@@ -1,0 +1,4 @@
+2026-05-13 15:48:18.699 EEST [11302] LOG:  redirecting log output to logging collector process
+2026-05-13 15:48:18.699 EEST [11302] HINT:  Future log output will appear in directory "log".
+2026-05-13 15:48:35.758 EEST [11338] LOG:  redirecting log output to logging collector process
+2026-05-13 15:48:35.758 EEST [11338] HINT:  Future log output will appear in directory "log".

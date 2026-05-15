@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+provider = "postgresql"
+}
+
+enum Role {
+CLIENT
+ENGINEER
+ADMIN
+}
+
+enum EngineerSpecialty {
+CIVIL
+ARCHITECTURAL
+}
+
+enum ServiceType{
+DESIGN
+SUPERVISION
+REVIEW
+}
+
+enum ProjectStatus {
+OPEN
+IN_PROGRESS
+COMPLETED
+CANCELLED
+}
+
+enum BidStatus{
+PENDING
+ACCEPTED
+REJECTED
+}
+
+enum PaymentStatus{
+PENDING
+RELEASED
+REFUNDED
+}
+
+enum VerificationStatus{
+PENDING
+APPROVED
+REJECTED
+}
+
+model User {
+id Int @id @default(autoincrement())
+name String
+email String @unique
+password String
+role Role @default(CLIENT)
+isVerified Boolean @default(false)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+profile EngineerProfile?
+projects Project[]
+reviews Review[]
+messages Message[]
+clientConversations Conversation[] @relation("ClientConversations")
+engineerConversations Conversation[] @relation("EngineerConversations")
+
+}
+model EngineerProfile {
+  id                 Int                @id @default(autoincrement())
+  userId             Int                @unique
+  specialty          EngineerSpecialty
+  bio                String?
+  verificationStatus VerificationStatus @default(PENDING)
+
+  collegeIdUrl     String?
+  certificateUrl   String?
+  syndicateCardUrl String?
+
+  averageRating      Float              @default(0)
+  totalReviews       Int                @default(0)
+  createdAt          DateTime           @default(now())
+
+  user User @relation(fields:[userId], references:[id])
+
+  portfolio PortfolioItem[]
+  bids      Bid[]
+  reviews   Review[]
+}
+
+model PortfolioItem {
+  id          Int             @id @default(autoincrement())
+  engineerId  Int
+  imageUrl    String
+  description String
+  createdAt   DateTime        @default(now())
+
+  engineer    EngineerProfile @relation(fields: [engineerId], references: [id])
+}
+
+model Project {
+  id          Int           @id @default(autoincrement())
+  clientId    Int
+  title       String
+  description String
+  budget      Float
+  serviceType ServiceType
+  status      ProjectStatus @default(OPEN)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  client       User          @relation(fields: [clientId], references: [id])
+  bids         Bid[]
+  payment      Payment?
+  conversation Conversation?
+  review       Review?
+}
+
+model Bid {
+  id          Int       @id @default(autoincrement())
+  projectId   Int
+  engineerId  Int
+  price       Float
+  duration    String
+  description String
+  status      BidStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+
+  project  Project         @relation(fields: [projectId], references: [id])
+  engineer EngineerProfile @relation(fields: [engineerId], references: [id])
+}
+
+model Payment {
+  id              Int           @id @default(autoincrement())
+  projectId       Int           @unique
+  clientId        Int
+  engineerId      Int
+  amount          Float
+  commission      Float
+  stripePaymentId String
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+}
+
+model Conversation {
+  id         Int      @id @default(autoincrement())
+  projectId  Int      @unique
+  clientId   Int
+  engineerId Int
+  createdAt  DateTime @default(now())
+
+  project  Project  @relation(fields: [projectId], references: [id])
+  client   User     @relation("ClientConversations", fields: [clientId], references: [id])
+  engineer User     @relation("EngineerConversations", fields: [engineerId], references: [id])
+  messages Message[]
+}
+
+model Message {
+  id             Int      @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User         @relation(fields: [senderId], references: [id])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  projectId  Int      @unique
+  clientId   Int
+  engineerId Int
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  project  Project         @relation(fields: [projectId], references: [id])
+  engineer EngineerProfile @relation(fields: [engineerId], references: [id])
+  client   User            @relation(fields: [clientId], references: [id])
+}

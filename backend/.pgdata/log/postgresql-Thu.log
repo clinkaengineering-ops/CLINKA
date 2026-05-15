@@ -1,0 +1,62 @@
+2026-05-14 12:29:37.152 EEST [11343] LOG:  checkpoint complete: wrote 6 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.602 s, sync=0.006 s, total=0.618 s; sync files=5, longest=0.002 s, average=0.002 s; distance=1 kB, estimate=5920 kB; lsn=0/30615F0, redo lsn=0/3061598
+2026-05-14 12:38:27.568 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-14 12:38:27.582 EEST [11343] LOG:  checkpoint complete: wrote 3 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.006 s, total=0.014 s; sync files=4, longest=0.002 s, average=0.002 s; distance=4939 kB, estimate=5822 kB; lsn=0/3534268, redo lsn=0/3534210
+2026-05-14 12:38:27.753 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-14 12:38:27.768 EEST [11343] LOG:  checkpoint complete: wrote 12 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.006 s, total=0.015 s; sync files=6, longest=0.002 s, average=0.001 s; distance=5007 kB, estimate=5740 kB; lsn=0/3A17F08, redo lsn=0/3A17EB0
+2026-05-14 12:43:27.868 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 12:43:28.494 EEST [11343] LOG:  checkpoint complete: wrote 6 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.607 s, sync=0.008 s, total=0.626 s; sync files=7, longest=0.002 s, average=0.002 s; distance=28 kB, estimate=5169 kB; lsn=0/3A1F008, redo lsn=0/3A1EFB0
+2026-05-14 12:50:28.273 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-14 12:50:28.287 EEST [11343] LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.007 s, total=0.015 s; sync files=5, longest=0.002 s, average=0.002 s; distance=4941 kB, estimate=5146 kB; lsn=0/3EF27A0, redo lsn=0/3EF2748
+2026-05-14 12:50:28.463 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-14 12:50:28.484 EEST [11343] LOG:  checkpoint complete: wrote 6 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=0.003 s, sync=0.011 s, total=0.022 s; sync files=7, longest=0.002 s, average=0.002 s; distance=4961 kB, estimate=5128 kB; lsn=0/43CAF50, redo lsn=0/43CAEF8
+2026-05-14 12:52:24.876 EEST [54681] ERROR:  table "_prisma_migrations" does not exist
+2026-05-14 12:52:24.876 EEST [54681] STATEMENT:  DROP TABLE _prisma_migrations
+2026-05-14 12:55:28.494 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 12:55:44.856 EEST [11343] LOG:  checkpoint complete: wrote 162 buffers (1.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=16.252 s, sync=0.102 s, total=16.363 s; sync files=111, longest=0.003 s, average=0.001 s; distance=1176 kB, estimate=4733 kB; lsn=0/44F1068, redo lsn=0/44F0FD8
+2026-05-14 13:05:35.238 EEST [57588] ERROR:  table "_prisma_migrations" does not exist
+2026-05-14 13:05:35.238 EEST [57588] STATEMENT:  DROP TABLE _prisma_migrations
+2026-05-14 13:10:29.099 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 13:10:46.970 EEST [11343] LOG:  checkpoint complete: wrote 177 buffers (1.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=17.759 s, sync=0.101 s, total=17.871 s; sync files=107, longest=0.003 s, average=0.001 s; distance=1267 kB, estimate=4386 kB; lsn=0/462DF18, redo lsn=0/462DC00
+2026-05-14 13:52:07.470 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-14 13:52:07.490 EEST [11343] LOG:  checkpoint complete: wrote 9 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.012 s, total=0.021 s; sync files=8, longest=0.002 s, average=0.002 s; distance=4943 kB, estimate=4943 kB; lsn=0/4B018B0, redo lsn=0/4B01858
+2026-05-14 13:52:07.667 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-14 13:52:07.693 EEST [11343] LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.017 s, total=0.027 s; sync files=12, longest=0.002 s, average=0.002 s; distance=4997 kB, estimate=4997 kB; lsn=0/4FE2FF0, redo lsn=0/4FE2F98
+2026-05-14 13:57:07.792 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 13:57:08.922 EEST [11343] LOG:  checkpoint complete: wrote 11 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.106 s, sync=0.016 s, total=1.131 s; sync files=10, longest=0.003 s, average=0.002 s; distance=4 kB, estimate=4498 kB; lsn=0/4FE4100, redo lsn=0/4FE40A8
+2026-05-14 17:17:13.123 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 17:17:13.546 EEST [11343] LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.405 s, sync=0.008 s, total=0.423 s; sync files=5, longest=0.002 s, average=0.002 s; distance=1 kB, estimate=4048 kB; lsn=0/4FE4640, redo lsn=0/4FE45E8
+2026-05-14 17:22:13.552 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 17:22:13.967 EEST [11343] LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.402 s, sync=0.007 s, total=0.416 s; sync files=5, longest=0.002 s, average=0.002 s; distance=2 kB, estimate=3644 kB; lsn=0/4FE4E98, redo lsn=0/4FE4E40
+2026-05-14 17:32:14.114 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 17:32:14.225 EEST [11343] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.101 s, sync=0.002 s, total=0.112 s; sync files=1, longest=0.002 s, average=0.002 s; distance=1 kB, estimate=3279 kB; lsn=0/4FE53B8, redo lsn=0/4FE5360
+2026-05-14 17:32:50.463 EEST [90646] ERROR:  update or delete on table "User" violates RESTRICT setting of foreign key constraint "EngineerProfile_userId_fkey" on table "EngineerProfile"
+2026-05-14 17:32:50.463 EEST [90646] DETAIL:  Key (id)=(2) is referenced from table "EngineerProfile".
+2026-05-14 17:32:50.463 EEST [90646] STATEMENT:  delete from "public"."User" where "id" = $1 returning "isVerified", "id", "password", "email", "name", "updatedAt", "createdAt", "role", cast(floor(extract(epoch from now()) * $2) as text) as "__ps_deleted_at__"
+2026-05-14 17:32:55.517 EEST [90644] ERROR:  update or delete on table "User" violates RESTRICT setting of foreign key constraint "EngineerProfile_userId_fkey" on table "EngineerProfile"
+2026-05-14 17:32:55.517 EEST [90644] DETAIL:  Key (id)=(2) is referenced from table "EngineerProfile".
+2026-05-14 17:32:55.517 EEST [90644] STATEMENT:  delete from "public"."User" where "id" = $1 returning "isVerified", "id", "password", "email", "name", "updatedAt", "createdAt", "role", cast(floor(extract(epoch from now()) * $2) as text) as "__ps_deleted_at__"
+2026-05-14 17:32:58.710 EEST [90645] ERROR:  update or delete on table "User" violates RESTRICT setting of foreign key constraint "EngineerProfile_userId_fkey" on table "EngineerProfile"
+2026-05-14 17:32:58.710 EEST [90645] DETAIL:  Key (id)=(2) is referenced from table "EngineerProfile".
+2026-05-14 17:32:58.710 EEST [90645] STATEMENT:  delete from "public"."User" where "id" = $1 returning "isVerified", "id", "password", "email", "name", "updatedAt", "createdAt", "role", cast(floor(extract(epoch from now()) * $2) as text) as "__ps_deleted_at__"
+2026-05-14 17:33:08.171 EEST [90646] ERROR:  update or delete on table "User" violates RESTRICT setting of foreign key constraint "EngineerProfile_userId_fkey" on table "EngineerProfile"
+2026-05-14 17:33:08.171 EEST [90646] DETAIL:  Key (id)=(2) is referenced from table "EngineerProfile".
+2026-05-14 17:33:08.171 EEST [90646] STATEMENT:  delete from "public"."User" where "id" = $1 returning "isVerified", "id", "password", "email", "name", "updatedAt", "createdAt", "role", cast(floor(extract(epoch from now()) * $2) as text) as "__ps_deleted_at__"
+2026-05-14 17:37:14.268 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 17:37:14.784 EEST [11343] LOG:  checkpoint complete: wrote 5 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.502 s, sync=0.007 s, total=0.517 s; sync files=6, longest=0.002 s, average=0.002 s; distance=3 kB, estimate=2952 kB; lsn=0/4FE6238, redo lsn=0/4FE61E0
+2026-05-14 17:47:14.977 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 17:47:15.397 EEST [11343] LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.403 s, sync=0.008 s, total=0.420 s; sync files=5, longest=0.002 s, average=0.002 s; distance=3 kB, estimate=2657 kB; lsn=0/4FE6E78, redo lsn=0/4FE6E20
+2026-05-14 17:50:49.006 EEST [96340] ERROR:  update or delete on table "User" violates RESTRICT setting of foreign key constraint "EngineerProfile_userId_fkey" on table "EngineerProfile"
+2026-05-14 17:50:49.006 EEST [96340] DETAIL:  Key (id)=(2) is referenced from table "EngineerProfile".
+2026-05-14 17:50:49.006 EEST [96340] STATEMENT:  delete from "public"."User" where "id" = $1 returning "isVerified", "id", "password", "email", "name", "updatedAt", "createdAt", "role", cast(floor(extract(epoch from now()) * $2) as text) as "__ps_deleted_at__"
+2026-05-14 17:52:14.496 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 17:52:15.016 EEST [11343] LOG:  checkpoint complete: wrote 5 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.502 s, sync=0.009 s, total=0.520 s; sync files=6, longest=0.002 s, average=0.002 s; distance=3 kB, estimate=2391 kB; lsn=0/4FE7DF0, redo lsn=0/4FE7D98
+2026-05-14 17:57:14.115 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 17:57:14.226 EEST [11343] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.101 s, sync=0.003 s, total=0.112 s; sync files=2, longest=0.002 s, average=0.002 s; distance=3 kB, estimate=2153 kB; lsn=0/4FE8AE8, redo lsn=0/4FE8A90
+2026-05-14 19:13:03.200 EEST [11343] LOG:  checkpoint starting: time
+2026-05-14 19:13:03.616 EEST [11343] LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.403 s, sync=0.006 s, total=0.417 s; sync files=5, longest=0.002 s, average=0.002 s; distance=5 kB, estimate=1938 kB; lsn=0/4FE9F58, redo lsn=0/4FE9F00
+2026-05-14 21:28:58.386 EEST [11338] LOG:  received smart shutdown request
+2026-05-14 21:28:58.388 EEST [11338] LOG:  background worker "logical replication launcher" (PID 11348) exited with exit code 1
+2026-05-14 21:28:58.389 EEST [11343] LOG:  shutting down
+2026-05-14 21:28:58.391 EEST [11343] LOG:  checkpoint starting: shutdown immediate
+2026-05-14 21:28:58.405 EEST [11343] LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.016 s; sync files=0, longest=0.000 s, average=0.000 s; distance=0 kB, estimate=1744 kB; lsn=0/4FEA020, redo lsn=0/4FEA020
+2026-05-14 21:28:58.428 EEST [11338] LOG:  database system is shut down

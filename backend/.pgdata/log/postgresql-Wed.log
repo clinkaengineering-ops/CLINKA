@@ -1,0 +1,27 @@
+2026-05-13 15:48:18.699 EEST [11302] LOG:  starting PostgreSQL 18.3 on x86_64-redhat-linux-gnu, compiled by gcc (GCC) 15.2.1 20260123 (Red Hat 15.2.1-7), 64-bit
+2026-05-13 15:48:18.699 EEST [11302] LOG:  listening on IPv6 address "::1", port 5433
+2026-05-13 15:48:18.699 EEST [11302] LOG:  listening on IPv4 address "127.0.0.1", port 5433
+2026-05-13 15:48:18.701 EEST [11302] FATAL:  could not create lock file "/var/run/postgresql/.s.PGSQL.5433.lock": Permission denied
+2026-05-13 15:48:18.703 EEST [11302] LOG:  database system is shut down
+2026-05-13 15:48:35.758 EEST [11338] LOG:  starting PostgreSQL 18.3 on x86_64-redhat-linux-gnu, compiled by gcc (GCC) 15.2.1 20260123 (Red Hat 15.2.1-7), 64-bit
+2026-05-13 15:48:35.758 EEST [11338] LOG:  listening on IPv6 address "::1", port 5433
+2026-05-13 15:48:35.758 EEST [11338] LOG:  listening on IPv4 address "127.0.0.1", port 5433
+2026-05-13 15:48:35.761 EEST [11338] LOG:  listening on Unix socket "/home/mohamedtalal/Documents/CLINKA/backend/.pgsocket/.s.PGSQL.5433"
+2026-05-13 15:48:35.766 EEST [11345] LOG:  database system was shut down at 2026-05-13 15:48:18 EEST
+2026-05-13 15:48:35.769 EEST [11338] LOG:  database system is ready to accept connections
+2026-05-13 15:49:48.693 EEST [11818] ERROR:  relation "_prisma_migrations" does not exist at character 126
+2026-05-13 15:49:48.693 EEST [11818] STATEMENT:  SELECT "id", "checksum", "finished_at", "migration_name", "logs", "rolled_back_at", "started_at", "applied_steps_count" FROM "_prisma_migrations" ORDER BY "started_at" ASC
+2026-05-13 15:49:48.793 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-13 15:49:49.189 EEST [11343] LOG:  checkpoint complete: wrote 972 buffers (5.9%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=0.033 s, sync=0.356 s, total=0.397 s; sync files=303, longest=0.002 s, average=0.002 s; distance=9128 kB, estimate=9128 kB; lsn=0/20AB480, redo lsn=0/20AB428
+2026-05-13 15:49:49.282 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-13 15:49:49.295 EEST [11343] LOG:  checkpoint complete: wrote 3 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.006 s, total=0.014 s; sync files=4, longest=0.002 s, average=0.002 s; distance=4565 kB, estimate=8672 kB; lsn=0/2520A58, redo lsn=0/2520A00
+2026-05-13 15:50:32.544 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-13 15:50:32.692 EEST [11343] LOG:  checkpoint complete: wrote 166 buffers (1.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.008 s, sync=0.134 s, total=0.148 s; sync files=114, longest=0.002 s, average=0.002 s; distance=6003 kB, estimate=8405 kB; lsn=0/2AFD770, redo lsn=0/2AFD718
+2026-05-13 15:50:32.864 EEST [11343] LOG:  checkpoint starting: immediate force wait
+2026-05-13 15:50:32.890 EEST [11343] LOG:  checkpoint complete: wrote 25 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.018 s, total=0.027 s; sync files=13, longest=0.002 s, average=0.002 s; distance=5120 kB, estimate=8076 kB; lsn=0/2FFD958, redo lsn=0/2FFD900
+2026-05-13 15:55:32.990 EEST [11343] LOG:  checkpoint starting: time
+2026-05-13 15:55:38.936 EEST [11343] LOG:  checkpoint complete: wrote 59 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=5.919 s, sync=0.018 s, total=5.947 s; sync files=13, longest=0.003 s, average=0.002 s; distance=389 kB, estimate=7308 kB; lsn=0/305F0B0, redo lsn=0/305F058
+2026-05-13 15:59:53.617 EEST [13294] FATAL:  role "postgres" does not exist
+2026-05-13 16:00:33.036 EEST [11343] LOG:  checkpoint starting: time
+2026-05-13 16:00:33.147 EEST [11343] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.101 s, sync=0.002 s, total=0.112 s; sync files=1, longest=0.002 s, average=0.002 s; distance=8 kB, estimate=6578 kB; lsn=0/30611F0, redo lsn=0/3061198
+2026-05-14 12:29:36.534 EEST [11343] LOG:  checkpoint starting: time
