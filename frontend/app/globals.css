@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme {
+  --color-navy-50: #f1f5fb;
+  --color-navy-100: #e2eaf5;
+  --color-navy-200: #c5d4ea;
+  --color-navy-300: #95b1d8;
+  --color-navy-400: #5d85be;
+  --color-navy-500: #3d65a3;
+  --color-navy-600: #2d4f87;
+  --color-navy-700: #243f6e;
+  --color-navy-800: #1c3155;
+  --color-navy-900: #14223c;
+  --color-navy-950: #0a1322;
+
+  --color-electric-300: #7dd3fc;
+  --color-electric-400: #38bdf8;
+  --color-electric-500: #0ea5e9;
+  --color-electric-600: #0284c7;
+  --color-electric-700: #0369a1;
+
+  --font-display: var(--font-display);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-display), Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+
+  * {
+    @apply border-slate-200/60;
+  }
+
+  .dark * {
+    @apply border-slate-800/80;
+  }
+}
+
+@layer utilities {
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .dark .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.6s ease-out both;
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+}
