@@ -16,7 +16,6 @@ import {
   resetPassword,
   resendVerificationEmail,
   changePassword,
-  getMe,
   verifyOtp,
 } from "./auth.service";
 import ApiResponse from "../../utils/ApiResponse";
@@ -152,18 +151,7 @@ export async function changePasswordController(
   }
 }
 
-export async function getMeController(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    const user = await getMe(req.user!.userId);
-    res.status(200).json(ApiResponse(200, "User fetched successfully", user));
-  } catch (error) {
-    next(error);
-  }
-}
+
 
 export async function verifyOtpController(req: Request, res: Response, next: NextFunction) {
   try {

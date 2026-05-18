@@ -209,14 +209,3 @@ export async function changePassword(
     data: { password: hashed },
   });
 }
-
-export async function getMe(userId: number) {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    include: { profile: true },
-  });
-  if (!user) throw new ApiError(404, "User not found");
-
-  const { password: _, ...userWithoutPassword } = user;
-  return userWithoutPassword;
-}

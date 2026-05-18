@@ -9,7 +9,6 @@ import {
   resetPasswordController,
   resendVerificationController,
   changePasswordController,
-  getMeController,
   verifyOtpController,
 } from "./auth.controller";
 import upload from "../../middlewares/upload.middleware";
@@ -26,7 +25,6 @@ router.post("/forgot-password", forgotPasswordController);
 router.post("/reset-password", resetPasswordController);
 router.post("/resend-verification", authenticate, resendVerificationController);
 router.post("/change-password", authenticate, changePasswordController);
-router.get("/me", authenticate, getMeController);
 router.post("/verify-otp", verifyOtpController);
 
 export default router;

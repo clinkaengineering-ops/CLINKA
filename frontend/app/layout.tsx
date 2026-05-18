@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeSync } from "@/components/theme";
+import { I18nProvider } from "@/i18n";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-display" });
 
@@ -19,7 +20,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body>
         <ThemeSync />
-        {children}
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

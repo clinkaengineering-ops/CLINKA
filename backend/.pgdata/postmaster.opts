@@ -1,1 +1,0 @@
-/usr/bin/postgres "-D" ".pgdata" "-p" "5433" "-k" "/home/mohamedtalal/Documents/CLINKA/backend/.pgsocket"

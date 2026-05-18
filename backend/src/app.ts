@@ -2,9 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import authRouter from "./modules/auth/auth.routes";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
-
+import registerRoutes from "./routes/index";
 dotenv.config();
 const app = express();
 
@@ -16,8 +15,7 @@ app.use(cookieParser());
 app.get("/api/health", (req, res) => {
   res.status(200).json({ message: "API is running", success: true });
 });
-
-app.use("/api/auth", authRouter);
+registerRoutes(app);
 
 app.use(errorHandler);
 
