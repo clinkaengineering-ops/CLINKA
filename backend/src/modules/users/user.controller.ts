@@ -1,10 +1,7 @@
-import { NextFunction, Response } from "express";
-import { AuthRequest } from "../../middlewares/auth.middleware";
-import {
-  addPortfolioItemSchema,
-  updateProfileInput,
-  updateProfileSchema,
-} from "./user.validation";
+// backend/features/users/user.controller.ts
+import type { NextFunction, Response } from "express";
+import type { AuthRequest } from "../../middlewares/auth.middleware";
+import { addPortfolioItemSchema, updateProfileSchema } from "./user.validation";
 import ApiResponse from "../../utils/ApiResponse";
 import {
   addPortfolioItem,
@@ -18,7 +15,7 @@ import {
 export async function getMeController(
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const user = await getMe(req.user!.userId);
@@ -31,7 +28,7 @@ export async function getMeController(
 export async function updateMeController(
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const validatedData = updateProfileSchema.parse(req.body);
@@ -45,7 +42,7 @@ export async function updateMeController(
 export async function getEngineersController(
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const engineers = await getEngineers();
@@ -56,10 +53,11 @@ export async function getEngineersController(
     next(error);
   }
 }
+
 export async function getEngineerByIdController(
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const engineer = await getEngineerById(Number(req.params.id));
@@ -74,7 +72,7 @@ export async function getEngineerByIdController(
 export async function addPortfolioItemController(
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const validatedData = addPortfolioItemSchema.parse(req.body);
@@ -90,13 +88,10 @@ export async function addPortfolioItemController(
 export async function deletePortfolioItemController(
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
-    await deletePortfolioItem(
-      req.user!.userId,
-      Number(req.params.id),
-    );
+    await deletePortfolioItem(req.user!.userId, Number(req.params.id));
     res
       .status(200)
       .json(ApiResponse(200, "Portfolio item deleted successfully"));

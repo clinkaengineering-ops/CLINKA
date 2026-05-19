@@ -1,2 +1,2 @@
-import { ClientDashboardPage } from "@/features/dashboard/components/ClientDashboardPage";
+import { ClientDashboardPage } from "../../../features/dashboard/Client/Pages/ClientDashboardPage";
 export default function Page() { return <ClientDashboardPage />; }

@@ -1,25 +1,21 @@
+// features/users/hooks/useEngineers.ts
 "use client";
 import { useState, useEffect } from "react";
-import { userApi } from "../api/user.api";
+import { getEngineers } from "@/features/users/api/user.api";
 import type { Engineer } from "@/types";
 
 export function useEngineers() {
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetch() {
-      try {
-        const res = await userApi.getEngineers();
-        setEngineers(res.data.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to fetch engineers");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetch();
+    getEngineers()
+      .then(setEngineers)
+      .catch((e: any) =>
+        setError(e?.response?.data?.message ?? e?.message ?? "Failed to fetch engineers")
+      )
+      .finally(() => setLoading(false));
   }, []);
 
   return { engineers, loading, error };

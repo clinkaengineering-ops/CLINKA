@@ -1,35 +1,54 @@
+// features/users/hooks/useMe.ts
+// THE one and only useMe hook for the entire application.
+// Any component that needs the current user imports from here.
 "use client";
-import { useState, useEffect } from "react";
-import { userApi } from "../api/user.api";
-import type { User } from "@/types";
+import { useState, useEffect, useCallback } from "react";
+import { getMe, updateMe } from "@/features/users/api/user.api";
+import type { Me } from "@/types";
 
-export function useMe() {
-  const [user, setUser] = useState<User | null>(null);
+export interface UseMeReturn {
+  me: Me | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  update: (payload: { name?: string; bio?: string }) => Promise<void>;
+}
+
+export function useMe(): UseMeReturn {
+  const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetch() {
-      try {
-        const res = await userApi.getMe();
-        setUser(res.data.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to fetch profile");
-      } finally {
-        setLoading(false);
-      }
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setMe(await getMe());
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? e?.message ?? "Failed to load profile");
+    } finally {
+      setLoading(false);
     }
-    fetch();
   }, []);
 
-  async function updateMe(data: { name?: string; bio?: string }) {
-    try {
-      const res = await userApi.updateMe(data);
-      setUser(res.data.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to update profile");
-    }
-  }
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
-  return { user, loading, error, updateMe };
+  const update = useCallback(
+    async (payload: { name?: string; bio?: string }) => {
+      // Optimistic update so the UI feels instant
+      setMe((prev) => (prev ? { ...prev, ...payload } : prev));
+      try {
+        const updated = await updateMe(payload);
+        setMe(updated); // replace with the real server response (includes profile)
+      } catch (e: any) {
+        setError(e?.response?.data?.message ?? e?.message ?? "Failed to update profile");
+        refetch(); // roll back to server state on error
+      }
+    },
+    [refetch]
+  );
+
+  return { me, loading, error, refetch, update };
 }

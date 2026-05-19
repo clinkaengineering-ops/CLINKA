@@ -1,3 +1,4 @@
+// features/users/components/EngineerCard.tsx
 "use client";
 import { useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card, VerifiedBadge } from "@/components/UI";
@@ -16,7 +17,9 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <p className="font-bold truncate">{engineer.name}</p>
-            {engineer.profile?.verificationStatus === "APPROVED" && <VerifiedBadge size={16} />}
+            {engineer.profile?.verificationStatus === "APPROVED" && (
+              <VerifiedBadge size={16} />
+            )}
           </div>
           <p className="text-xs text-slate-500">{engineer.profile?.specialty}</p>
           <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
@@ -24,7 +27,9 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
             <span className="font-semibold text-slate-900 dark:text-white">
               {engineer.profile?.averageRating?.toFixed(1) ?? "0.0"}
             </span>
-            <span>({engineer.profile?.totalReviews ?? 0} {t("common.reviews")})</span>
+            <span>
+              ({engineer.profile?.totalReviews ?? 0} {t("common.reviews")})
+            </span>
           </div>
         </div>
       </div>
@@ -36,7 +41,7 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
       )}
 
       <div className="mt-5 flex items-center justify-between">
-        <Badge color="electric">{engineer.profile?.specialty}</Badge>
+        <Badge color="electric">{engineer.profile?.specialty ?? "—"}</Badge>
         <Button
           size="sm"
           onClick={() => router.push(`/engineers/${engineer.id}`)}

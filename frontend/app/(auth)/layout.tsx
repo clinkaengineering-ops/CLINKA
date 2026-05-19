@@ -1,5 +1,5 @@
-import { AuthShell } from "@/components/auth-ui";
+import { Shell } from "../../components/UI";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return <AuthShell>{children}</AuthShell>;
+  return <Shell>{children}</Shell>;
 }
