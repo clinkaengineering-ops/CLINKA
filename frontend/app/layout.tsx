@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeSync } from "@/components/theme";
 import { I18nProvider } from "@/i18n";
-
 const inter = Inter({ subsets: ["latin"], variable: "--font-display" });
 
 export const metadata: Metadata = {

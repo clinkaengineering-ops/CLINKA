@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { AxiosError } from "axios";
 import { authApi } from "../api/auth.api";
 
@@ -10,6 +10,7 @@ type ApiErrorResponse = {
 
 export function useLogin() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -20,7 +21,8 @@ export function useLogin() {
       const res = await authApi.login({ email, password });
       const userId = res.data.data.userId;
       sessionStorage.setItem("pendingUserId", String(userId));
-      router.push("/verify-otp");
+      const next = searchParams.get("next");
+      router.push(next ? `/verify-otp?next=${encodeURIComponent(next)}` : "/verify-otp");
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
       setError(axiosError.response?.data?.message || "Something went wrong");

@@ -1,12 +1,6 @@
 // features/users/components/EngineerProfilePage.tsx
 "use client";
-import {
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  VerifiedBadge,
-} from "@/components/UI";
+import { Avatar, Badge, Button, Card, VerifiedBadge } from "@/components/UI";
 import {
   IconStar,
   IconMessage,
@@ -14,10 +8,12 @@ import {
   IconCheck,
 } from "@/components/Icons";
 import { useI18n } from "@/i18n";
+import { useRouter } from "next/navigation";
 import { useEngineerById } from "../hooks/useEngineerById";
 
 export function EngineerProfilePage({ id }: { id: number }) {
   const { t } = useI18n();
+  const router = useRouter();
   const { engineer, loading, error } = useEngineerById(id);
 
   // ── Loading skeleton ────────────────────────────────────────────────────────
@@ -89,10 +85,14 @@ export function EngineerProfilePage({ id }: { id: number }) {
             <Button
               variant="secondary"
               icon={<IconMessage width={14} height={14} />}
+              onClick={() => router.push("/messages")}
             >
               {t("common.message")}
             </Button>
-            <Button icon={<IconBriefcase width={14} height={14} />}>
+            <Button
+              icon={<IconBriefcase width={14} height={14} />}
+              onClick={() => router.push("/projects")}
+            >
               {t("common.hire")}
             </Button>
           </div>
@@ -148,11 +148,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold">{t("ep.reviews")}</h2>
                 <div className="flex items-center gap-1 text-sm">
-                  <IconStar
-                    width={16}
-                    height={16}
-                    className="text-amber-500"
-                  />
+                  <IconStar width={16} height={16} className="text-amber-500" />
                   <span className="font-bold">
                     {profile.averageRating?.toFixed(1)}
                   </span>
@@ -223,9 +219,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Specialty
               </p>
-              <p className="mt-1 font-semibold">
-                {profile?.specialty ?? "—"}
-              </p>
+              <p className="mt-1 font-semibold">{profile?.specialty ?? "—"}</p>
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -236,8 +230,8 @@ export function EngineerProfilePage({ id }: { id: number }) {
                   profile?.verificationStatus === "APPROVED"
                     ? "text-emerald-600"
                     : profile?.verificationStatus === "REJECTED"
-                    ? "text-rose-600"
-                    : "text-amber-600"
+                      ? "text-rose-600"
+                      : "text-amber-600"
                 }`}
               >
                 {profile?.verificationStatus ?? "—"}

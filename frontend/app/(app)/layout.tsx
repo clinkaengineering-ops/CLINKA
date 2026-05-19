@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { AuthProvider } from "@/features/auth/components/AuthProvider";
 import { cn } from "@/utils/cn";
 import {
   IconHome, IconUsers, IconBriefcase, IconChart, IconWallet, IconMessage,
@@ -31,11 +32,37 @@ const navItems = [
 const sections = ["side.discover", "side.workspace", "side.operations"];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <AppShell>{children}</AppShell>
+    </AuthProvider>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dark, setDark] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useI18n();
   const { user, logout } = useAuthStore();
+
+  async function handleLogout() {
+    await logout();
+    router.push("/login");
+  }
+
+  function handleNewProject() {
+    if (!user) {
+      router.push("/login?next=/projects?create=1");
+      return;
+    }
+    if (user.role === "CLIENT") {
+      router.push("/projects?create=1");
+      return;
+    }
+    router.push("/projects");
+  }
 
   return (
     <div className={dark ? "dark" : ""}>
@@ -117,7 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <p className="text-xs text-slate-500 truncate">{user?.role ?? ""}</p>
               </div>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition"
               >
                 <IconLogout width={16} height={16} />
@@ -141,7 +168,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 />
               </div>
               <div className="ms-auto flex items-center gap-2">
-                <Button variant="ghost" size="sm">{t("side.newProject")}</Button>
+                <Button variant="ghost" size="sm" onClick={handleNewProject}>
+                  {t("side.newProject")}
+                </Button>
                 <button className="relative h-10 w-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center">
                   <IconBell width={18} height={18} />
                   <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
@@ -160,6 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
+
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { AxiosError } from "axios";
 import { authApi } from "../api/auth.api";
 import useAuthStore from "@/store/authStore";
@@ -11,6 +11,7 @@ type ApiErrorResponse = {
 
 export function useVerifyOtp() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,7 +25,8 @@ export function useVerifyOtp() {
       const res = await authApi.verifyOtp({ userId: Number(userId), otp });
       setUser(res.data.data);
       sessionStorage.removeItem("pendingUserId");
-      router.push("/dashboard");
+      const next = searchParams.get("next") || "/dashboard";
+      router.push(next);
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
       setError(axiosError.response?.data?.message || "Invalid OTP");

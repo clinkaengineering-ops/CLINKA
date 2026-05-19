@@ -4,7 +4,7 @@ import { Avatar, Badge, Button, Card, Input } from "@/components/UI";
 import { IconUser, IconBell, IconLock, IconCard, IconCheck, IconUpload } from "@/components/Icons";
 import { cn } from "@/utils/cn";
 import { useI18n } from "@/i18n";
-import { useMe } from "@/features/users/hooks/useMe";
+import { useMe } from "@/features/auth/hooks/useMe";
 
 export function SettingsPage() {
   const { t } = useI18n();
@@ -35,7 +35,7 @@ export function SettingsPage() {
 
 function AccountTab() {
   const { t } = useI18n();
-  const { user, updateMe } = useMe();
+  const { me: user, update } = useMe();
   const [name, setName] = useState(user?.name ?? "");
   return (
     <Card className="p-6">
@@ -48,7 +48,7 @@ function AccountTab() {
       </div>
       <div className="mt-6 flex justify-end gap-2">
         <Button variant="ghost">{t("common.cancel")}</Button>
-        <Button onClick={() => updateMe({ name })} icon={<IconCheck width={14} height={14} />}>{t("common.saveChanges")}</Button>
+        <Button onClick={() => update({ name })} icon={<IconCheck width={14} height={14} />}>{t("common.saveChanges")}</Button>
       </div>
     </Card>
   );
@@ -71,15 +71,59 @@ function NotifTab() {
 
 function SecurityTab() {
   const { t } = useI18n();
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handlePasswordUpdate() {
+    setLoading(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const { authApi } = await import("@/features/auth/api/auth.api");
+      await authApi.changePassword({ oldPassword, newPassword });
+      setMessage("Password updated successfully.");
+      setOldPassword("");
+      setNewPassword("");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err?.response?.data?.message ?? err?.message ?? "Failed to update password");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <>
       <Card className="p-6">
         <h2 className="font-bold">{t("st.password")}</h2>
         <div className="mt-4 grid sm:grid-cols-2 gap-4">
-          <Field label={t("st.curPass")}><Input type="password" placeholder="••••••••" /></Field>
-          <Field label={t("st.newPass")}><Input type="password" placeholder="••••••••" /></Field>
+          <Field label={t("st.curPass")}>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+            />
+          </Field>
+          <Field label={t("st.newPass")}>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </Field>
         </div>
-        <div className="mt-4 flex justify-end"><Button>{t("st.updatePass")}</Button></div>
+        {message && <p className="mt-2 text-sm text-emerald-600">{message}</p>}
+        {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
+        <div className="mt-4 flex justify-end">
+          <Button onClick={handlePasswordUpdate} disabled={loading || !oldPassword || !newPassword}>
+            {loading ? "Updating…" : t("st.updatePass")}
+          </Button>
+        </div>
       </Card>
       <Card className="p-6">
         <div className="flex items-center justify-between"><div><h2 className="font-bold">{t("st.2fa")}</h2><p className="text-sm text-slate-500">{t("st.2faSub")}</p></div><Badge color="green"><IconCheck width={10} height={10} /> {t("st.active")}</Badge></div>

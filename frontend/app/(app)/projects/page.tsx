@@ -1,4 +1,4 @@
-import ProjectsPage from "../../././../features/projects/Pages/ProjectPage";
+import ProjectsPage from "../../../features/projects/Pages/ProjectPage";
 
 export const metadata = {
   title: "Project Marketplace — CLINKA",

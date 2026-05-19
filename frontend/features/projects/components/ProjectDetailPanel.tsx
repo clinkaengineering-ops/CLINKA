@@ -1,10 +1,12 @@
 "use client";
 
-import { Badge, Card } from "../../../components/UI";
-import { IconStar } from "../../../components/Icons";
-import { useI18n } from "../../../i18n";
+import { Badge, Card } from "@/components/UI";
+import { IconStar } from "@/components/Icons";
+import { useI18n } from "@/i18n";
+import useAuthStore from "@/store/authStore";
 import type { Project, ServiceType } from "../api/project.api";
 import { BidForm } from "@/features/bids/components/BidForm";
+import { ProjectBidsList } from "./ProjectBidsList";
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   DESIGN: "Design",
@@ -12,22 +14,19 @@ const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   REVIEW: "Review",
 };
 
-const SERVICE_TYPE_COLORS: Record<ServiceType, "blue" | "violet" | "green"> = {
-  DESIGN: "blue",
-  SUPERVISION: "violet",
-  REVIEW: "green",
-};
-
 interface ProjectDetailPanelProps {
   project: Project | null;
   loading: boolean;
+  onRefresh?: () => void;
 }
 
 export function ProjectDetailPanel({
   project,
   loading,
+  onRefresh,
 }: ProjectDetailPanelProps) {
   const { t } = useI18n();
+  const user = useAuthStore((s) => s.user);
 
   if (loading || !project) {
     return (
@@ -41,43 +40,32 @@ export function ProjectDetailPanel({
     );
   }
 
-  const color = SERVICE_TYPE_COLORS[project.serviceType] ?? "slate";
   const label = SERVICE_TYPE_LABELS[project.serviceType] ?? project.serviceType;
   const bidCount = project._count?.bids ?? project.bids?.length ?? 0;
+  const isOwner = user?.id === project.clientId;
 
   return (
     <Card className="overflow-hidden">
-      {/* Header */}
       <div className="p-5 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
-        <Badge className="!bg-white/10 !text-white !border-white/20">
-          {label}
-        </Badge>
+        <Badge className="!bg-white/10 !text-white !border-white/20">{label}</Badge>
         <h3 className="mt-3 text-xl font-bold">{project.title}</h3>
         <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
           <div className="rounded-lg bg-white/10 p-2.5">
-            <p className="text-white/60 text-[10px] uppercase">
-              {t("common.budget")}
-            </p>
-            <p className="font-bold mt-0.5">
-              ${project.budget.toLocaleString()}
-            </p>
+            <p className="text-white/60 text-[10px] uppercase">{t("common.budget")}</p>
+            <p className="font-bold mt-0.5">${project.budget.toLocaleString()}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-2.5">
-            <p className="text-white/60 text-[10px] uppercase">Type</p>
-            <p className="font-bold mt-0.5">{label}</p>
+            <p className="text-white/60 text-[10px] uppercase">Status</p>
+            <p className="font-bold mt-0.5">{project.status}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-2.5">
-            <p className="text-white/60 text-[10px] uppercase">
-              {t("stat.bids")}
-            </p>
+            <p className="text-white/60 text-[10px] uppercase">{t("stat.bids")}</p>
             <p className="font-bold mt-0.5">{bidCount}</p>
           </div>
         </div>
       </div>
 
-      {/* Body */}
       <div className="p-5 space-y-5">
-        {/* Client */}
         {project.client && (
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -98,7 +86,6 @@ export function ProjectDetailPanel({
           </div>
         )}
 
-        {/* Description */}
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
             {t("common.description")}
@@ -108,8 +95,13 @@ export function ProjectDetailPanel({
           </p>
         </div>
 
-        {/* Bid form */}
-        <BidForm project={project} />
+        <ProjectBidsList
+          project={project}
+          canManage={isOwner && user?.role === "CLIENT"}
+          onUpdated={onRefresh}
+        />
+
+        {!isOwner && <BidForm project={project} onSubmitted={onRefresh} />}
       </div>
     </Card>
   );

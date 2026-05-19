@@ -54,6 +54,7 @@ const en: Dict = {
   "common.saveChanges": "Save changes",
   "common.continue": "Continue",
   "common.back": "Back",
+  "common.step": "Step",
   "common.export": "Export",
   "common.exportCsv": "Export CSV",
   "common.details": "Details",
@@ -127,6 +128,7 @@ const en: Dict = {
 
   "how.eyebrow": "How it works",
   "how.title": "From scope to signed-off in days, not months.",
+  "how.subtitle": "A consistent workflow for clients and engineers with secure escrow, verified delivery, and simple collaboration.",
   "how.1.t": "Post a project",
   "how.1.d": "Describe your scope, discipline, deliverables, budget and timeline.",
   "how.2.t": "Receive bids",
@@ -569,6 +571,7 @@ const ar: Dict = {
   "common.saveChanges": "حفظ التغييرات",
   "common.continue": "متابعة",
   "common.back": "السابق",
+  "common.step": "خطوة",
   "common.export": "تصدير",
   "common.exportCsv": "تصدير CSV",
   "common.details": "التفاصيل",
@@ -641,6 +644,7 @@ const ar: Dict = {
 
   "how.eyebrow": "كيف يعمل",
   "how.title": "من النطاق إلى التوقيع خلال أيام، لا أشهر.",
+  "how.subtitle": "سير عمل متسق للعملاء والمهندسين مع ضمان آمن وتسليم موثّق وتعاون بسيط.",
   "how.1.t": "انشر مشروعًا",
   "how.1.d": "صف نطاق العمل والتخصص والتسليمات والميزانية والمدة.",
   "how.2.t": "استلم العروض",

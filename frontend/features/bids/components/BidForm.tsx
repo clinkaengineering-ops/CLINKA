@@ -1,39 +1,84 @@
 "use client";
 
-import {  useMemo, useState } from "react";
-import {  Button } from "../../../components/UI";
-import {
-  IconArrow,
-} from "../../../components/Icons";
-import { useI18n } from "../../../i18n";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/UI";
+import { IconArrow } from "@/components/Icons";
+import { useI18n } from "@/i18n";
 import type { Project } from "../../projects/api/project.api";
-
-
-
+import { createBid } from "../api/bids.api";
+import useAuthStore from "@/store/authStore";
 
 interface BidFormProps {
   project: Project;
+  onSubmitted?: () => void;
 }
 
-export function BidForm({ project }: BidFormProps) {
+export function BidForm({ project, onSubmitted }: BidFormProps) {
   const { t } = useI18n();
+  const user = useAuthStore((s) => s.user);
   const [price, setPrice] = useState(project.budget.toString());
   const [weeks, setWeeks] = useState("8");
   const [cover, setCover] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const net = useMemo(() => {
     const p = parseFloat(price) || 0;
     return (p * 0.92).toLocaleString(undefined, { maximumFractionDigits: 0 });
   }, [price]);
 
+  if (!user) {
+    return (
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-center text-sm">
+        <p className="text-slate-600 dark:text-slate-400">
+          Sign in as an engineer to place a bid.
+        </p>
+        <Link href={`/login?next=/projects`}>
+          <Button className="mt-3 w-full" size="sm">
+            Sign in
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (user.role !== "ENGINEER") {
+    return (
+      <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+        Only verified engineers can submit bids on open projects.
+      </p>
+    );
+  }
+
+  if (project.status !== "OPEN") {
+    return (
+      <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+        Bidding is closed for this project.
+      </p>
+    );
+  }
+
   const handleSubmit = async () => {
     setSubmitting(true);
-    // Wire to your bid API endpoint here
-    await new Promise(r => setTimeout(r, 800)); // placeholder
-    setSubmitting(false);
-    setSubmitted(true);
+    setError(null);
+    try {
+      await createBid(project.id, {
+        price: parseFloat(price),
+        duration: `${weeks} weeks`,
+        description: cover,
+      });
+      setSubmitted(true);
+      onSubmitted?.();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(
+        err?.response?.data?.message ?? err?.message ?? "Failed to submit bid",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -43,12 +88,6 @@ export function BidForm({ project }: BidFormProps) {
           ✓ Bid submitted successfully!
         </p>
         <p className="mt-1 text-xs text-slate-500">The client will be notified.</p>
-        <button
-          onClick={() => setSubmitted(false)}
-          className="mt-3 text-xs text-electric-600 underline"
-        >
-          Edit bid
-        </button>
       </div>
     );
   }
@@ -64,7 +103,7 @@ export function BidForm({ project }: BidFormProps) {
           </label>
           <input
             value={price}
-            onChange={e => setPrice(e.target.value)}
+            onChange={(e) => setPrice(e.target.value)}
             className="mt-1 w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
           />
         </div>
@@ -74,7 +113,7 @@ export function BidForm({ project }: BidFormProps) {
           </label>
           <input
             value={weeks}
-            onChange={e => setWeeks(e.target.value)}
+            onChange={(e) => setWeeks(e.target.value)}
             className="mt-1 w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
           />
         </div>
@@ -83,7 +122,7 @@ export function BidForm({ project }: BidFormProps) {
       <textarea
         placeholder={t("pm.coverLetter")}
         value={cover}
-        onChange={e => setCover(e.target.value)}
+        onChange={(e) => setCover(e.target.value)}
         rows={3}
         className="mt-3 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
       />
@@ -94,7 +133,7 @@ export function BidForm({ project }: BidFormProps) {
           <span className="font-bold text-slate-900 dark:text-white">${net}</span>
         </span>
       </div>
-
+      {error && <p className="mt-2 text-xs text-rose-500">{error}</p>}
       <Button
         className="mt-3 w-full"
         icon={<IconArrow width={14} height={14} />}

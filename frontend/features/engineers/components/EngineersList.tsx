@@ -13,13 +13,10 @@ import { EngineerCardSkeleton } from "./EngineerCardSkeleton";
 const DISCIPLINES = [
   { id: "All", labelKey: "disc.all" },
   { id: "CIVIL", labelKey: "disc.civil" },
-  { id: "STRUCTURAL", labelKey: "disc.structural" },
   { id: "ARCHITECTURAL", labelKey: "disc.architecture" },
-  { id: "MEP", labelKey: "disc.mep" },
-  { id: "BIM", labelKey: "disc.bim" },
 ] as const;
 
-export function EngineersPage() {
+export function EngineersList() {
   const { t } = useI18n();
   const { engineers, loading, error } = useEngineers();
   const [search, setSearch] = useState("");

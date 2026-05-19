@@ -1,7 +1,7 @@
 // features/users/hooks/useEngineerById.ts
 "use client";
 import { useState, useEffect } from "react";
-import { getEngineerById } from "@/features/users/api/user.api";
+import { getEngineerById } from "@/features/engineers/api/engineer.api";
 import type { Engineer } from "@/types";
 
 export function useEngineerById(id: number) {

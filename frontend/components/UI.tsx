@@ -382,3 +382,23 @@ export function Shell({ children }: { children: ReactNode }) {
   );
 }
 
+export function SectionHeader({
+  eyebrow,
+  title,
+  subtitle,
+  center,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+  center?: boolean;
+}) {
+  return (
+    <div className={center ? "text-center" : ""}>
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-electric-600">{eyebrow}</p>
+      <h2 className="mt-4 text-4xl font-bold tracking-tight text-slate-950 dark:text-white">{title}</h2>
+      {subtitle ? <p className="mt-4 text-lg leading-8 text-slate-600 dark:text-slate-300">{subtitle}</p> : null}
+    </div>
+  );
+}
+

@@ -3,7 +3,7 @@
 // Any component that needs the current user imports from here.
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { getMe, updateMe } from "@/features/users/api/user.api";
+import { getMe, updateMe } from "@/features/engineers/api/engineer.api";
 import type { Me } from "@/types";
 
 export interface UseMeReturn {

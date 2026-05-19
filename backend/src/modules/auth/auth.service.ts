@@ -74,7 +74,6 @@ export async function registerEngineer(
   return userWithoutPassword;
 }
 
-
 // Step 1 — validate credentials, send OTP
 export async function login(data: loginInput) {
   const { email, password } = data;
@@ -85,11 +84,14 @@ export async function login(data: loginInput) {
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) throw new ApiError(400, "Invalid email or password");
   if (!user.isVerified) {
-  throw new ApiError(403, "Please verify your email before logging in")
-}
+    throw new ApiError(403, "Please verify your email before logging in");
+  }
 
   // generate 6 digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp =
+    process.env.FIXED_OTP ??
+    Math.floor(100000 + Math.random() * 900000).toString();
 
   // store in Redis with 10 min expiry
   await redis.set(`otp:${user.id}`, otp, "EX", 600);
@@ -107,7 +109,10 @@ export async function login(data: loginInput) {
     console.log("OTP email sent:", info.messageId, info.accepted);
   } catch (error) {
     // Log email error but don't fail the login
-    console.warn("Failed to send OTP email:", error instanceof Error ? error.message : "Unknown error");
+    console.warn(
+      "Failed to send OTP email:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
     console.warn(`OTP for ${email}: ${otp}`);
   }
 
@@ -166,7 +171,10 @@ export async function forgotPassword(email: string) {
     console.log("Reset email sent:", info.messageId, info.accepted);
   } catch (error) {
     // Log email error but don't fail the request
-    console.warn("Failed to send password reset email:", error instanceof Error ? error.message : "Unknown error");
+    console.warn(
+      "Failed to send password reset email:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
     console.warn(`Password reset link: ${resetUrl}`);
   }
 }

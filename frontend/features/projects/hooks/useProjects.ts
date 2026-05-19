@@ -1,8 +1,5 @@
 /**
- * useProjects.ts
- * React hooks that wrap projectApi.ts.
- * No external query library required — uses plain useEffect + useState.
- * Drop-in replaceable with React Query if you add it later.
+ * useProjects.ts — hooks wrapping project.api.ts (cookie auth).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,158 +15,178 @@ import {
   updateProject,
 } from "../api/project.api";
 
-// ─── Shared state shape ───────────────────────────────────────────────────────
-
 interface AsyncState<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
 }
 
-function useAsyncState<T>(initial: T | null = null): [AsyncState<T>, (fn: () => Promise<T>) => Promise<void>] {
-  const [state, setState] = useState<AsyncState<T>>({ data: initial, loading: false, error: null });
+function useAsyncState<T>(
+  initial: T | null = null,
+): [AsyncState<T>, (fn: () => Promise<T>) => Promise<void>] {
+  const [state, setState] = useState<AsyncState<T>>({
+    data: initial,
+    loading: false,
+    error: null,
+  });
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
   const run = useCallback(async (fn: () => Promise<T>) => {
-    setState(s => ({ ...s, loading: true, error: null }));
+    setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const data = await fn();
       if (mounted.current) setState({ data, loading: false, error: null });
     } catch (err) {
       if (mounted.current)
-        setState(s => ({ ...s, loading: false, error: (err as Error).message }));
+        setState((s) => ({
+          ...s,
+          loading: false,
+          error: (err as Error).message,
+        }));
     }
   }, []);
 
   return [state, run];
 }
 
-// ─── useProjects ──────────────────────────────────────────────────────────────
+function axiosMessage(err: unknown): string {
+  const e = err as { response?: { data?: { message?: string } }; message?: string };
+  return e?.response?.data?.message ?? e?.message ?? "Request failed";
+}
 
-/**
- * Fetches all OPEN projects from the public endpoint.
- * Re-fetches whenever `refresh` changes (call `refetch()` to trigger).
- */
+/** Fetches all OPEN projects (public). */
 export function useProjects() {
   const [state, run] = useAsyncState<Project[]>([]);
   const [tick, setTick] = useState(0);
 
-  useEffect(() => { run(fetchProjects); }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    run(async () => {
+      try {
+        return await fetchProjects();
+      } catch (err) {
+        throw new Error(axiosMessage(err));
+      }
+    });
+  }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { ...state, refetch: () => setTick(t => t + 1) };
+  return { ...state, refetch: () => setTick((t) => t + 1) };
 }
 
-// ─── useProject ───────────────────────────────────────────────────────────────
-
-/**
- * Fetches a single project by id (includes bids).
- * Re-fetches when `id` changes.
- */
+/** Fetches a single project by id (includes bids). */
 export function useProject(id: number | null) {
   const [state, run] = useAsyncState<Project>();
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (id == null) return;
-    run(() => fetchProjectById(id));
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+    run(async () => {
+      try {
+        return await fetchProjectById(id);
+      } catch (err) {
+        throw new Error(axiosMessage(err));
+      }
+    });
+  }, [id, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return state;
+  return { ...state, refetch: () => setTick((t) => t + 1) };
 }
 
-// ─── useMyProjects ────────────────────────────────────────────────────────────
-
-/**
- * Fetches projects belonging to the authenticated client.
- * Pass `token` from your auth context / session.
- */
-export function useMyProjects(token: string | null) {
+/** Fetches projects for the logged-in client. */
+export function useMyProjects(enabled = true) {
   const [state, run] = useAsyncState<Project[]>([]);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (!token) return;
-    run(() => fetchMyProjects(token));
-  }, [token, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!enabled) return;
+    run(async () => {
+      try {
+        return await fetchMyProjects();
+      } catch (err) {
+        throw new Error(axiosMessage(err));
+      }
+    });
+  }, [enabled, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { ...state, refetch: () => setTick(t => t + 1) };
+  return { ...state, refetch: () => setTick((t) => t + 1) };
 }
 
-// ─── useCreateProject ─────────────────────────────────────────────────────────
-
-/**
- * Returns a `create` function plus loading/error state.
- * On success calls optional `onSuccess` callback (e.g. to invalidate list).
- */
-export function useCreateProject(token: string | null, onSuccess?: (p: Project) => void) {
-  const [state, run] = useAsyncState<Project>();
+export function useCreateProject(onSuccess?: (p: Project) => void) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const create = useCallback(
-    (payload: CreateProjectPayload) => {
-      if (!token) return Promise.reject(new Error("Not authenticated"));
-      return run(async () => {
-        const project = await createProject(payload, token);
+    async (payload: CreateProjectPayload) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const project = await createProject(payload);
         onSuccess?.(project);
         return project;
-      });
+      } catch (err) {
+        const msg = axiosMessage(err);
+        setError(msg);
+        throw new Error(msg);
+      } finally {
+        setLoading(false);
+      }
     },
-    [token, onSuccess, run],
+    [onSuccess],
   );
 
-  return { ...state, create };
+  return { create, loading, error };
 }
 
-// ─── useUpdateProject ─────────────────────────────────────────────────────────
-
-/**
- * Returns an `update` function plus loading/error state.
- */
-export function useUpdateProject(token: string | null, onSuccess?: (p: Project) => void) {
-  const [state, run] = useAsyncState<Project>();
+export function useUpdateProject(onSuccess?: (p: Project) => void) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const update = useCallback(
-    (id: number, payload: UpdateProjectPayload) => {
-      if (!token) return Promise.reject(new Error("Not authenticated"));
-      return run(async () => {
-        const project = await updateProject(id, payload, token);
+    async (id: number, payload: UpdateProjectPayload) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const project = await updateProject(id, payload);
         onSuccess?.(project);
         return project;
-      });
+      } catch (err) {
+        const msg = axiosMessage(err);
+        setError(msg);
+        throw new Error(msg);
+      } finally {
+        setLoading(false);
+      }
     },
-    [token, onSuccess, run],
+    [onSuccess],
   );
 
-  return { ...state, update };
+  return { update, loading, error };
 }
 
-// ─── useDeleteProject ─────────────────────────────────────────────────────────
-
-/**
- * Returns a `remove` function plus loading/error state.
- */
-export function useDeleteProject(token: string | null, onSuccess?: () => void) {
+export function useDeleteProject(onSuccess?: () => void) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const remove = useCallback(
     async (id: number) => {
-      if (!token) return;
       setLoading(true);
       setError(null);
       try {
-        await deleteProject(id, token);
+        await deleteProject(id);
         onSuccess?.();
       } catch (err) {
-        setError((err as Error).message);
+        setError(axiosMessage(err));
       } finally {
         setLoading(false);
       }
     },
-    [token, onSuccess],
+    [onSuccess],
   );
 
   return { loading, error, remove };

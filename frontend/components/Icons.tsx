@@ -20,6 +20,11 @@ export const IconLogo = (p: P) => (
     <path d="M9 20v-6h6v6" />
   </svg>
 );
+export const IconGlobe = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 2a8 8 0 0 1 7.18 4.51A19.84 19.84 0 0 1 12 10a19.84 19.84 0 0 1-7.18-1.49A8 8 0 0 1 12 4Zm0 16a8 8 0 0 1-7.18-4.51A19.84 19.84 0 0 0 12 14a19.84 19.84 0 0 0 7.18 1.49A8 8 0 0 1 12 20Z" />
+  </svg>
+);
 export const IconSearch = (p: P) => (
   <svg {...base(p)}>
     <circle cx="11" cy="11" r="7" />
@@ -161,6 +166,20 @@ export const IconCube = (p: P) => (
     <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
     <path d="m3 7 9 5 9-5" />
     <path d="M12 12v10" />
+  </svg>
+);
+export const IconLayers = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 3 2 7l10 4 10-4-10-4Z" />
+    <path d="M2 11l10 4 10-4" />
+    <path d="M2 17l10 4 10-4" />
+  </svg>
+);
+export const IconCompass = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 5v7" />
+    <path d="m15 15-6 2 2-6 4-2-2 6Z" />
   </svg>
 );
 export const IconMoon = (p: P) => (

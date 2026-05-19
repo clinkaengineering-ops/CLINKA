@@ -133,19 +133,22 @@ export interface EscrowOverview {
 // ── Project marketplace ───────────────────────────────────────────────────────
 export type ServiceType = "DESIGN" | "SUPERVISION" | "REVIEW";
 
+// This type is used by the global types only — the project marketplace uses
+// the Project type from features/projects/api/project.api.ts which matches the backend.
+// Keeping this alias for any legacy references.
 export interface Project {
   id: number;
   title: string;
   description: string;
-  discipline: string;
-  budgetMin: number;
-  budgetMax: number;
-  timelineWeeks: number;
-  clientName: string;
-  postedAt: string;
-  bidsCount: number;
-  isFeatured: boolean;
-}
+  budget: number;
+  serviceType: "DESIGN" | "SUPERVISION" | "REVIEW";
+  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  clientId: number;
+  createdAt: string;
+  updatedAt: string;
+  client?: { id: number; name: string };
+  _count?: { bids: number };
+} 
 
 export interface Bid {
   id: number;

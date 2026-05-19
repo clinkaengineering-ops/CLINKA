@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useMe } from "../../../users/hooks/useMe";
+import { useMe } from "../../../auth/hooks/useMe";
 import { DashboardHeader } from "../components/DashboardHeader";
 import { ClientProfile } from "../components/ClientProfile";
 
@@ -12,8 +12,8 @@ export function ClientDashboardPage() {
     <div>
       <DashboardHeader
         me={me}
-        onNewProject={() => router.push("/projects/new")}
-        onInviteTeam={() => router.push("/settings/team")}
+        onNewProject={() => router.push("/projects?create=1")}
+        onInviteTeam={() => router.push("/settings")}
       />
       <ClientProfile
         me={me}
