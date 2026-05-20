@@ -104,5 +104,21 @@ export async function approveBid(clientId: number, bidId: number) {
     data: { status: "IN_PROGRESS" },
   });
 
+  // Create conversation between client and engineer for this project
+const engineerUser = await db.user.findFirst({
+  where: { profile: { id: bid.engineerId } },
+  select: { id: true },
+});
+
+await db.conversation.upsert({
+  where: { projectId: project.id },
+  create: {
+    projectId: project.id,
+    clientId: project.clientId,
+    engineerId: engineerUser!.id,
+  },
+  update: {}, // already exists, do nothing
+});
+
   return { message: "Bid approved and project assigned to engineer" };
 }

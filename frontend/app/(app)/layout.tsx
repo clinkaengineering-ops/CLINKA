@@ -21,7 +21,7 @@ const navItems = [
 
   // Workspace
   { href: "/dashboard", label: "side.clientDash", icon: IconChart, section: "side.workspace" },
-  { href: "/messages", label: "side.messages", icon: IconMessage, section: "side.workspace", badge: "3" },
+  { href: "/messages", label: "side.messages", icon: IconMessage, section: "side.workspace" },
   { href: "/escrow", label: "side.escrow", icon: IconWallet, section: "side.workspace" },
 
   // Operations
@@ -118,7 +118,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
                         >
                           <Icon width={18} height={18} />
                           <span className="flex-1 text-start">{t(item.label)}</span>
-                          {item.badge && <Badge color="electric">{item.badge}</Badge>}
                           {active && <span className="h-1.5 w-1.5 rounded-full bg-electric-500" />}
                         </Link>
                       );

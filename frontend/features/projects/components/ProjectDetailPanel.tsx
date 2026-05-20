@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Badge, Card } from "@/components/UI";
 import { IconStar } from "@/components/Icons";
 import { useI18n } from "@/i18n";
@@ -100,6 +101,15 @@ export function ProjectDetailPanel({
           canManage={isOwner && user?.role === "CLIENT"}
           onUpdated={onRefresh}
         />
+
+        {isOwner && project.status === "IN_PROGRESS" && (
+          <Link
+            href={`/messages?project=${project.id}`}
+            className="block text-center text-sm font-semibold text-electric-600 hover:underline"
+          >
+            Open project chat →
+          </Link>
+        )}
 
         {!isOwner && <BidForm project={project} onSubmitted={onRefresh} />}
       </div>

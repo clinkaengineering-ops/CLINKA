@@ -138,6 +138,17 @@ export const IconSend = (p: P) => (
     <path d="m22 2-11 20-2-9-9-2 22-9Z" />
   </svg>
 );
+export const IconFile = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
+    <path d="M14 3v5h5" />
+  </svg>
+);
+export const IconPaperclip = (p: P) => (
+  <svg {...base(p)}>
+    <path d="m21 12-9 9a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" />
+  </svg>
+);
 export const IconLock = (p: P) => (
   <svg {...base(p)}>
     <rect x="4" y="11" width="16" height="10" rx="2" />

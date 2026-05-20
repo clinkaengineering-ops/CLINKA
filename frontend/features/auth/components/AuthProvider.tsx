@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { getMe } from "@/features/engineers/api/engineer.api";
 import useAuthStore from "@/store/authStore";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/settings", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/settings", "/admin", "/messages"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
