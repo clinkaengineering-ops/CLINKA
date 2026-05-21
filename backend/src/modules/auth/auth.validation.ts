@@ -36,4 +36,14 @@ export type clientRegisterInput = z.infer<typeof clientRegisterSchema>;
 export type engineerRegisterInput = z.infer<typeof engineerRegisterSchema>;
 export type loginInput = z.infer<typeof loginSchema>;
 export type forgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export const requestEmailChangeSchema = z.object({
+  newEmail: z.string().email("Invalid email address"),
+});
+
+export const confirmEmailChangeSchema = z.object({
+  otp: z.string().length(6, "OTP must be 6 digits"),
+});
+
 export type resetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type RequestEmailChangeInput = z.infer<typeof requestEmailChangeSchema>;
+export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>;

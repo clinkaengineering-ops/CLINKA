@@ -1,6 +1,6 @@
 // features/users/components/EngineersPage.tsx
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card } from "@/components/UI";
 import { IconFilter } from "@/components/Icons";
 import { IconSearch } from "@/components/Icons";
@@ -18,16 +18,19 @@ const DISCIPLINES = [
 
 export function EngineersList() {
   const { t } = useI18n();
-  const { engineers, loading, error } = useEngineers();
   const [search, setSearch] = useState("");
-  const [active, setActive] = useState("All");
 
-  const filtered = engineers.filter((e) => {
-    const matchSearch = e.name.toLowerCase().includes(search.toLowerCase());
-    const matchSpecialty =
-      active === "All" || e.profile?.specialty === active;
-    return matchSearch && matchSpecialty;
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setSearch(q);
+  }, []);
+  const [active, setActive] = useState("All");
+  const { engineers, loading, error } = useEngineers({
+    q: search || undefined,
+    specialty: active !== "All" ? active : undefined,
   });
+
+  const filtered = engineers;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">

@@ -13,7 +13,11 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
   return (
     <Card className="p-5 hover:-translate-y-1 hover:border-electric-500/40 hover:shadow-xl hover:shadow-electric-500/10 transition group">
       <div className="flex items-start gap-4">
-        <Avatar name={engineer.name} size={56} />
+        <Avatar
+          name={engineer.name}
+          src={engineer.avatarUrl ?? undefined}
+          size={56}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <p className="font-bold truncate">{engineer.name}</p>

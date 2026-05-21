@@ -6,7 +6,12 @@ import { Button } from "@/components/UI";
 import { IconBriefcase } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
-import { useProjects, useProject } from "../hooks/useProjects";
+import {
+  useProjects,
+  useProject,
+  useMyProjects,
+  useAssignedProjects,
+} from "../hooks/useProjects";
 import { ProjectFilters } from "./ProjectFilters";
 import { ProjectListPanel } from "./ProjectListPanel";
 import { ProjectDetailPanel } from "./ProjectDetailPanel";
@@ -18,16 +23,58 @@ export default function ProjectMarketplace() {
   const searchParams = useSearchParams();
   const user = useAuthStore((s) => s.user);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [budget, setBudget] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [activeDisc, setActiveDisc] = useState("All");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [postOpen, setPostOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"browse" | "mine" | "contracts">(
+    "browse",
+  );
 
-  const { data: allProjects, loading, error, refetch } = useProjects();
+  const isClient = user?.role === "CLIENT";
+  const isEngineer = user?.role === "ENGINEER";
+  const urlQ = searchParams.get("q") ?? "";
+  const { data: allProjects, loading, error, refetch } = useProjects(
+    viewMode === "browse"
+      ? {
+          q: search || urlQ || undefined,
+          serviceType: serviceType || undefined,
+        }
+      : undefined,
+  );
+  const {
+    data: myProjects,
+    loading: myLoading,
+    error: myError,
+    refetch: refetchMy,
+  } = useMyProjects(isClient);
+  const {
+    data: assignedProjects,
+    loading: assignedLoading,
+    error: assignedError,
+    refetch: refetchAssigned,
+  } = useAssignedProjects(isEngineer);
 
-  const projects = allProjects ?? [];
+  const projects =
+    viewMode === "mine" && isClient
+      ? (myProjects ?? [])
+      : viewMode === "contracts" && isEngineer
+        ? (assignedProjects ?? [])
+        : (allProjects ?? []);
+  const listLoading =
+    viewMode === "mine" && isClient
+      ? myLoading
+      : viewMode === "contracts" && isEngineer
+        ? assignedLoading
+        : loading;
+  const listError =
+    viewMode === "mine" && isClient
+      ? myError
+      : viewMode === "contracts" && isEngineer
+        ? assignedError
+        : error;
   const firstId = projects[0]?.id ?? null;
   const effectiveSelected = selectedId ?? firstId;
 
@@ -61,21 +108,46 @@ export default function ProjectMarketplace() {
   const handleSelect = useCallback((id: number) => setSelectedId(id), []);
 
   useEffect(() => {
+    if (searchParams.get("view") === "mine" && isClient) {
+      setViewMode("mine");
+    }
+    if (searchParams.get("view") === "contracts" && isEngineer) {
+      setViewMode("contracts");
+    }
+
+    const idParam = searchParams.get("id");
+    if (idParam) {
+      const id = Number(idParam);
+      if (!Number.isNaN(id)) {
+        setSelectedId(id);
+        if (isClient) setViewMode("mine");
+      }
+    }
+
     if (searchParams.get("create") !== "1") return;
 
     if (!user) {
       router.replace("/login?next=/projects?create=1");
       return;
     }
+    if (user.role === "ADMIN") {
+      router.replace("/projects", { scroll: false });
+      return;
+    }
     if (user.role === "CLIENT") {
       setPostOpen(true);
+      setViewMode("mine");
     }
     router.replace("/projects", { scroll: false });
-  }, [searchParams, user, router]);
+  }, [searchParams, user, router, isClient]);
 
   const handlePostClick = () => {
     if (!user) {
       router.push("/login?next=/projects?create=1");
+      return;
+    }
+    if (user.role === "ADMIN") {
+      router.push("/admin");
       return;
     }
     if (user.role !== "CLIENT") return;
@@ -84,6 +156,8 @@ export default function ProjectMarketplace() {
 
   const handleRefresh = () => {
     refetch();
+    if (isClient) refetchMy();
+    if (isEngineer) refetchAssigned();
     refetchDetail();
   };
 
@@ -94,14 +168,48 @@ export default function ProjectMarketplace() {
           <h1 className="text-3xl font-bold tracking-tight">{t("pm.title")}</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">{t("pm.subtitle")}</p>
         </div>
-        <div className="flex gap-2">
-          {user?.role === "CLIENT" && (
-            <Button
-              icon={<IconBriefcase width={16} height={16} />}
-              onClick={handlePostClick}
-            >
-              {t("common.postProject")}
-            </Button>
+        <div className="flex gap-2 flex-wrap">
+          {isClient && (
+            <>
+              <Button
+                variant={viewMode === "browse" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setViewMode("browse")}
+              >
+                {t("pm.browse")}
+              </Button>
+              <Button
+                variant={viewMode === "mine" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setViewMode("mine")}
+              >
+                {t("pm.myProjects")}
+              </Button>
+              <Button
+                icon={<IconBriefcase width={16} height={16} />}
+                onClick={handlePostClick}
+              >
+                {t("common.postProject")}
+              </Button>
+            </>
+          )}
+          {isEngineer && (
+            <>
+              <Button
+                variant={viewMode === "browse" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setViewMode("browse")}
+              >
+                {t("pm.browse")}
+              </Button>
+              <Button
+                variant={viewMode === "contracts" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setViewMode("contracts")}
+              >
+                {t("pm.myContracts")}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -117,7 +225,7 @@ export default function ProjectMarketplace() {
         onDisc={setActiveDisc}
       />
 
-      {!loading && (
+      {!listLoading && (
         <p className="text-sm text-slate-500">
           <span className="font-semibold text-slate-900 dark:text-white">
             {filtered.length}
@@ -129,8 +237,8 @@ export default function ProjectMarketplace() {
       <div className="grid lg:grid-cols-[1fr_420px] gap-6">
         <ProjectListPanel
           projects={filtered}
-          loading={loading}
-          error={error}
+          loading={listLoading}
+          error={listError}
           selectedId={effectiveSelected}
           onSelect={handleSelect}
         />

@@ -14,7 +14,13 @@ export async function getMe(userId: number) {
     where: { id: userId },
     include: {
       profile: {
-        include: { portfolio: true, reviews: true },
+        include: {
+          portfolio: true,
+          reviews: {
+            include: { client: { select: { id: true, name: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        },
       },
     },
   });
@@ -26,7 +32,7 @@ export async function getMe(userId: number) {
 // FIX 1: Always includes profile in the response so the frontend Me type is complete.
 // FIX 2: bio can be "" (empty string) — use `bio !== undefined` not `bio &&`.
 export async function updateMe(userId: number, data: updateProfileInput) {
-  const { name, bio } = data;
+  const { name, bio, coverImageUrl } = data;
 
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -42,11 +48,20 @@ export async function updateMe(userId: number, data: updateProfileInput) {
       ...(bio !== undefined && user.profile
         ? { profile: { update: { bio } } }
         : {}),
+      ...(coverImageUrl !== undefined && user.profile
+        ? { profile: { update: { coverImageUrl } } }
+        : {}),
     },
     // Always return the full Me shape including profile
     include: {
       profile: {
-        include: { portfolio: true, reviews: true },
+        include: {
+          portfolio: true,
+          reviews: {
+            include: { client: { select: { id: true, name: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        },
       },
     },
   });
@@ -54,17 +69,63 @@ export async function updateMe(userId: number, data: updateProfileInput) {
   return stripPassword(updatedUser);
 }
 
+export async function updateAvatar(userId: number, avatarUrl: string) {
+  const user = await db.user.update({
+    where: { id: userId },
+    data: { avatarUrl },
+    include: {
+      profile: {
+        include: {
+          portfolio: true,
+          reviews: {
+            include: { client: { select: { id: true, name: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      },
+    },
+  });
+  return stripPassword(user);
+}
+
+export async function updateCoverImage(userId: number, coverImageUrl: string) {
+  const profile = await db.engineerProfile.findUnique({ where: { userId } });
+  if (!profile) throw new ApiError(404, "Engineer profile not found");
+  await db.engineerProfile.update({
+    where: { userId },
+    data: { coverImageUrl },
+  });
+  return getMe(userId);
+}
+
 // ── getEngineers ──────────────────────────────────────────────────────────────
-// Only returns APPROVED engineers — keeps the list consistent.
-export async function getEngineers() {
+export async function getEngineers(query?: { q?: string; specialty?: string }) {
+  const q = query?.q?.trim();
   const engineers = await db.user.findMany({
     where: {
       role: "ENGINEER",
-      profile: { verificationStatus: "APPROVED" },
+      profile: {
+        verificationStatus: "APPROVED",
+        ...(query?.specialty ? { specialty: query.specialty as "CIVIL" | "ARCHITECTURAL" } : {}),
+      },
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { profile: { bio: { contains: q, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
     },
     include: {
       profile: {
-        include: { portfolio: true, reviews: true },
+        include: {
+          portfolio: true,
+          reviews: {
+            include: { client: { select: { id: true, name: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        },
       },
     },
   });
@@ -78,16 +139,34 @@ export async function getEngineerById(engineerId: number) {
   const engineer = await db.user.findUnique({
     where: {
       id: engineerId,
-      role: "ENGINEER", // guard: only fetch users who are actually engineers
+      role: "ENGINEER",
     },
     include: {
       profile: {
-        include: { portfolio: true, reviews: true },
+        include: {
+          portfolio: true,
+          reviews: {
+            include: { client: { select: { id: true, name: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        },
       },
     },
   });
   if (!engineer) throw new ApiError(404, "Engineer not found");
-  return stripPassword(engineer);
+
+  const profileId = engineer.profile?.id;
+  let completedProjects = 0;
+  if (profileId) {
+    completedProjects = await db.project.count({
+      where: {
+        status: "COMPLETED",
+        bids: { some: { engineerId: profileId, status: "ACCEPTED" } },
+      },
+    });
+  }
+
+  return { ...stripPassword(engineer), completedProjects };
 }
 
 // ── addPortfolioItem ──────────────────────────────────────────────────────────

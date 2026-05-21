@@ -10,6 +10,11 @@ import type {
 const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
   promise.then((r) => r.data.data);
 
+export const fetchUnreadMessagesCount = (): Promise<number> =>
+  unwrap(api.get<ApiResponse<{ count: number }>>("/messages/unread-count")).then(
+    (d) => d.count,
+  );
+
 /** GET /messages/conversations */
 export const fetchConversations = (): Promise<ConversationListItem[]> =>
   unwrap(api.get<ApiResponse<ConversationListItem[]>>("/messages/conversations")).then(

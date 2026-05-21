@@ -8,8 +8,9 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// DATABASE_URL is configured in prisma.config.ts (Prisma 7)
 datasource db {
-provider = "postgresql"
+  provider = "postgresql"
 }
 
 enum Role {
@@ -44,6 +45,7 @@ REJECTED
 
 enum PaymentStatus{
 PENDING
+FUNDED
 RELEASED
 REFUNDED
 }
@@ -59,8 +61,11 @@ id Int @id @default(autoincrement())
 name String
 email String @unique
 password String
+googleId String? @unique
 role Role @default(CLIENT)
 isVerified Boolean @default(false)
+avatarUrl String?
+notificationPrefs Json?
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 
@@ -68,6 +73,7 @@ profile EngineerProfile?
 projects Project[]
 reviews Review[]
 messages Message[]
+notifications Notification[]
 clientConversations Conversation[] @relation("ClientConversations")
 engineerConversations Conversation[] @relation("EngineerConversations")
 
@@ -77,6 +83,7 @@ model EngineerProfile {
   userId             Int                @unique
   specialty          EngineerSpecialty
   bio                String?
+  coverImageUrl      String?
   verificationStatus VerificationStatus @default(PENDING)
 
   collegeIdUrl     String?
@@ -137,26 +144,42 @@ model Bid {
 }
 
 model Payment {
-  id              Int           @id @default(autoincrement())
-  projectId       Int           @unique
-  clientId        Int
-  engineerId      Int
-  amount          Float
-  commission      Float
-  stripePaymentId String
-  status          PaymentStatus @default(PENDING)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                 Int           @id @default(autoincrement())
+  projectId          Int           @unique
+  clientId           Int
+  engineerId         Int
+  amount             Float
+  commission         Float
+  gatewayInvoiceId   String?
+  gatewayInvoiceKey  String?
+  status             PaymentStatus @default(PENDING)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   project Project @relation(fields: [projectId], references: [id])
 }
 
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  title     String
+  body      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Conversation {
-  id         Int      @id @default(autoincrement())
-  projectId  Int      @unique
-  clientId   Int
-  engineerId Int
-  createdAt  DateTime @default(now())
+  id                 Int       @id @default(autoincrement())
+  projectId          Int       @unique
+  clientId           Int
+  engineerId         Int
+  clientLastReadAt   DateTime?
+  engineerLastReadAt DateTime?
+  createdAt          DateTime  @default(now())
 
   project  Project  @relation(fields: [projectId], references: [id])
   client   User     @relation("ClientConversations", fields: [clientId], references: [id])

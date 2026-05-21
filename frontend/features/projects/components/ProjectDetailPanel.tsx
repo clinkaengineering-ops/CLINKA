@@ -8,6 +8,7 @@ import useAuthStore from "@/store/authStore";
 import type { Project, ServiceType } from "../api/project.api";
 import { BidForm } from "@/features/bids/components/BidForm";
 import { ProjectBidsList } from "./ProjectBidsList";
+import { ProjectReviewSection } from "@/features/reviews/components/ProjectReviewSection";
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   DESIGN: "Design",
@@ -109,6 +110,18 @@ export function ProjectDetailPanel({
           >
             Open project chat →
           </Link>
+        )}
+
+        {isOwner && (project.status === "IN_PROGRESS" || project.status === "COMPLETED") && (
+          <ProjectReviewSection
+            projectId={project.id}
+            projectTitle={project.title}
+            engineerName={
+              project.bids?.find((b) => b.status === "ACCEPTED")?.engineer.user
+                .name
+            }
+            onSubmitted={onRefresh}
+          />
         )}
 
         {!isOwner && <BidForm project={project} onSubmitted={onRefresh} />}

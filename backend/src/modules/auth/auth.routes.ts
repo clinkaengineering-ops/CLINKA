@@ -9,7 +9,12 @@ import {
   resetPasswordController,
   resendVerificationController,
   changePasswordController,
+  confirmEmailChangeController,
+  requestEmailChangeController,
   verifyOtpController,
+  googleAuthStartController,
+  googleAuthCallbackController,
+  googleAuthStatusController,
 } from "./auth.controller";
 import upload from "../../middlewares/upload.middleware";
 import { authenticate } from "../../middlewares/auth.middleware";
@@ -25,6 +30,12 @@ router.post("/forgot-password", forgotPasswordController);
 router.post("/reset-password", resetPasswordController);
 router.post("/resend-verification", authenticate, resendVerificationController);
 router.post("/change-password", authenticate, changePasswordController);
+router.post("/request-email-change", authenticate, requestEmailChangeController);
+router.post("/confirm-email-change", authenticate, confirmEmailChangeController);
 router.post("/verify-otp", verifyOtpController);
+
+router.get("/google/status", googleAuthStatusController);
+router.get("/google", googleAuthStartController);
+router.get("/google/callback", googleAuthCallbackController);
 
 export default router;

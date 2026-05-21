@@ -15,6 +15,7 @@ export interface User {
   email: string;
   role: Role;
   isVerified: boolean;
+  avatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -30,7 +31,10 @@ export interface Review {
   id: number;
   rating: number;
   comment: string | null;
-  createdAt: string; // was missing — used in EngineerProfilePage
+  createdAt: string;
+  projectId?: number;
+  client?: { id: number; name: string };
+  project?: { id: number; title: string };
 }
 
 // ── Engineer profile (full shape returned by GET /users/engineers/:id) ────────
@@ -39,6 +43,7 @@ export interface EngineerProfile {
   userId: number;
   bio: string | null;
   specialty: string | null;
+  coverImageUrl?: string | null;
   averageRating: number | null;
   totalReviews: number;
   verificationStatus: VerificationStatus;
@@ -64,6 +69,7 @@ export interface Engineer {
   email: string;
   role: Role;
   isVerified: boolean;
+  avatarUrl?: string | null;
   createdAt: string;
   profile: EngineerProfile | null;
 }
@@ -78,11 +84,33 @@ export interface Message {
   unread: number;
 }
 
+export interface AppNotification {
+  id: number;
+  type: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPrefs {
+  newBid?: boolean;
+  bidAccepted?: boolean;
+  fundsReleased?: boolean;
+  newMessage?: boolean;
+}
+
+/** @deprecated use AppNotification */
 export interface Notification {
   id: string;
   title: string;
   time: string;
   read: boolean;
+}
+
+export interface EngineerDetail extends Engineer {
+  completedProjects?: number;
 }
 
 // ── Client dashboard shapes ───────────────────────────────────────────────────

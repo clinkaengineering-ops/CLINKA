@@ -2,14 +2,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRegister } from "@/features/auth/hooks/useRegister";
+import { startGoogleSignIn } from "@/features/auth/lib/googleAuth";
 import { cn } from "@/utils/cn";
 import {
   Button,
   Card,
+  Divider,
   Field,
   Input,
   Textarea,
-  
 } from "@/components/UI";
 import { IconArrow, IconBriefcase, IconCheck, IconLock, IconMail, IconUser } from "@/components/Icons";
 
@@ -54,7 +55,7 @@ export function RegisterForm() {
   }
 
   return (
-    <Card>
+    <Card className="p-6 sm:p-8">
       <p className="text-xs uppercase tracking-wider text-electric-600 font-bold">
         Step {step} of {role === "CLIENT" ? 2 : stepLabels.length}
       </p>
@@ -104,6 +105,21 @@ export function RegisterForm() {
         {/* Step 2 — Basic details */}
         {step === 2 && (
           <div className="space-y-4">
+            {role && (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full !h-11"
+                  onClick={() =>
+                    startGoogleSignIn({ role: role ?? "CLIENT" })
+                  }
+                >
+                  Continue with Google
+                </Button>
+                <Divider />
+              </>
+            )}
             <Field label="Full name">
               <Input
                 icon={<IconUser width={16} height={16} />}

@@ -45,7 +45,7 @@ export function VerifyEmailForm() {
   }, []);
 
   return (
-    <Card>
+    <Card className="p-6 sm:p-8">
       <div className="text-center space-y-4">
         {status === "loading" && (
           <>

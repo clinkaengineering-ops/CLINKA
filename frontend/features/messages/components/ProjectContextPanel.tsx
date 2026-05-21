@@ -12,6 +12,13 @@ const STATUS_COLORS: Record<string, "green" | "amber" | "blue" | "slate"> = {
   CANCELLED: "slate",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: "Inquiry / Bidding",
+  IN_PROGRESS: "In progress",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
 export function ProjectContextPanel({ conversation }: ProjectContextPanelProps) {
   if (!conversation) {
     return (
@@ -30,7 +37,8 @@ export function ProjectContextPanel({ conversation }: ProjectContextPanelProps) 
         <p className="mt-1 font-bold text-sm">{conversation.projectTitle}</p>
         <div className="mt-2">
           <Badge color={STATUS_COLORS[conversation.projectStatus] ?? "slate"}>
-            {conversation.projectStatus.replace("_", " ")}
+            {STATUS_LABELS[conversation.projectStatus] ??
+              conversation.projectStatus.replace("_", " ")}
           </Badge>
         </div>
       </div>
@@ -40,8 +48,9 @@ export function ProjectContextPanel({ conversation }: ProjectContextPanelProps) 
         </p>
         <p className="text-sm font-medium">{conversation.participantName}</p>
         <p className="text-xs text-slate-500 mt-4">
-          Conversations are created when a client accepts an engineer&apos;s bid on a
-          project.
+          {conversation.projectStatus === "OPEN"
+            ? "This thread is for questions while the project is open for bidding."
+            : "Project messaging is tied to your active contract."}
         </p>
       </div>
     </aside>

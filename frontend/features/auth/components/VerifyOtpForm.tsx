@@ -8,7 +8,7 @@ export function VerifyOtpForm() {
   const [otp, setOtp] = useState("");
 
   return (
-    <Card>
+    <Card className="p-6 sm:p-8">
       <h1 className="text-2xl font-bold">Check your email</h1>
       <p className="text-sm text-slate-500 mt-1">Enter the 6-digit code we sent you</p>
 

@@ -12,6 +12,7 @@ import {
 } from "@/components/Icons";
 import type { LandingFeature, LandingStep, LandingStat } from "../api/landing.api";
 import { landingStats, marketingFeatures, howItWorksSteps } from "../api/landing.api";
+import { useLandingData } from "./useLandingData";
 
 export type LandingHeroContent = {
   badge: string;
@@ -53,29 +54,43 @@ export type LandingTestimonial = {
 
 export type LandingContent = {
   hero: LandingHeroContent;
-  features: Array<LandingFeature & { title: string; description: string; icon?: ComponentType<any> }>;
+  features: Array<
+    LandingFeature & { title: string; description: string; icon?: ComponentType<{ width?: number; height?: number }> }
+  >;
   steps: Array<LandingStep & { title: string; description: string }>;
   stats: Array<LandingStat & { label: string }>;
   cta: LandingCtaContent;
   trustedBy: string[];
   talent: LandingTalent[];
   testimonials: LandingTestimonial[];
+  platformLive: boolean;
 };
+
+function specialtyLabel(specialty: string, t: (k: string) => string): string {
+  if (specialty === "ARCHITECTURAL") return t("disc.architecture");
+  if (specialty === "CIVIL") return t("disc.structural");
+  return specialty;
+}
 
 export function useLandingContent(): LandingContent {
   const { t } = useI18n();
+  const { data: live } = useLandingData();
 
   const hero: LandingHeroContent = {
     badge: t("hero.badge"),
     title1: t("hero.title1"),
     title2: t("hero.title2"),
     subtitle: t("hero.subtitle"),
-    live: t("hero.live"),
-    escrowReleased: t("hero.escrowReleased"),
+    live: live
+      ? `${live.stats.openProjects} open projects`
+      : t("hero.live"),
+    escrowReleased: live
+      ? `${live.stats.escrowReleasedLabel} released via escrow`
+      : t("hero.escrowReleased"),
     primaryLabel: t("hero.hire"),
-    primaryHref: "/auth/register",
+    primaryHref: "/register",
     secondaryLabel: t("hero.findWork"),
-    secondaryHref: "/auth/login",
+    secondaryHref: "/login",
     points: [t("hero.f1"), t("hero.f2"), t("hero.f3")],
     trustedBy: t("hero.trustedBy"),
   };
@@ -88,14 +103,14 @@ export function useLandingContent(): LandingContent {
       feature.id === "verified-credentials"
         ? IconShield
         : feature.id === "milestone-escrow"
-        ? IconWallet
-        : feature.id === "bim-native-workflows"
-        ? IconCube
-        : feature.id === "discipline-bidding"
-        ? IconLayers
-        : feature.id === "operations-analytics"
-        ? IconTrend
-        : IconCompass,
+          ? IconWallet
+          : feature.id === "bim-native-workflows"
+            ? IconCube
+            : feature.id === "discipline-bidding"
+              ? IconLayers
+              : feature.id === "operations-analytics"
+                ? IconTrend
+                : IconCompass,
   }));
 
   const steps = howItWorksSteps.map((step) => ({
@@ -104,58 +119,72 @@ export function useLandingContent(): LandingContent {
     description: t(step.descriptionKey),
   }));
 
-  const stats = landingStats.map((stat) => ({
-    ...stat,
-    label: t(stat.labelKey),
-  }));
+  const stats = live
+    ? [
+        {
+          id: "open-projects",
+          labelKey: "stat.budget",
+          value: String(live.stats.openProjects),
+          label: "Open projects",
+        },
+        {
+          id: "engineers",
+          labelKey: "stat.timeline",
+          value: String(live.stats.verifiedEngineers),
+          label: "Verified engineers",
+        },
+        {
+          id: "bids",
+          labelKey: "stat.bids",
+          value: `${live.stats.totalBids}+`,
+          label: "Bids placed",
+        },
+      ]
+    : landingStats.map((stat) => ({
+        ...stat,
+        label: t(stat.labelKey),
+      }));
 
-  const trustedBy = ["AECOM", "Foster+", "ARCADIS", "WSP", "JACOBS", "BURO·H"];
+  const talent: LandingTalent[] = live?.featuredEngineers.length
+    ? live.featuredEngineers.map((e) => ({
+        name: e.name,
+        role: specialtyLabel(e.specialty, t),
+        rating: e.rating || 4.5,
+        projects: e.projectCount,
+        skills: e.skills.length ? e.skills : [specialtyLabel(e.specialty, t)],
+      }))
+    : [];
 
-  const talent: LandingTalent[] = [
-    {
-      name: "Layla Hassan",
-      role: `${t("disc.structural")} · Cairo`,
-      rating: 4.9,
-      projects: 64,
-      skills: ["ETABS", "Concrete"],
-    },
-    {
-      name: "Marcus Chen",
-      role: `${t("disc.bim")} · Singapore`,
-      rating: 4.8,
-      projects: 41,
-      skills: ["Revit", "ISO 19650"],
-    },
-    {
-      name: "Sofia Rinaldi",
-      role: `${t("disc.architecture")} · Milan`,
-      rating: 5.0,
-      projects: 32,
-      skills: ["Rhino", "LEED"],
-    },
-    {
-      name: "Ahmed Al-Farsi",
-      role: `${t("disc.mep")} · Dubai`,
-      rating: 4.7,
-      projects: 78,
-      skills: ["Revit MEP", "ASHRAE"],
-    },
-  ];
-
-  const testimonials: LandingTestimonial[] = [
-    { quote: t("test.1"), name: "Hana Park", role: "Director, Meridian Developments" },
-    { quote: t("test.2"), name: "Marcus Chen", role: "BIM Coordinator" },
-    { quote: t("test.3"), name: "Sofia Rinaldi", role: "Principal Architect, Studio R" },
-  ];
+  const testimonials: LandingTestimonial[] = live?.testimonials.length
+    ? live.testimonials.map((item) => ({
+        quote: item.quote,
+        name: item.name,
+        role: item.role,
+      }))
+    : [
+        { quote: t("test.1"), name: "Hana Park", role: "Director, Meridian Developments" },
+        { quote: t("test.2"), name: "Marcus Chen", role: "BIM Coordinator" },
+        { quote: t("test.3"), name: "Sofia Rinaldi", role: "Principal Architect, Studio R" },
+      ];
 
   const cta: LandingCtaContent = {
     title: t("cta.title"),
     subtitle: t("cta.subtitle"),
     primaryLabel: t("cta.create"),
     secondaryLabel: t("cta.explore"),
-    primaryHref: "/auth/register",
+    primaryHref: "/register",
     secondaryHref: "/projects",
   };
 
-  return { hero, features, steps, stats, cta, trustedBy, talent, testimonials };
+  return {
+    hero,
+    features,
+    steps,
+    stats,
+    cta,
+    trustedBy: ["AECOM", "Foster+", "ARCADIS", "WSP", "JACOBS", "BURO·H"],
+    talent,
+    testimonials,
+    platformLive: Boolean(live),
+  };
 }

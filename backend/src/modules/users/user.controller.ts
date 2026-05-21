@@ -9,6 +9,8 @@ import {
   getEngineerById,
   getEngineers,
   getMe,
+  updateAvatar,
+  updateCoverImage,
   updateMe,
 } from "./user.service";
 
@@ -45,7 +47,10 @@ export async function getEngineersController(
   next: NextFunction
 ) {
   try {
-    const engineers = await getEngineers();
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    const specialty =
+      typeof req.query.specialty === "string" ? req.query.specialty : undefined;
+    const engineers = await getEngineers({ q, specialty });
     res
       .status(200)
       .json(ApiResponse(200, "Engineers fetched successfully", engineers));
@@ -75,11 +80,44 @@ export async function addPortfolioItemController(
   next: NextFunction
 ) {
   try {
-    const validatedData = addPortfolioItemSchema.parse(req.body);
+    const imageUrl =
+      (req.file as Express.Multer.File | undefined)?.path ?? req.body.imageUrl;
+    const description = String(req.body.description ?? "").trim();
+    const validatedData = addPortfolioItemSchema.parse({ imageUrl, description });
     const item = await addPortfolioItem(req.user!.userId, validatedData);
     res
       .status(201)
       .json(ApiResponse(201, "Portfolio item added successfully", item));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadAvatarController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const imageUrl = (req.file as Express.Multer.File | undefined)?.path;
+    if (!imageUrl) throw new Error("No image uploaded");
+    const user = await updateAvatar(req.user!.userId, imageUrl);
+    res.status(200).json(ApiResponse(200, "Avatar updated", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadCoverController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const imageUrl = (req.file as Express.Multer.File | undefined)?.path;
+    if (!imageUrl) throw new Error("No image uploaded");
+    const user = await updateCoverImage(req.user!.userId, imageUrl);
+    res.status(200).json(ApiResponse(200, "Cover updated", user));
   } catch (error) {
     next(error);
   }

@@ -5,6 +5,7 @@ import {
   getMessages,
   sendMessage,
   getConversationByProject,
+  getUnreadMessagesCount,
 } from "./messages.service";
 import { sendMessageSchema } from "./messages.validation";
 import ApiResponse from "../../utils/ApiResponse";
@@ -48,6 +49,19 @@ export async function sendMessageController(
     const validatedData = sendMessageSchema.parse(req.body);
     const message = await sendMessage(conversationId, req.user!.userId, validatedData);
     res.status(201).json(ApiResponse(201, "Message sent", message));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function unreadMessagesCountController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const count = await getUnreadMessagesCount(req.user!.userId);
+    res.status(200).json(ApiResponse(200, "OK", { count }));
   } catch (error) {
     next(error);
   }

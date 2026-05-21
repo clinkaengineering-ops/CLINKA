@@ -23,10 +23,13 @@ export function useVerifyOtp() {
     if (!userId) { router.push("/login"); return; }
     try {
       const res = await authApi.verifyOtp({ userId: Number(userId), otp });
-      setUser(res.data.data);
+      const loggedInUser = res.data.data;
+      setUser(loggedInUser);
       sessionStorage.removeItem("pendingUserId");
-      const next = searchParams.get("next") || "/dashboard";
-      router.push(next);
+      const nextParam = searchParams.get("next");
+      const defaultHome =
+        loggedInUser.role === "ADMIN" ? "/admin" : "/dashboard";
+      router.push(nextParam || defaultHome);
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
       setError(axiosError.response?.data?.message || "Invalid OTP");

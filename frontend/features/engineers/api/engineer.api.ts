@@ -26,14 +26,42 @@ export const getMe = (): Promise<Me> =>
  * Backend must include { include: { profile: true } } in its Prisma update
  * so the response always returns the full Me shape with profile attached.
  */
-export const updateMe = (payload: { name?: string; bio?: string }): Promise<Me> =>
-  unwrap(api.put<ApiResponse<Me>>("/users/me", payload));
+export const updateMe = (payload: {
+  name?: string;
+  bio?: string;
+  coverImageUrl?: string | null;
+}): Promise<Me> => unwrap(api.put<ApiResponse<Me>>("/users/me", payload));
+
+export const uploadAvatar = (file: File): Promise<Me> => {
+  const form = new FormData();
+  form.append("image", file);
+  return unwrap(
+    api.post<ApiResponse<Me>>("/users/me/avatar", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  );
+};
+
+export const uploadCoverImage = (file: File): Promise<Me> => {
+  const form = new FormData();
+  form.append("image", file);
+  return unwrap(
+    api.post<ApiResponse<Me>>("/users/me/cover", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  );
+};
 
 // ── Engineers ─────────────────────────────────────────────────────────────────
 
 /** GET /users/engineers — list of APPROVED engineers */
-export const getEngineers = (): Promise<Engineer[]> =>
-  unwrap(api.get<ApiResponse<Engineer[]>>("/users/engineers"));
+export const getEngineers = (params?: {
+  q?: string;
+  specialty?: string;
+}): Promise<Engineer[]> =>
+  unwrap(
+    api.get<ApiResponse<Engineer[]>>("/users/engineers", { params }),
+  );
 
 /** GET /users/engineers/:id */
 export const getEngineerById = (id: number): Promise<Engineer> =>
@@ -47,6 +75,21 @@ export const addPortfolioItem = (data: {
   description: string;
 }): Promise<PortfolioItem> =>
   unwrap(api.post<ApiResponse<PortfolioItem>>("/users/portfolio", data));
+
+/** POST /users/portfolio — multipart image upload */
+export const uploadPortfolioItem = (
+  file: File,
+  description: string,
+): Promise<PortfolioItem> => {
+  const form = new FormData();
+  form.append("image", file);
+  form.append("description", description);
+  return unwrap(
+    api.post<ApiResponse<PortfolioItem>>("/users/portfolio", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  );
+};
 
 /** DELETE /users/portfolio/:id */
 export const deletePortfolioItem = (id: number): Promise<void> =>

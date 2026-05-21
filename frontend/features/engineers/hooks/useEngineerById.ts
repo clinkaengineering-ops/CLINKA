@@ -2,10 +2,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { getEngineerById } from "@/features/engineers/api/engineer.api";
-import type { Engineer } from "@/types";
+import type { EngineerDetail } from "@/types";
 
 export function useEngineerById(id: number) {
-  const [engineer, setEngineer] = useState<Engineer | null>(null);
+  const [engineer, setEngineer] = useState<EngineerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

@@ -34,6 +34,14 @@ export interface ProjectBid {
   };
 }
 
+export interface ProjectReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  client?: { id: number; name: string };
+}
+
 export interface Project {
   id: number;
   title: string;
@@ -46,6 +54,7 @@ export interface Project {
   updatedAt: string;
   client?: ProjectClient;
   bids?: ProjectBid[];
+  review?: ProjectReview | null;
   _count?: { bids: number };
 }
 
@@ -66,8 +75,13 @@ export interface UpdateProjectPayload {
 // ─── Endpoints ────────────────────────────────────────────────────────────────
 
 /** GET /projects — public OPEN projects */
-export const fetchProjects = (): Promise<Project[]> =>
-  unwrap(api.get<ApiResponse<Project[]>>("/projects")).then((d) => d ?? []);
+export const fetchProjects = (params?: {
+  q?: string;
+  serviceType?: string;
+}): Promise<Project[]> =>
+  unwrap(api.get<ApiResponse<Project[]>>("/projects", { params })).then(
+    (d) => d ?? [],
+  );
 
 /** GET /projects/:id — public, includes bids */
 export const fetchProjectById = (id: number): Promise<Project> =>
@@ -79,6 +93,12 @@ export const fetchProjectById = (id: number): Promise<Project> =>
 /** GET /projects/my — authenticated client's projects */
 export const fetchMyProjects = (): Promise<Project[]> =>
   unwrap(api.get<ApiResponse<Project[]>>("/projects/my")).then((d) => d ?? []);
+
+/** GET /projects/assigned — engineer's accepted contracts */
+export const fetchAssignedProjects = (): Promise<Project[]> =>
+  unwrap(api.get<ApiResponse<Project[]>>("/projects/assigned")).then(
+    (d) => d ?? [],
+  );
 
 /** POST /projects */
 export const createProject = (payload: CreateProjectPayload): Promise<Project> =>

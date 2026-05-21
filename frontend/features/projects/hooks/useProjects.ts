@@ -9,6 +9,7 @@ import {
   type UpdateProjectPayload,
   createProject,
   deleteProject,
+  fetchAssignedProjects,
   fetchMyProjects,
   fetchProjectById,
   fetchProjects,
@@ -62,19 +63,21 @@ function axiosMessage(err: unknown): string {
 }
 
 /** Fetches all OPEN projects (public). */
-export function useProjects() {
+export function useProjects(params?: { q?: string; serviceType?: string }) {
   const [state, run] = useAsyncState<Project[]>([]);
   const [tick, setTick] = useState(0);
+  const q = params?.q;
+  const serviceType = params?.serviceType;
 
   useEffect(() => {
     run(async () => {
       try {
-        return await fetchProjects();
+        return await fetchProjects({ q, serviceType });
       } catch (err) {
         throw new Error(axiosMessage(err));
       }
     });
-  }, [tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tick, q, serviceType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { ...state, refetch: () => setTick((t) => t + 1) };
 }
@@ -108,6 +111,25 @@ export function useMyProjects(enabled = true) {
     run(async () => {
       try {
         return await fetchMyProjects();
+      } catch (err) {
+        throw new Error(axiosMessage(err));
+      }
+    });
+  }, [enabled, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { ...state, refetch: () => setTick((t) => t + 1) };
+}
+
+/** Fetches projects where engineer has an accepted bid. */
+export function useAssignedProjects(enabled = true) {
+  const [state, run] = useAsyncState<Project[]>([]);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!enabled) return;
+    run(async () => {
+      try {
+        return await fetchAssignedProjects();
       } catch (err) {
         throw new Error(axiosMessage(err));
       }

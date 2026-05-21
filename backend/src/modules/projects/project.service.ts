@@ -6,6 +6,11 @@ export async function createProject(
   clientId: number,
   data: CreateProjectInput,
 ) {
+  const client = await db.user.findUnique({ where: { id: clientId } });
+  if (!client || client.role !== "CLIENT") {
+    throw new ApiError(403, "Only clients can post projects");
+  }
+
   const { title, description, budget, serviceType } = data;
 
   const project = await db.project.create({
@@ -20,9 +25,23 @@ export async function createProject(
   return project;
 }
 
-export async function getProjects() {
+export async function getProjects(query?: { q?: string; serviceType?: string }) {
+  const q = query?.q?.trim();
   const projects = await db.project.findMany({
-    where: { status: "OPEN" },
+    where: {
+      status: "OPEN",
+      ...(query?.serviceType
+        ? { serviceType: query.serviceType as "DESIGN" | "SUPERVISION" | "REVIEW" }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { description: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     include: {
       client: {
         select: { id: true, name: true },
@@ -39,6 +58,14 @@ export async function getMyProjects(clientId: number) {
   const projects = await db.project.findMany({
     where: { clientId },
     include: {
+      bids: {
+        include: {
+          engineer: {
+            include: { user: { select: { id: true, name: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
       _count: {
         select: { bids: true },
       },
@@ -61,6 +88,12 @@ export async function getProjectById(projectId: number) {
           },
         },
       },
+      review: {
+        include: {
+          client: { select: { id: true, name: true } },
+        },
+      },
+      payment: true,
     },
   });
 
@@ -109,4 +142,37 @@ export async function deleteProject(clientId: number, projectId: number) {
   }
 
   await db.project.delete({ where: { id: projectId } });
+}
+
+/** Projects where the engineer has an accepted bid (active contracts). */
+export async function getAssignedProjects(engineerUserId: number) {
+  const profile = await db.engineerProfile.findUnique({
+    where: { userId: engineerUserId },
+  });
+  if (!profile) throw new ApiError(404, "Engineer profile not found");
+
+  const acceptedBids = await db.bid.findMany({
+    where: { engineerId: profile.id, status: "ACCEPTED" },
+    include: {
+      project: {
+        include: {
+          client: { select: { id: true, name: true } },
+          payment: true,
+          bids: {
+            where: { status: "ACCEPTED" },
+            take: 1,
+            include: {
+              engineer: {
+                include: { user: { select: { id: true, name: true } } },
+              },
+            },
+          },
+          _count: { select: { bids: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return acceptedBids.map((b) => b.project);
 }

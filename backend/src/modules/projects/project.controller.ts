@@ -3,6 +3,7 @@ import { createProjectSchema, updateProjectSchema } from "./project.validation";
 import {
   createProject,
   deleteProject,
+  getAssignedProjects,
   getMyProjects,
   getProjectById,
   getProjects,
@@ -33,7 +34,10 @@ export async function getProjectsController(
   next: NextFunction,
 ) {
   try {
-    const projects = await getProjects();
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    const serviceType =
+      typeof req.query.serviceType === "string" ? req.query.serviceType : undefined;
+    const projects = await getProjects({ q, serviceType });
 
     res
       .status(200)
@@ -68,6 +72,21 @@ export async function getMyProjectsController(
     res
       .status(200)
       .json(ApiResponse(200, "My projects fetched successfully", projects));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAssignedProjectsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const projects = await getAssignedProjects(req.user!.userId);
+    res
+      .status(200)
+      .json(ApiResponse(200, "Assigned projects fetched successfully", projects));
   } catch (error) {
     next(error);
   }

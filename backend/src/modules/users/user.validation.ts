@@ -3,8 +3,13 @@ import { z } from "zod";
 
 export const updateProfileSchema = z.object({
   name: z.string().min(1, "Name cannot be empty").optional(),
-  // bio can be "" (user clearing their bio) — do not add .min(1) here
   bio: z.string().optional(),
+  coverImageUrl: z.string().url().optional().nullable(),
+});
+
+export const searchQuerySchema = z.object({
+  q: z.string().optional(),
+  specialty: z.enum(["CIVIL", "ARCHITECTURAL"]).optional(),
 });
 
 export const addPortfolioItemSchema = z.object({

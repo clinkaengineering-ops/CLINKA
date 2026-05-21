@@ -6,6 +6,9 @@ import { Button } from "@/components/UI";
 import { IconLogo } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
+import { NavbarActions } from "@/components/NavbarActions";
+import { LangToggle } from "@/components/LangToggle";
+import { ThemeToggle } from "@/components/theme";
 
 const navItems = [
   { href: "/", label: "side.home" },
@@ -59,15 +62,13 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <LangToggle compact />
+          <ThemeToggle compact />
           {user ? (
             <>
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  {user.name.split(" ")[0]}
-                </Button>
-              </Link>
+              <NavbarActions showInbox />
               <Button variant="secondary" size="sm" onClick={handleLogout}>
-                Sign out
+                {t("nav.signOut")}
               </Button>
             </>
           ) : (

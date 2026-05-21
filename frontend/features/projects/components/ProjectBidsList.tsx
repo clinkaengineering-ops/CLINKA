@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Badge, Button } from "@/components/UI";
 import { IconCheck } from "@/components/Icons";
 import { approveBid } from "@/features/bids/api/bids.api";
@@ -20,6 +21,7 @@ export function ProjectBidsList({
   const bids = project.bids ?? [];
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [justApproved, setJustApproved] = useState(false);
 
   if (!bids.length) {
     return (
@@ -34,6 +36,7 @@ export function ProjectBidsList({
     setError(null);
     try {
       await approveBid(bid.id);
+      setJustApproved(true);
       onUpdated?.();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };
@@ -49,6 +52,23 @@ export function ProjectBidsList({
         Bids ({bids.length})
       </p>
       {error && <p className="text-xs text-rose-500">{error}</p>}
+      {(justApproved || project.status === "IN_PROGRESS") && (
+        <div className="rounded-xl border border-electric-500/30 bg-electric-500/5 p-3 text-sm space-y-2">
+          <p className="font-semibold text-electric-700 dark:text-electric-300">
+            Bid accepted — next steps
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/messages?project=${project.id}`}>
+              <Button size="sm" variant="secondary">
+                Open chat
+              </Button>
+            </Link>
+            <Link href={`/checkout?projectId=${project.id}`}>
+              <Button size="sm">Fund escrow</Button>
+            </Link>
+          </div>
+        </div>
+      )}
       {bids.map((bid) => (
         <div
           key={bid.id}

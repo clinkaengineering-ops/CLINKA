@@ -6,9 +6,18 @@ export interface AuthRequest extends Request {
   user?: { userId: number; role: string };
 }
 
+function extractToken(req: Request): string | undefined {
+  const cookieToken = req.cookies?.token;
+  if (cookieToken) return cookieToken;
+
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) return header.slice(7).trim();
+  return undefined;
+}
+
 export function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const token = req.cookies.token;
+    const token = extractToken(req);
     if (!token) throw new ApiError(401, "Not authenticated");
 
     const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: number; role: string };

@@ -1,7 +1,7 @@
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import {Request, NextFunction, Response } from "express";
 import { createBidSchema } from "./bids.validation";
-import { approveBid, createBid, getBidsForProject } from "./bids.service";
+import { approveBid, createBid, getBidsForProject, listMyBids } from "./bids.service";
 import ApiResponse from "../../utils/ApiResponse";
 export async function createBidController(
   req: AuthRequest,
@@ -41,6 +41,19 @@ export async function approveBidController(
     const bidId = Number(req.params.bidId);
     const bid = await approveBid(req.user!.userId, bidId);
     res.status(200).json(ApiResponse(200, "Bid approved successfully", bid));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listMyBidsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const bids = await listMyBids(req.user!.userId);
+    res.status(200).json(ApiResponse(200, "Bids fetched successfully", bids));
   } catch (error) {
     next(error);
   }

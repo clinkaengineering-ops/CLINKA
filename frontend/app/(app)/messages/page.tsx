@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { MessagingPage } from "@/features/messages/components/MessagingPage";
+import { MessagingPage } from "@/features/messages/pages/MessagingPage";
 
 export default function Page() {
   return (

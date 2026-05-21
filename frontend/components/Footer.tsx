@@ -4,6 +4,21 @@ import Link from "next/link";
 import { IconGlobe, IconLogo } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 
+const footerLinkMap: Record<string, string> = {
+  "side.findEngineers": "/engineers",
+  "side.findProjects": "/projects",
+  "nav.escrow": "/escrow",
+  "side.verification": "/admin",
+  "foot.about": "/",
+  "foot.customers": "/engineers",
+  "foot.careers": "/register",
+  "foot.press": "/",
+  "foot.help": "/messages",
+  "foot.blog": "/",
+  "foot.api": "/",
+  "foot.community": "/projects",
+};
+
 const footerColumns = [
   { title: "foot.platform", items: ["side.findEngineers", "side.findProjects", "nav.escrow", "side.verification"] },
   { title: "foot.company", items: ["foot.about", "foot.customers", "foot.careers", "foot.press"] },
@@ -38,7 +53,10 @@ export function Footer() {
             <ul className="mt-4 space-y-2 text-sm text-slate-500 dark:text-slate-400">
               {column.items.map((item) => (
                 <li key={item}>
-                  <Link href="#" className="transition hover:text-electric-500">
+                  <Link
+                    href={footerLinkMap[item] ?? "/"}
+                    className="transition hover:text-electric-500"
+                  >
                     {t(item)}
                   </Link>
                 </li>
@@ -51,10 +69,10 @@ export function Footer() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p>{t("foot.copyright")}</p>
           <div className="flex flex-wrap gap-4">
-            <Link href="#" className="transition hover:text-electric-500">{t("foot.privacy")}</Link>
-            <Link href="#" className="transition hover:text-electric-500">{t("foot.terms")}</Link>
-            <Link href="#" className="transition hover:text-electric-500">{t("foot.security")}</Link>
-            <Link href="#" className="transition hover:text-electric-500">{t("foot.status")}</Link>
+            <Link href="/settings" className="transition hover:text-electric-500">{t("foot.privacy")}</Link>
+            <Link href="/settings" className="transition hover:text-electric-500">{t("foot.terms")}</Link>
+            <Link href="/settings" className="transition hover:text-electric-500">{t("foot.security")}</Link>
+            <Link href="/" className="transition hover:text-electric-500">{t("foot.status")}</Link>
           </div>
         </div>
       </div>

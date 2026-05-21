@@ -22,7 +22,7 @@ export function ForgotPasswordForm() {
 
   if (sent)
     return (
-      <Card >
+      <Card className="p-6 sm:p-8">
         <div className="text-center space-y-4">
           <div className="h-12 w-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto text-xl">
             ✓
@@ -39,7 +39,7 @@ export function ForgotPasswordForm() {
     );
 
   return (
-    <Card>
+    <Card className="p-6 sm:p-8">
       <h1 className="text-2xl font-bold">Reset password</h1>
       <p className="text-sm text-slate-500 mt-1">Enter your email and we&apos;ll send you a reset link</p>
 

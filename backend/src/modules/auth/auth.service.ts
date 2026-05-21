@@ -10,7 +10,7 @@ import generateToken from "../../utils/generateToken";
 import { sendVerificationEmail } from "../../utils/sendVerificationEmail";
 import jwt from "jsonwebtoken";
 import transporter from "../../config/mailer";
-import redis from "../../config/redis";
+import { cacheDel, cacheGet, cacheSet } from "../../config/redis";
 
 export async function registerClient(data: clientRegisterInput) {
   const { name, email, password } = data;
@@ -93,10 +93,8 @@ export async function login(data: loginInput) {
     process.env.FIXED_OTP ??
     Math.floor(100000 + Math.random() * 900000).toString();
 
-  // store in Redis with 10 min expiry
-  await redis.set(`otp:${user.id}`, otp, "EX", 600);
-  const otpTtl = await redis.ttl(`otp:${user.id}`);
-  console.log(`OTP cached in Redis for user ${user.id} with TTL ${otpTtl}s`);
+  await cacheSet(`otp:${user.id}`, otp, 600);
+  console.log(`OTP cached for user ${user.id} (10 min TTL)`);
 
   // send to email
   try {
@@ -121,13 +119,12 @@ export async function login(data: loginInput) {
 
 // Step 2 — verify OTP, set cookie
 export async function verifyOtp(userId: number, otp: string) {
-  const storedOtp = await redis.get(`otp:${userId}`);
+  const storedOtp = await cacheGet(`otp:${userId}`);
 
   if (!storedOtp) throw new ApiError(400, "OTP expired or not found");
   if (storedOtp !== otp) throw new ApiError(400, "Invalid OTP");
 
-  // delete OTP after use — one time only
-  await redis.del(`otp:${userId}`);
+  await cacheDel(`otp:${userId}`);
 
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw new ApiError(404, "User not found");
@@ -198,6 +195,61 @@ export async function resendVerificationEmail(userId: number, email: string) {
   if (user.isVerified) throw new ApiError(400, "Email already verified");
 
   await sendVerificationEmail(userId, email);
+}
+
+export async function requestEmailChange(userId: number, newEmail: string) {
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (!user) throw new ApiError(404, "User not found");
+  if (user.email === newEmail) {
+    throw new ApiError(400, "New email is the same as your current email");
+  }
+
+  const taken = await db.user.findUnique({ where: { email: newEmail } });
+  if (taken) throw new ApiError(400, "Email already in use");
+
+  const otp =
+    process.env.FIXED_OTP ??
+    Math.floor(100000 + Math.random() * 900000).toString();
+
+  await cacheSet(
+    `email-change:${userId}`,
+    JSON.stringify({ newEmail, otp }),
+    600,
+  );
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: newEmail,
+      subject: "Confirm your new CLINKA email",
+      html: `<p>Your verification code is: <strong>${otp}</strong>. Expires in 10 minutes.</p>`,
+    });
+  } catch (error) {
+    console.warn("Failed to send email-change OTP:", error);
+    console.warn(`OTP for ${newEmail}: ${otp}`);
+  }
+
+  return { message: "Verification code sent to your new email address" };
+}
+
+export async function confirmEmailChange(userId: number, otp: string) {
+  const raw = await cacheGet(`email-change:${userId}`);
+  if (!raw) throw new ApiError(400, "OTP expired or not found");
+
+  const { newEmail, otp: storedOtp } = JSON.parse(raw) as {
+    newEmail: string;
+    otp: string;
+  };
+  if (storedOtp !== otp) throw new ApiError(400, "Invalid OTP");
+
+  await cacheDel(`email-change:${userId}`);
+
+  const updated = await db.user.update({
+    where: { id: userId },
+    data: { email: newEmail },
+  });
+  const { password: _, ...safe } = updated;
+  return safe;
 }
 
 export async function changePassword(

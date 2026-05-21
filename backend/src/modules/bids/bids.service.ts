@@ -1,6 +1,6 @@
 import db from "../../config/db";
-import { ProjectStatus } from "../../generated/prisma/enums";
 import ApiError from "../../utils/ApiError";
+import { createNotification } from "../../utils/notifications";
 import { CreateBidInput } from "./bids.validation";
 
 export async function createBid(
@@ -12,7 +12,10 @@ export async function createBid(
 
   // Check user is an engineer
   const user = await db.user.findUnique({ where: { id: engineerId } });
-  if (!user || user.role !== "ENGINEER") {
+  if (!user || user.role === "ADMIN") {
+    throw new ApiError(403, "Admins cannot place bids");
+  }
+  if (user.role !== "ENGINEER") {
     throw new ApiError(403, "Only engineers can place bids");
   }
 
@@ -21,6 +24,12 @@ export async function createBid(
     where: { userId: engineerId },
   });
   if (!profile) throw new ApiError(404, "Engineer profile not found");
+  if (profile.verificationStatus !== "APPROVED") {
+    throw new ApiError(
+      403,
+      "Your engineer account must be verified before bidding",
+    );
+  }
 
   // Check project exists
   const project = await db.project.findUnique({ where: { id: projectId } });
@@ -49,6 +58,26 @@ export async function createBid(
       description,
     },
   });
+
+  await createNotification(
+    project.clientId,
+    "NEW_BID",
+    "New bid received",
+    `${user.name} placed a bid on "${project.title}"`,
+    `/projects?project=${projectId}`,
+  );
+
+  // Open a project thread so client and engineer can discuss before bid acceptance
+  await db.conversation.upsert({
+    where: { projectId },
+    create: {
+      projectId,
+      clientId: project.clientId,
+      engineerId,
+    },
+    update: {},
+  });
+
   return bid;
 }
 
@@ -117,8 +146,42 @@ await db.conversation.upsert({
     clientId: project.clientId,
     engineerId: engineerUser!.id,
   },
-  update: {}, // already exists, do nothing
+  update: {},
 });
 
+  if (engineerUser) {
+    await createNotification(
+      engineerUser.id,
+      "BID_ACCEPTED",
+      "Bid accepted",
+      `Your bid on "${project.title}" was accepted`,
+      `/my-bids`,
+    );
+  }
+
   return { message: "Bid approved and project assigned to engineer" };
+}
+
+export async function listMyBids(engineerUserId: number) {
+  const profile = await db.engineerProfile.findUnique({
+    where: { userId: engineerUserId },
+  });
+  if (!profile) throw new ApiError(404, "Engineer profile not found");
+
+  return db.bid.findMany({
+    where: { engineerId: profile.id },
+    include: {
+      project: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          serviceType: true,
+          budget: true,
+          updatedAt: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 }

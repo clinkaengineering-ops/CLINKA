@@ -8,6 +8,7 @@ import { useI18n } from "@/i18n";
 import type { Project } from "../../projects/api/project.api";
 import { createBid } from "../api/bids.api";
 import useAuthStore from "@/store/authStore";
+import { useMe } from "@/features/auth/hooks/useMe";
 
 interface BidFormProps {
   project: Project;
@@ -17,6 +18,8 @@ interface BidFormProps {
 export function BidForm({ project, onSubmitted }: BidFormProps) {
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
+  const { me } = useMe();
+  const verification = me?.profile?.verificationStatus ?? "PENDING";
   const [price, setPrice] = useState(project.budget.toString());
   const [weeks, setWeeks] = useState("8");
   const [cover, setCover] = useState("");
@@ -44,10 +47,18 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
     );
   }
 
+  if (user.role === "ADMIN") {
+    return (
+      <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+        Admin accounts can browse projects but cannot place bids.
+      </p>
+    );
+  }
+
   if (user.role !== "ENGINEER") {
     return (
       <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-        Only verified engineers can submit bids on open projects.
+        Only engineers can submit bids on open projects.
       </p>
     );
   }
@@ -57,6 +68,23 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
       <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
         Bidding is closed for this project.
       </p>
+    );
+  }
+
+  if (verification !== "APPROVED") {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-800 dark:text-amber-200">
+        <p className="font-semibold">Verification required</p>
+        <p className="mt-1">
+          Your account must be approved by CLINKA before you can bid. Status:{" "}
+          {verification}
+        </p>
+        <Link href="/settings" className="inline-block mt-3">
+          <Button size="sm" variant="secondary">
+            Settings
+          </Button>
+        </Link>
+      </div>
     );
   }
 

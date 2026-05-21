@@ -5,6 +5,7 @@ import {
   getMessagesController,
   sendMessageController,
   getConversationByProjectController,
+  unreadMessagesCountController,
 } from "./messages.controller";
 
 const router = Router();
@@ -13,6 +14,7 @@ router.use(authenticate);
 
 // GET  /api/messages/conversations
 router.get("/conversations", getMyConversationsController);
+router.get("/unread-count", unreadMessagesCountController);
 
 // GET  /api/messages/conversations/:id?page=1&limit=30
 router.get("/conversations/:id", getMessagesController);

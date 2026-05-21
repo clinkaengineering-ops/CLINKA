@@ -1,13 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { NavbarActions } from "@/components/NavbarActions";
+import { LangToggle } from "@/components/LangToggle";
+import { ThemeToggle } from "@/components/theme";
 import { AuthProvider } from "@/features/auth/components/AuthProvider";
 import { cn } from "@/utils/cn";
 import {
-  IconHome, IconUsers, IconBriefcase, IconChart, IconWallet, IconMessage,
-  IconShield, IconSettings, IconBell, IconSearch, IconLogo, IconMenu, IconClose,
-  IconSun, IconMoon, IconLogout, IconUser
+  IconHome, IconUsers, IconBriefcase, IconChart, IconWallet, IconMessage, IconStar,
+  IconShield, IconSettings, IconLogo, IconMenu, IconClose,
+  IconLogout,
 } from "@/components/Icons";
 import { Avatar, Badge, Button } from "@/components/UI";
 import { useI18n } from "@/i18n";
@@ -18,11 +21,13 @@ const navItems = [
   { href: "/", label: "side.home", icon: IconHome, section: "side.discover" },
   { href: "/engineers", label: "side.findEngineers", icon: IconUsers, section: "side.discover" },
   { href: "/projects", label: "side.findProjects", icon: IconBriefcase, section: "side.discover" },
+  { href: "/my-bids", label: "side.myBids", icon: IconBriefcase, section: "side.workspace" },
 
   // Workspace
   { href: "/dashboard", label: "side.clientDash", icon: IconChart, section: "side.workspace" },
   { href: "/messages", label: "side.messages", icon: IconMessage, section: "side.workspace" },
   { href: "/escrow", label: "side.escrow", icon: IconWallet, section: "side.workspace" },
+  { href: "/reviews", label: "side.reviews", icon: IconStar, section: "side.workspace" },
 
   // Operations
   { href: "/admin", label: "side.admin", icon: IconShield, section: "side.operations" },
@@ -41,11 +46,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dark, setDark] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
-  const { user, logout } = useAuthStore();
+  const { user, sessionReady, logout } = useAuthStore();
+  const displayName = sessionReady ? (user?.name ?? "Guest") : "…";
+  const displayRole = sessionReady ? (user?.role ?? "") : "";
+
+  const visibleNavItems = useMemo(() => {
+    if (user?.role === "ADMIN") {
+      return [
+        { href: "/", label: "side.home", icon: IconHome, section: "side.discover" },
+        { href: "/engineers", label: "side.findEngineers", icon: IconUsers, section: "side.discover" },
+        { href: "/projects", label: "side.findProjects", icon: IconBriefcase, section: "side.discover" },
+        { href: "/admin", label: "side.admin", icon: IconShield, section: "side.workspace" },
+        { href: "/settings", label: "side.settings", icon: IconSettings, section: "side.operations" },
+      ];
+    }
+
+    return navItems.filter((item) => {
+      if (item.href === "/admin") return false;
+      if (item.href === "/reviews" && user?.role !== "CLIENT") return false;
+      if (item.href === "/escrow" && user?.role !== "CLIENT" && user?.role !== "ENGINEER") {
+        return false;
+      }
+      if (item.href === "/my-bids" && user?.role !== "ENGINEER") return false;
+      return true;
+    });
+  }, [user?.role]);
 
   async function handleLogout() {
     await logout();
@@ -57,6 +85,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
       router.push("/login?next=/projects?create=1");
       return;
     }
+    if (user.role === "ADMIN") {
+      router.push("/admin");
+      return;
+    }
     if (user.role === "CLIENT") {
       router.push("/projects?create=1");
       return;
@@ -65,18 +97,17 @@ function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={dark ? "dark" : ""}>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
         {/* Mobile top bar */}
-        <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
-          <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+        <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between gap-2 px-4 h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+          <button type="button" onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
             <IconMenu />
           </button>
           <Brand />
-          <button onClick={() => setDark(!dark)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-            {dark ? <IconSun /> : <IconMoon />}
-          </button>
+          <div className="flex items-center gap-1">
+            <LangToggle compact />
+            <ThemeToggle compact />
+          </div>
         </div>
 
         <div className="flex">
@@ -101,7 +132,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     {t(section)}
                   </p>
                   <div className="space-y-0.5">
-                    {navItems.filter(n => n.section === section).map(item => {
+                    {visibleNavItems.filter(n => n.section === section).map(item => {
                       const Icon = item.icon;
                       const active = pathname === item.href;
                       return (
@@ -132,15 +163,25 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <div className="absolute -end-6 -top-6 h-24 w-24 rounded-full bg-electric-500/20 blur-2xl" />
               <p className="text-xs font-semibold uppercase tracking-wider text-electric-300">{t("side.proTitle")}</p>
               <p className="mt-1 text-sm font-semibold">{t("side.proDesc")}</p>
-              <Button size="sm" className="mt-3 w-full">{t("side.upgrade")}</Button>
+              <Button
+                size="sm"
+                className="mt-3 w-full"
+                onClick={() => router.push("/settings")}
+              >
+                {t("side.upgrade")}
+              </Button>
             </div>
 
             {/* User footer */}
             <div className="border-t border-slate-200 dark:border-slate-900 p-3 flex items-center gap-3">
-              <Avatar name={user?.name ?? "User"} size={36} />
+              <Avatar
+                name={displayName}
+                src={user?.avatarUrl ?? undefined}
+                size={36}
+              />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{user?.name ?? "Guest"}</p>
-                <p className="text-xs text-slate-500 truncate">{user?.role ?? ""}</p>
+                <p className="text-sm font-semibold truncate">{displayName}</p>
+                <p className="text-xs text-slate-500 truncate">{displayRole}</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -158,37 +199,22 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {/* Main content */}
           <main className="flex-1 min-w-0">
             {/* Top bar */}
-            <div className="hidden lg:flex sticky top-0 z-30 items-center gap-4 h-16 px-6 lg:px-8 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900">
-              <div className="relative max-w-md flex-1">
-                <IconSearch width={16} height={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  placeholder={t("side.searchPlaceholder")}
-                  className="w-full h-10 ps-10 pe-20 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
-                />
-              </div>
-              <div className="ms-auto flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleNewProject}>
-                  {t("side.newProject")}
-                </Button>
-                <button className="relative h-10 w-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center">
-                  <IconBell width={18} height={18} />
-                  <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
-                </button>
-                <button
-                  onClick={() => setDark(!dark)}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  {dark ? <IconSun width={18} height={18} /> : <IconMoon width={18} height={18} />}
-                </button>
-                <Avatar name={user?.name ?? "User"} size={36} />
+            <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-2 h-16 px-6 lg:px-8 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900">
+              <div className="flex items-center gap-2">
+                {user?.role === "CLIENT" && (
+                  <Button variant="ghost" size="sm" onClick={handleNewProject}>
+                    {t("side.newProject")}
+                  </Button>
+                )}
+                <LangToggle compact />
+                <ThemeToggle compact />
+                {user && <NavbarActions showInbox={false} />}
               </div>
             </div>
 
             <div className="p-4 sm:p-6 lg:p-8">{children}</div>
           </main>
         </div>
-      </div>
-
     </div>
   );
 }

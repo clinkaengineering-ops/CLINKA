@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import {
   changePasswordSchema,
+  confirmEmailChangeSchema,
+  requestEmailChangeSchema,
   clientRegisterSchema,
   engineerRegisterSchema,
   forgotPasswordSchema,
@@ -16,11 +18,20 @@ import {
   resetPassword,
   resendVerificationEmail,
   changePassword,
+  confirmEmailChange,
+  requestEmailChange,
   verifyOtp,
 } from "./auth.service";
 import ApiResponse from "../../utils/ApiResponse";
+import ApiError from "../../utils/ApiError";
+import { authCookieOptions } from "../../config/cookies";
 import multer from "multer";
 import { AuthRequest } from "../../middlewares/auth.middleware";
+import {
+  getGoogleAuthRedirectUrl,
+  handleGoogleCallback,
+} from "./google.service";
+import { isGoogleAuthEnabled } from "../../config/google";
 
 export async function registerClientController(
   req: Request,
@@ -113,11 +124,7 @@ export async function logoutController(
   next: NextFunction,
 ) {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    res.clearCookie("token", authCookieOptions());
     res.status(200).json(ApiResponse(200, "Logged out successfully"));
   } catch (error) {
     next(error);
@@ -151,6 +158,34 @@ export async function changePasswordController(
   }
 }
 
+export async function requestEmailChangeController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { newEmail } = requestEmailChangeSchema.parse(req.body);
+    const result = await requestEmailChange(req.user!.userId, newEmail);
+    res.status(200).json(ApiResponse(200, result.message, null));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function confirmEmailChangeController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { otp } = confirmEmailChangeSchema.parse(req.body);
+    const user = await confirmEmailChange(req.user!.userId, otp);
+    res.status(200).json(ApiResponse(200, "Email updated successfully", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
 
 
 export async function verifyOtpController(req: Request, res: Response, next: NextFunction) {
@@ -158,14 +193,66 @@ export async function verifyOtpController(req: Request, res: Response, next: Nex
     const { userId, otp } = req.body;
     const result = await verifyOtp(userId, otp);
 
-    res.cookie("token", result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-      maxAge: 60 * 60 * 1000,
-    });
+    res.cookie("token", result.token, authCookieOptions());
 
     res.status(200).json(ApiResponse(200, "Logged in successfully", result.user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function googleAuthStartController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    if (!isGoogleAuthEnabled()) {
+      throw new ApiError(503, "Google sign-in is not configured");
+    }
+    const next =
+      typeof req.query.next === "string" ? req.query.next : undefined;
+    const role =
+      req.query.role === "ENGINEER" ? ("ENGINEER" as const) : ("CLIENT" as const);
+    const url = getGoogleAuthRedirectUrl({ next, role });
+    res.redirect(url);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function googleAuthCallbackController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const code = typeof req.query.code === "string" ? req.query.code : undefined;
+    const state = typeof req.query.state === "string" ? req.query.state : undefined;
+    const error =
+      typeof req.query.error === "string" ? req.query.error : undefined;
+
+    const result = await handleGoogleCallback(code, state, error);
+
+    if (result.token) {
+      res.cookie("token", result.token, authCookieOptions());
+    }
+
+    res.redirect(result.redirectUrl);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function googleAuthStatusController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    res.status(200).json(
+      ApiResponse(200, "OK", { enabled: isGoogleAuthEnabled() }),
+    );
   } catch (error) {
     next(error);
   }

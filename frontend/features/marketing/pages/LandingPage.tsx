@@ -147,7 +147,8 @@ export function LandingPage() {
           </div>
           <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {talent.map((e) => (
-              <Card key={e.name} className="p-5 hover:-translate-y-1 hover:border-electric-500/40 hover:shadow-xl transition">
+              <Link key={e.name} href="/engineers">
+              <Card className="p-5 hover:-translate-y-1 hover:border-electric-500/40 hover:shadow-xl transition h-full">
                 <div className="flex items-center gap-3">
                   <Avatar name={e.name} size={48} />
                   <div className="min-w-0">
@@ -169,6 +170,7 @@ export function LandingPage() {
                   ))}
                 </div>
               </Card>
+              </Link>
             ))}
           </div>
         </div>
@@ -229,7 +231,7 @@ export function LandingPage() {
                 <p className="mt-4 text-white/70 text-lg">{cta.subtitle}</p>
               </div>
               <div className="flex flex-col sm:flex-row md:justify-end gap-3">
-                <Link href={"/auth/register"}><Button size="lg">{cta.primaryLabel}</Button></Link>
+                <Link href={cta.primaryHref}><Button size="lg">{cta.primaryLabel}</Button></Link>
                 <Link href={"/engineers"}><Button size="lg" variant="secondary" className="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20">{cta.secondaryLabel}</Button></Link>
               </div>
             </div>

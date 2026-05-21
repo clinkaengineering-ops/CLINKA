@@ -1,3 +1,14 @@
+import api from "@/lib/axios";
+import type { ApiResponse } from "@/features/engineers/api/engineer.api";
+import type { LandingSnapshot } from "../types";
+
+const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
+  promise.then((r) => r.data.data as T);
+
+/** GET /public/landing — live platform metrics for marketing pages */
+export const fetchLandingSnapshot = (): Promise<LandingSnapshot> =>
+  unwrap(api.get<ApiResponse<LandingSnapshot>>("/public/landing"));
+
 export type LandingFeature = {
   id: string;
   titleKey: string;
