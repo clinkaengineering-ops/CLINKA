@@ -1,23 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          {
-            key: "ngrok-skip-browser-warning",
-            value: "true",
-          },
-          {
-            key: "bypass-tunnel-reminder",
-            value: "true",
-          },
-        ],
-      },
-    ];
-  },
+  allowedDevOrigins: [
+    "latitude-very-his-queens.trycloudflare.com/",
+  ],
 };
 
 export default nextConfig;

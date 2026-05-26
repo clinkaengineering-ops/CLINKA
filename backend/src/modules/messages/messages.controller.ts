@@ -9,6 +9,8 @@ import {
 } from "./messages.service";
 import { sendMessageSchema } from "./messages.validation";
 import ApiResponse from "../../utils/ApiResponse";
+import ApiError from "../../utils/ApiError";
+import { broadcastNewMessage } from "../../socket";
 
 export async function getMyConversationsController(
   req: AuthRequest,
@@ -47,7 +49,23 @@ export async function sendMessageController(
   try {
     const conversationId = Number(req.params.id);
     const validatedData = sendMessageSchema.parse(req.body);
-    const message = await sendMessage(conversationId, req.user!.userId, validatedData);
+    const file = req.file as Express.Multer.File | undefined;
+
+    const payload = {
+      ...validatedData,
+      ...(file && {
+        attachmentUrl: file.path,
+        attachmentName: file.originalname,
+        attachmentMime: file.mimetype,
+      }),
+    };
+
+    if (!payload.content?.trim() && !payload.attachmentUrl) {
+      throw new ApiError(400, "Message must include text or a file");
+    }
+
+    const message = await sendMessage(conversationId, req.user!.userId, payload);
+    broadcastNewMessage(conversationId, message);
     res.status(201).json(ApiResponse(201, "Message sent", message));
   } catch (error) {
     next(error);

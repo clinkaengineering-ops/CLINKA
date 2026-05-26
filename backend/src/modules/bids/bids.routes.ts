@@ -4,11 +4,19 @@ import {
   createBidController,
   getBidsForProjectController,
 } from "./bids.controller";
-import { authenticate } from "../../middlewares/auth.middleware";
+import {
+  authenticate,
+  rejectIfBanned,
+} from "../../middlewares/auth.middleware";
 
 const router = Router();
 
-router.post("/:projectId/bids", authenticate, createBidController);
+router.post(
+  "/:projectId/bids",
+  authenticate,
+  rejectIfBanned("ENGINEER"),
+  createBidController,
+);
 router.get("/:projectId/bids", getBidsForProjectController);
 router.put("/approve/:bidId", authenticate, approveBidController);
 

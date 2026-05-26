@@ -11,6 +11,25 @@ import {
 } from "./project.service";
 import ApiResponse from "../../utils/ApiResponse";
 import { AuthRequest } from "../../middlewares/auth.middleware";
+import { assertUserNotBanned } from "../messages/ban.service";
+
+import { markProjectFinished } from "./project.service"; // add to existing import
+
+export async function markProjectFinishedController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const projectId = Number(req.params.id);
+    const project = await markProjectFinished(req.user!.userId, projectId);
+    res
+      .status(200)
+      .json(ApiResponse(200, "Project marked as finished", project));
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function createProjectController(
   req: AuthRequest,
@@ -29,14 +48,20 @@ export async function createProjectController(
 }
 
 export async function getProjectsController(
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) {
   try {
+    if (req.user?.role === "ENGINEER") {
+      await assertUserNotBanned(req.user.userId, "browse projects");
+    }
+
     const q = typeof req.query.q === "string" ? req.query.q : undefined;
     const serviceType =
-      typeof req.query.serviceType === "string" ? req.query.serviceType : undefined;
+      typeof req.query.serviceType === "string"
+        ? req.query.serviceType
+        : undefined;
     const projects = await getProjects({ q, serviceType });
 
     res
@@ -48,11 +73,15 @@ export async function getProjectsController(
 }
 
 export async function getProjectByIdController(
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) {
   try {
+    if (req.user?.role === "ENGINEER") {
+      await assertUserNotBanned(req.user.userId, "view project details");
+    }
+
     const project = await getProjectById(Number(req.params.id));
     res
       .status(200)
@@ -86,7 +115,9 @@ export async function getAssignedProjectsController(
     const projects = await getAssignedProjects(req.user!.userId);
     res
       .status(200)
-      .json(ApiResponse(200, "Assigned projects fetched successfully", projects));
+      .json(
+        ApiResponse(200, "Assigned projects fetched successfully", projects),
+      );
   } catch (error) {
     next(error);
   }
@@ -113,7 +144,6 @@ export async function updateProjectController(
   }
 }
 
-
 export async function deleteProjectController(
   req: AuthRequest,
   res: Response,
@@ -126,4 +156,3 @@ export async function deleteProjectController(
     next(error);
   }
 }
-

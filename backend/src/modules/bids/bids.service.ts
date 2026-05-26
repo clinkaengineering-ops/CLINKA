@@ -2,12 +2,15 @@ import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 import { createNotification } from "../../utils/notifications";
 import { CreateBidInput } from "./bids.validation";
+import { assertUserNotBanned } from "../messages/ban.service";
 
 export async function createBid(
   engineerId: number,
   projectId: number,
   data: CreateBidInput,
 ) {
+  await assertUserNotBanned(engineerId, "place bids");
+
   const { price, duration, description } = data;
 
   // Check user is an engineer
@@ -163,6 +166,8 @@ await db.conversation.upsert({
 }
 
 export async function listMyBids(engineerUserId: number) {
+  await assertUserNotBanned(engineerUserId, "view your bids");
+
   const profile = await db.engineerProfile.findUnique({
     where: { userId: engineerUserId },
   });

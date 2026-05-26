@@ -31,10 +31,11 @@ REVIEW
 }
 
 enum ProjectStatus {
-OPEN
-IN_PROGRESS
-COMPLETED
-CANCELLED
+  OPEN
+  IN_PROGRESS
+  AWAITING_APPROVAL
+  COMPLETED
+  CANCELLED
 }
 
 enum BidStatus{
@@ -54,6 +55,11 @@ enum VerificationStatus{
 PENDING
 APPROVED
 REJECTED
+}
+
+enum BanReason {
+  CONTACT_INFO_SHARING
+  MANUAL_BAN
 }
 
 model User {
@@ -76,7 +82,26 @@ messages Message[]
 notifications Notification[]
 clientConversations Conversation[] @relation("ClientConversations")
 engineerConversations Conversation[] @relation("EngineerConversations")
+ban         Ban?
+bannedBans  Ban[]  @relation("BannedByAdmin")
 
+clientPayments   Payment[] @relation("ClientPayments")
+
+}
+
+model Ban {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @unique
+  reason      BanReason
+  bannedAt    DateTime  @default(now())
+  expiresAt   DateTime
+  bannedById      Int?
+  note            String?
+  triggerMessage  String?
+  active          Boolean   @default(true)
+
+  user     User  @relation(fields: [userId], references: [id])
+  bannedBy User? @relation("BannedByAdmin", fields: [bannedById], references: [id])
 }
 model EngineerProfile {
   id                 Int                @id @default(autoincrement())
@@ -95,6 +120,7 @@ model EngineerProfile {
   createdAt          DateTime           @default(now())
 
   user User @relation(fields:[userId], references:[id])
+  engineerPayments Payment[] @relation("EngineerPayments")
 
   portfolio PortfolioItem[]
   bids      Bid[]
@@ -156,7 +182,10 @@ model Payment {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id])
+  project    Project         @relation(fields: [projectId], references: [id])
+  client     User            @relation("ClientPayments",   fields: [clientId],   references: [id])
+  engineer   EngineerProfile @relation("EngineerPayments", fields: [engineerId], references: [id])
+
 }
 
 model Notification {
@@ -191,7 +220,10 @@ model Message {
   id             Int      @id @default(autoincrement())
   conversationId Int
   senderId       Int
-  content        String
+  content        String   @default("")
+  attachmentUrl  String?
+  attachmentName String?
+  attachmentMime String?
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id])

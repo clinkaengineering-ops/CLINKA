@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Avatar, Button, Card, Input } from "@/components/UI";
+import { Avatar, Button, Card, Field, Input } from "@/components/UI";
+import {
+  confirmEmailChangeFormSchema,
+  portfolioItemFormSchema,
+  requestEmailChangeFormSchema,
+  updateProfileFormSchema,
+  parseApiValidation,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import { IconCheck, IconUpload } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import {
@@ -16,21 +25,6 @@ import {
 } from "../api/settings.api";
 import { useAccountSettings } from "../hooks/useAccountSettings";
 
-const Field = ({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) => (
-  <div>
-    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-      {label}
-    </label>
-    <div className="mt-1.5">{children}</div>
-  </div>
-);
-
 export function AccountSettingsTab() {
   const { t } = useI18n();
   const { me, loading, saving, error, save, refetch } = useAccountSettings();
@@ -40,6 +34,7 @@ export function AccountSettingsTab() {
   const [emailStep, setEmailStep] = useState<"idle" | "otp">("idle");
   const [otp, setOtp] = useState("");
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -78,30 +73,60 @@ export function AccountSettingsTab() {
   }
 
   async function handleRequestEmailChange() {
-    if (!email.trim() || email === me?.email) return;
+    if (email === me?.email) {
+      setEmailMsg("New email must be different from your current email.");
+      return;
+    }
+    const result = validateForm(requestEmailChangeFormSchema, { newEmail: email });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      return;
+    }
+    setFieldErrors({});
     setEmailMsg(null);
     try {
-      await requestEmailChange(email.trim());
+      await requestEmailChange(result.data.newEmail);
       setEmailStep("otp");
       setEmailMsg("Verification code sent to your new email.");
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setEmailMsg(err?.response?.data?.message ?? err?.message ?? "Failed");
+      const { message, errors } = parseApiValidation(e);
+      setFieldErrors(errors);
+      setEmailMsg(message);
     }
   }
 
   async function handleConfirmEmail() {
+    const result = validateForm(confirmEmailChangeFormSchema, { otp });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      return;
+    }
+    setFieldErrors({});
     setEmailMsg(null);
     try {
-      await confirmEmailChange(otp);
+      await confirmEmailChange(result.data.otp);
       setEmailStep("idle");
       setOtp("");
       setEmailMsg("Email updated successfully.");
       await refetch();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setEmailMsg(err?.response?.data?.message ?? err?.message ?? "Invalid OTP");
+      const { message, errors } = parseApiValidation(e);
+      setFieldErrors(errors);
+      setEmailMsg(message);
     }
+  }
+
+  async function handleSaveProfile() {
+    const result = validateForm(updateProfileFormSchema, {
+      name,
+      bio: me?.role === "ENGINEER" ? bio : undefined,
+    });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      return;
+    }
+    setFieldErrors({});
+    await save({ name: result.data.name, bio: result.data.bio });
   }
 
   return (
@@ -161,10 +186,14 @@ export function AccountSettingsTab() {
       )}
 
       <div className="mt-6 grid sm:grid-cols-2 gap-4">
-        <Field label={t("st.fullName")}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <Field label={t("st.fullName")} error={fieldErrors.name}>
+          <Input
+            value={name}
+            error={!!fieldErrors.name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </Field>
-        <Field label={t("st.email")}>
+        <Field label={t("st.email")} error={fieldErrors.newEmail}>
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -180,7 +209,8 @@ export function AccountSettingsTab() {
               <Input
                 placeholder="6-digit code"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                error={!!fieldErrors.otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 maxLength={6}
               />
               <Button size="sm" onClick={handleConfirmEmail}>
@@ -188,7 +218,18 @@ export function AccountSettingsTab() {
               </Button>
             </div>
           )}
-          {emailMsg && <p className="mt-1 text-xs text-slate-500">{emailMsg}</p>}
+          {fieldErrors.otp && (
+            <p className="mt-1 text-xs text-rose-500">{fieldErrors.otp}</p>
+          )}
+          {emailMsg && (
+            <p
+              className={`mt-1 text-xs ${
+                emailMsg.includes("success") ? "text-emerald-600" : "text-slate-500"
+              }`}
+            >
+              {emailMsg}
+            </p>
+          )}
         </Field>
         {me?.role === "ENGINEER" && (
           <div className="sm:col-span-2">
@@ -218,7 +259,7 @@ export function AccountSettingsTab() {
         </Button>
         <Button
           disabled={saving}
-          onClick={() => save({ name, bio: me?.role === "ENGINEER" ? bio : undefined })}
+          onClick={handleSaveProfile}
           icon={<IconCheck width={14} height={14} />}
         >
           {saving ? t("common.loading") : t("common.saveChanges")}
@@ -248,16 +289,24 @@ function EngineerPortfolioSection({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
   async function handleUpload() {
     const file = fileRef.current?.files?.[0];
-    if (!file || !description.trim()) {
-      setUploadError("Choose an image and enter a description.");
+    const result = validateForm(portfolioItemFormSchema, {
+      description,
+      file: file ?? new File([], ""),
+    });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      setUploadError(result.errors.file ?? result.errors.description ?? null);
       return;
     }
+    setFieldErrors({});
     setUploading(true);
     setUploadError(null);
     try {
-      await uploadPortfolioItem(file, description.trim());
+      await uploadPortfolioItem(result.data.file, result.data.description);
       setDescription("");
       if (fileRef.current) fileRef.current.value = "";
       await refetch();
@@ -274,8 +323,12 @@ function EngineerPortfolioSection({
       <h3 className="font-bold">{t("st.portfolio")}</h3>
       <p className="text-sm text-slate-500 mt-1">{t("st.portfolioSub")}</p>
       <div className="mt-4 grid sm:grid-cols-2 gap-4">
-        <Field label={t("st.portfolioDesc")}>
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Field label={t("st.portfolioDesc")} error={fieldErrors.description}>
+          <Input
+            value={description}
+            error={!!fieldErrors.description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </Field>
         <Field label={t("st.portfolioImage")}>
           <input ref={fileRef} type="file" accept="image/*" className="text-sm w-full" />

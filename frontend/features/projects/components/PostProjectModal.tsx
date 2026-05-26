@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { Button, Card, Field, Input, Textarea } from "@/components/UI";
 import { IconCheck, IconClose } from "@/components/Icons";
+import {
+  createProjectFormSchema,
+  parseApiValidation,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import { useCreateProject } from "../hooks/useProjects";
 import type { ServiceType } from "../api/project.api";
 
@@ -19,7 +25,7 @@ interface PostProjectModalProps {
 }
 
 export function PostProjectModal({ open, onClose, onCreated }: PostProjectModalProps) {
-  const { create, loading, error } = useCreateProject(() => {
+  const { create, loading, error: apiError } = useCreateProject(() => {
     onCreated?.();
     onClose();
   });
@@ -29,24 +35,30 @@ export function PostProjectModal({ open, onClose, onCreated }: PostProjectModalP
     budget: "",
     serviceType: "DESIGN" as ServiceType,
   });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   if (!open) return null;
 
   async function handleSubmit() {
-    await create({
-      title: form.title.trim(),
-      description: form.description.trim(),
-      budget: parseFloat(form.budget),
+    const result = validateForm(createProjectFormSchema, {
+      title: form.title,
+      description: form.description,
+      budget: form.budget,
       serviceType: form.serviceType,
     });
-    setForm({ title: "", description: "", budget: "", serviceType: "DESIGN" });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      return;
+    }
+    setFieldErrors({});
+    try {
+      await create(result.data);
+      setForm({ title: "", description: "", budget: "", serviceType: "DESIGN" });
+    } catch (e) {
+      const { errors } = parseApiValidation(e);
+      setFieldErrors(errors);
+    }
   }
-
-  const valid =
-    form.title.trim().length > 0 &&
-    form.description.trim().length > 0 &&
-    !Number.isNaN(parseFloat(form.budget)) &&
-    parseFloat(form.budget) > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -63,42 +75,52 @@ export function PostProjectModal({ open, onClose, onCreated }: PostProjectModalP
           </button>
         </div>
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {apiError && <p className="text-sm text-rose-500">{apiError}</p>}
+        {fieldErrors._form && (
+          <p className="text-sm text-rose-500">{fieldErrors._form}</p>
+        )}
 
-        <Field label="Title">
+        <Field label="Title" error={fieldErrors.title}>
           <Input
             value={form.title}
+            error={!!fieldErrors.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             placeholder="e.g. 12-Story Mixed-Use Tower"
           />
         </Field>
 
-        <Field label="Description">
+        <Field label="Description" error={fieldErrors.description}>
           <Textarea
             rows={4}
             value={form.description}
+            error={!!fieldErrors.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="Scope, deliverables, timeline expectations…"
           />
         </Field>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Budget (USD)">
+          <Field label="Budget (USD)" error={fieldErrors.budget}>
             <Input
               type="number"
               min={1}
               value={form.budget}
+              error={!!fieldErrors.budget}
               onChange={(e) => setForm({ ...form, budget: e.target.value })}
               placeholder="25000"
             />
           </Field>
-          <Field label="Service type">
+          <Field label="Service type" error={fieldErrors.serviceType}>
             <select
               value={form.serviceType}
               onChange={(e) =>
                 setForm({ ...form, serviceType: e.target.value as ServiceType })
               }
-              className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm"
+              className={`w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm ${
+                fieldErrors.serviceType
+                  ? "border-rose-500"
+                  : "border-slate-200 dark:border-slate-800"
+              }`}
             >
               {SERVICE_TYPES.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -116,7 +138,7 @@ export function PostProjectModal({ open, onClose, onCreated }: PostProjectModalP
           <Button
             icon={<IconCheck width={14} height={14} />}
             onClick={handleSubmit}
-            disabled={loading || !valid}
+            disabled={loading}
           >
             {loading ? "Posting…" : "Post project"}
           </Button>

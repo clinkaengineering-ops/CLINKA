@@ -2,6 +2,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { authApi } from "@/features/auth/api/auth.api";
+import {
+  forgotPasswordFormSchema,
+  parseApiValidation,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import { Button, Card, Field, Input } from "@/components/UI";
 import { IconArrow, IconMail } from "@/components/Icons";
 
@@ -9,18 +15,31 @@ export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   async function handleSubmit() {
+    const result = validateForm(forgotPasswordFormSchema, { email });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      return;
+    }
+    setFieldErrors({});
+    setFormError(null);
     setLoading(true);
     try {
-      await authApi.forgotPassword(email);
+      await authApi.forgotPassword(result.data.email);
       setSent(true);
+    } catch (e) {
+      const { message, errors } = parseApiValidation(e);
+      setFieldErrors(errors);
+      setFormError(message);
     } finally {
       setLoading(false);
     }
   }
 
-  if (sent)
+  if (sent) {
     return (
       <Card className="p-6 sm:p-8">
         <div className="text-center space-y-4">
@@ -37,30 +56,46 @@ export function ForgotPasswordForm() {
         </div>
       </Card>
     );
+  }
 
   return (
     <Card className="p-6 sm:p-8">
       <h1 className="text-2xl font-bold">Reset password</h1>
-      <p className="text-sm text-slate-500 mt-1">Enter your email and we&apos;ll send you a reset link</p>
+      <p className="text-sm text-slate-500 mt-1">
+        Enter your email and we&apos;ll send you a reset link
+      </p>
 
       <div className="mt-6 space-y-4">
-        <Field label="Email">
+        {formError && <p className="text-sm text-rose-500">{formError}</p>}
+
+        <Field label="Email" error={fieldErrors.email}>
           <Input
             icon={<IconMail width={16} height={16} />}
             type="email"
             placeholder="you@firm.com"
+            autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            error={!!fieldErrors.email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.email;
+                  return next;
+                });
+              }
+            }}
           />
         </Field>
 
         <Button
-          onClick={handleSubmit}
-          disabled={loading || !email}
           className="w-full"
+          onClick={handleSubmit}
           icon={<IconArrow width={14} height={14} />}
+          disabled={loading}
         >
-          {loading ? "Sending..." : "Send reset link"}
+          {loading ? "Sending…" : "Send reset link"}
         </Button>
 
         <Link href="/login" className="block text-center text-sm text-electric-600 font-semibold hover:underline">

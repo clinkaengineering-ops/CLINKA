@@ -7,7 +7,7 @@ import { SettingsSidebar, type SettingsTabId } from "../components/SettingsSideb
 import { AccountSettingsTab } from "../components/AccountSettingsTab";
 import { NotificationsSettingsTab } from "../components/NotificationsSettingsTab";
 import { SecuritySettingsTab } from "../components/SecuritySettingsTab";
-import { BillingSettingsTab } from "../components/BillingSettingsTab";
+// import { BillingSettingsTab } from "../components/BillingSettingsTab";
 
 export function SettingsPage() {
   const { t } = useI18n();
@@ -17,7 +17,7 @@ export function SettingsPage() {
     { id: "account" as const, label: t("st.account"), icon: IconUser },
     { id: "notif" as const, label: t("st.notif"), icon: IconBell },
     { id: "security" as const, label: t("st.security"), icon: IconLock },
-    { id: "billing" as const, label: t("st.billing"), icon: IconCard },
+    // { id: "billing" as const, label: t("st.billing"), icon: IconCard },
   ];
 
   return (
@@ -32,7 +32,7 @@ export function SettingsPage() {
           {tab === "account" && <AccountSettingsTab />}
           {tab === "notif" && <NotificationsSettingsTab />}
           {tab === "security" && <SecuritySettingsTab />}
-          {tab === "billing" && <BillingSettingsTab />}
+          {/* {tab === "billing" && <BillingSettingsTab />} */}
         </div>
       </div>
     </div>

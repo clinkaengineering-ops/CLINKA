@@ -37,13 +37,17 @@ export async function getCheckoutSessionController(
 ) {
   try {
     const projectId = Number(req.params.projectId);
+    const phone =
+      typeof req.query.phone === "string" ? req.query.phone : undefined;
+    const address =
+      typeof req.query.address === "string" ? req.query.address : undefined;
     const session = await prepareProjectCheckoutSession(
       req.user!.userId,
       projectId,
+      phone,
+      address,
     );
-    res
-      .status(200)
-      .json(ApiResponse(200, "Checkout session ready", session));
+    res.status(200).json(ApiResponse(200, "Checkout session ready", session));
   } catch (error) {
     next(error);
   }
@@ -93,7 +97,9 @@ export async function listEscrowController(
 ) {
   try {
     const items = await listClientEscrow(req.user!.userId);
-    res.status(200).json(ApiResponse(200, "Escrow items fetched successfully", items));
+    res
+      .status(200)
+      .json(ApiResponse(200, "Escrow items fetched successfully", items));
   } catch (error) {
     next(error);
   }
@@ -108,7 +114,9 @@ export async function listEngineerEscrowController(
     const items = await listEngineerEscrow(req.user!.userId);
     res
       .status(200)
-      .json(ApiResponse(200, "Engineer escrow items fetched successfully", items));
+      .json(
+        ApiResponse(200, "Engineer escrow items fetched successfully", items),
+      );
   } catch (error) {
     next(error);
   }

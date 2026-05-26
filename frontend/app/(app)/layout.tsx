@@ -15,6 +15,8 @@ import {
 import { Avatar, Badge, Button } from "@/components/UI";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
+import { featureFlags } from "@/lib/featureFlags";
+import { ProUpgradeCard } from "@/features/upgrade/components/ProUpgradeCard";
 
 const navItems = [
   // Discover
@@ -158,19 +160,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
 
-            {/* Pro upgrade card */}
-            <div className="m-3 p-4 rounded-2xl bg-gradient-to-br from-navy-900 to-navy-800 dark:from-electric-600/20 dark:to-navy-900 text-white relative overflow-hidden">
-              <div className="absolute -end-6 -top-6 h-24 w-24 rounded-full bg-electric-500/20 blur-2xl" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-electric-300">{t("side.proTitle")}</p>
-              <p className="mt-1 text-sm font-semibold">{t("side.proDesc")}</p>
-              <Button
-                size="sm"
-                className="mt-3 w-full"
-                onClick={() => router.push("/settings")}
-              >
-                {t("side.upgrade")}
-              </Button>
-            </div>
+            {featureFlags.proUpgrade && <ProUpgradeCard />}
 
             {/* User footer */}
             <div className="border-t border-slate-200 dark:border-slate-900 p-3 flex items-center gap-3">

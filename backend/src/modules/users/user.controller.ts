@@ -1,7 +1,11 @@
 // backend/features/users/user.controller.ts
 import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "../../middlewares/auth.middleware";
-import { addPortfolioItemSchema, updateProfileSchema } from "./user.validation";
+import {
+  addPortfolioItemSchema,
+  searchQuerySchema,
+  updateProfileSchema,
+} from "./user.validation";
 import ApiResponse from "../../utils/ApiResponse";
 import {
   addPortfolioItem,
@@ -47,9 +51,7 @@ export async function getEngineersController(
   next: NextFunction
 ) {
   try {
-    const q = typeof req.query.q === "string" ? req.query.q : undefined;
-    const specialty =
-      typeof req.query.specialty === "string" ? req.query.specialty : undefined;
+    const { q, specialty } = searchQuerySchema.parse(req.query);
     const engineers = await getEngineers({ q, specialty });
     res
       .status(200)

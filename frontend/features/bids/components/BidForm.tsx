@@ -6,6 +6,12 @@ import { Button } from "@/components/UI";
 import { IconArrow } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import type { Project } from "../../projects/api/project.api";
+import {
+  createBidFormSchema,
+  parseApiValidation,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import { createBid } from "../api/bids.api";
 import useAuthStore from "@/store/authStore";
 import { useMe } from "@/features/auth/hooks/useMe";
@@ -26,6 +32,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const net = useMemo(() => {
     const p = parseFloat(price) || 0;
@@ -89,21 +96,32 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   }
 
   const handleSubmit = async () => {
+    const result = validateForm(createBidFormSchema, {
+      price,
+      weeks,
+      description: cover,
+    });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     setError(null);
     try {
+      const duration =
+        result.data.weeks === 1 ? "1 week" : `${result.data.weeks} weeks`;
       await createBid(project.id, {
-        price: parseFloat(price),
-        duration: `${weeks} weeks`,
-        description: cover,
+        price: result.data.price,
+        duration,
+        description: result.data.description,
       });
       setSubmitted(true);
       onSubmitted?.();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setError(
-        err?.response?.data?.message ?? err?.message ?? "Failed to submit bid",
-      );
+      const { message, errors } = parseApiValidation(e);
+      setFieldErrors(errors);
+      setError(message);
     } finally {
       setSubmitting(false);
     }
@@ -130,20 +148,39 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
             {t("pm.yourPrice")}
           </label>
           <input
+            type="number"
+            min={1}
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="mt-1 w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
+            className={`mt-1 w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 ${
+              fieldErrors.price
+                ? "border-rose-500 focus:ring-rose-500/30"
+                : "border-slate-200 dark:border-slate-700 focus:ring-electric-500/30"
+            }`}
           />
+          {fieldErrors.price && (
+            <p className="mt-1 text-xs text-rose-500">{fieldErrors.price}</p>
+          )}
         </div>
         <div>
           <label className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
             {t("pm.deliveryWeeks")}
           </label>
           <input
+            type="number"
+            min={1}
+            max={52}
             value={weeks}
             onChange={(e) => setWeeks(e.target.value)}
-            className="mt-1 w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
+            className={`mt-1 w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 ${
+              fieldErrors.weeks
+                ? "border-rose-500 focus:ring-rose-500/30"
+                : "border-slate-200 dark:border-slate-700 focus:ring-electric-500/30"
+            }`}
           />
+          {fieldErrors.weeks && (
+            <p className="mt-1 text-xs text-rose-500">{fieldErrors.weeks}</p>
+          )}
         </div>
       </div>
 
@@ -152,8 +189,15 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
         value={cover}
         onChange={(e) => setCover(e.target.value)}
         rows={3}
-        className="mt-3 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
+        className={`mt-3 w-full rounded-lg border bg-white dark:bg-slate-900 p-3 text-sm focus:outline-none focus:ring-2 ${
+          fieldErrors.description
+            ? "border-rose-500 focus:ring-rose-500/30"
+            : "border-slate-200 dark:border-slate-700 focus:ring-electric-500/30"
+        }`}
       />
+      {fieldErrors.description && (
+        <p className="mt-1 text-xs text-rose-500">{fieldErrors.description}</p>
+      )}
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
         <span>
@@ -166,7 +210,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
         className="mt-3 w-full"
         icon={<IconArrow width={14} height={14} />}
         onClick={handleSubmit}
-        disabled={submitting || !price || !cover}
+        disabled={submitting}
       >
         {submitting ? "Submitting…" : t("pm.submitBid")}
       </Button>

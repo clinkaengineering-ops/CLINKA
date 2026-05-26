@@ -243,6 +243,8 @@ export async function initiateProjectCheckout(
 export async function prepareProjectCheckoutSession(
   clientId: number,
   projectId: number,
+  phone?: string,
+  address?: string,
 ) {
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -310,8 +312,8 @@ export async function prepareProjectCheckoutSession(
         first_name,
         last_name,
         email: project.client.email,
-        phone: "01000000000",
-        address: "N/A",
+        phone: phone ?? "01000000000",
+        address: address ?? "N/A",
       },
       redirectionUrls: {
         successUrl: redirectionUrls.successUrl,
@@ -371,14 +373,24 @@ export async function handleFawaterkWebhook(body: unknown) {
       throw new ApiError(404, "Payment record not found for this invoice");
     }
 
-    await db.payment.update({
+    const updated = await db.payment.update({
       where: { id: payment.id },
       data: {
         status: "FUNDED",
         gatewayInvoiceId: String(payload.invoice_id),
         gatewayInvoiceKey: payload.invoice_key,
       },
+      include: { project: { select: { title: true } } },
     });
+
+    const { createNotification } = await import("../../utils/notifications");
+    await createNotification(
+      updated.engineerId,
+      "ESCROW_FUNDED",
+      "Escrow funded",
+      `The client funded escrow for "${updated.project.title}". You can start work.`,
+      `/messages?project=${updated.projectId}`,
+    );
 
     return { handled: true, type: "paid", paymentId: payment.id };
   }
@@ -477,10 +489,13 @@ function mapPaymentStatusToEscrow(
   }
 }
 
-export async function releaseEscrowPayment(clientId: number, paymentId: number) {
+export async function releaseEscrowPayment(
+  clientId: number,
+  paymentId: number,
+) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
-    include: { project: { select: { title: true } } },
+    include: { project: { select: { title: true, status: true } } },
   });
   if (!payment) throw new ApiError(404, "Payment not found");
   if (payment.clientId !== clientId) {
@@ -488,6 +503,12 @@ export async function releaseEscrowPayment(clientId: number, paymentId: number) 
   }
   if (payment.status !== "FUNDED") {
     throw new ApiError(400, "Escrow must be funded before release");
+  }
+  if (payment.project.status !== "AWAITING_APPROVAL") {
+    throw new ApiError(
+      400,
+      "The engineer must mark the project as finished before you can release payment",
+    );
   }
 
   const projectTitle = payment.project?.title ?? "Project";
@@ -516,14 +537,13 @@ export async function releaseEscrowPayment(clientId: number, paymentId: number) 
   return updated;
 }
 
-export async function getEscrowPaymentById(
-  paymentId: number,
-  userId: number,
-) {
+export async function getEscrowPaymentById(paymentId: number, userId: number) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
     include: {
-      project: { select: { id: true, title: true, status: true, clientId: true } },
+      project: {
+        select: { id: true, title: true, status: true, clientId: true },
+      },
     },
   });
   if (!payment) throw new ApiError(404, "Payment not found");

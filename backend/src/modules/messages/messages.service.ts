@@ -2,6 +2,24 @@ import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 import { createNotification } from "../../utils/notifications";
 import { SendMessageInput } from "./messages.validation";
+import { scanMessageContent } from "./content.scanner";
+import { assertUserNotBanned, banUserFor30Days } from "./ban.service";
+import { BanReason } from "../../generated/prisma/enums";
+
+function formatLastMessagePreview(message: {
+  content: string;
+  attachmentUrl: string | null;
+  attachmentName: string | null;
+}) {
+  const text = message.content.trim();
+  if (text) return text;
+  if (message.attachmentUrl) {
+    return message.attachmentName
+      ? `📎 ${message.attachmentName}`
+      : "📎 Attachment";
+  }
+  return null;
+}
 
 function unreadCountForConv(
   conv: {
@@ -55,7 +73,7 @@ export async function getMyConversations(userId: number) {
       participantId: other.id,
       participantName: other.name,
       participantAvatar: other.avatarUrl,
-      lastMessage: lastMessage?.content ?? null,
+      lastMessage: lastMessage ? formatLastMessagePreview(lastMessage) : null,
       lastMessageAt: lastMessage?.createdAt ?? conv.createdAt,
       unread,
     };
@@ -145,6 +163,13 @@ export async function sendMessage(
   senderId: number,
   data: SendMessageInput,
 ) {
+  const content = (data.content ?? "").trim();
+  const hasAttachment = Boolean(data.attachmentUrl);
+
+  if (!content && !hasAttachment) {
+    throw new ApiError(400, "Message must include text or a file");
+  }
+
   const conv = await db.conversation.findUnique({
     where: { id: conversationId },
   });
@@ -154,11 +179,35 @@ export async function sendMessage(
     throw new ApiError(403, "Access denied");
   }
 
+  await assertUserNotBanned(senderId, "send messages");
+
+  if (content) {
+    const scan = scanMessageContent(content);
+    if (scan.flagged) {
+      await banUserFor30Days(
+        senderId,
+        BanReason.CONTACT_INFO_SHARING,
+        undefined,
+        undefined,
+        content,
+      );
+      throw new ApiError(
+        403,
+        `${scan.reason} Your account has been suspended for 30 days.`,
+      );
+    }
+  }
+
   const message = await db.message.create({
     data: {
       conversationId,
       senderId,
-      content: data.content,
+      content,
+      ...(hasAttachment && {
+        attachmentUrl: data.attachmentUrl,
+        attachmentName: data.attachmentName,
+        attachmentMime: data.attachmentMime,
+      }),
     },
     include: {
       sender: { select: { id: true, name: true, role: true } },
@@ -172,11 +221,14 @@ export async function sendMessage(
     select: { title: true },
   });
 
+  const preview =
+    formatLastMessagePreview(message) ?? "New message";
+
   await createNotification(
     recipientId,
     "NEW_MESSAGE",
     "New message",
-    data.content.slice(0, 120),
+    preview.slice(0, 120),
     `/messages?project=${conv.projectId}`,
   );
 

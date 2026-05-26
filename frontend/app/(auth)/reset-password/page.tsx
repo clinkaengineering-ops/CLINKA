@@ -3,8 +3,14 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button, Card, Input } from "@/components/UI";
+import { Button, Card, Field, Input } from "@/components/UI";
 import { authApi } from "@/features/auth/api/auth.api";
+import {
+  parseApiValidation,
+  resetPasswordFormSchema,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -12,33 +18,33 @@ function ResetPasswordForm() {
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token) {
-      setError("Invalid or missing reset token.");
+      setFormError("Invalid or missing reset link. Request a new reset email.");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    const result = validateForm(resetPasswordFormSchema, { password, confirm });
+    if (!result.success) {
+      setFieldErrors(result.errors);
       return;
     }
-    if (password !== confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
+    setFieldErrors({});
+    setFormError(null);
     setLoading(true);
-    setError(null);
     try {
-      await authApi.resetPassword({ token, newPassword: password });
+      await authApi.resetPassword({ token, newPassword: result.data.password });
       setDone(true);
       setTimeout(() => router.push("/login"), 2000);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(e?.response?.data?.message ?? e?.message ?? "Reset failed");
+    } catch (err) {
+      const { message, errors } = parseApiValidation(err);
+      setFieldErrors(errors);
+      setFormError(message);
     } finally {
       setLoading(false);
     }
@@ -54,19 +60,28 @@ function ResetPasswordForm() {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <Input
-              type="password"
-              placeholder="New password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Input
-              type="password"
-              placeholder="Confirm password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-            />
-            {error && <p className="text-sm text-rose-500">{error}</p>}
+            {formError && <p className="text-sm text-rose-500">{formError}</p>}
+
+            <Field label="New password" error={fieldErrors.password}>
+              <Input
+                type="password"
+                placeholder="Min. 8 characters"
+                autoComplete="new-password"
+                value={password}
+                error={!!fieldErrors.password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+            <Field label="Confirm password" error={fieldErrors.confirm}>
+              <Input
+                type="password"
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                value={confirm}
+                error={!!fieldErrors.confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </Field>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Saving…" : "Update password"}
             </Button>

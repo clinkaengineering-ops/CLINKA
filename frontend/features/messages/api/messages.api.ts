@@ -33,7 +33,7 @@ export const fetchMessages = (
     }),
   );
 
-/** POST /messages/conversations/:id */
+/** POST /messages/conversations/:id — text only */
 export const sendMessage = (
   conversationId: number,
   content: string,
@@ -43,6 +43,27 @@ export const sendMessage = (
       content,
     }),
   );
+
+/** POST /messages/conversations/:id — file with optional caption */
+export const sendMessageWithAttachment = (
+  conversationId: number,
+  file: File,
+  content?: string,
+): Promise<ChatMessage> => {
+  const form = new FormData();
+  form.append("file", file);
+  if (content?.trim()) form.append("content", content.trim());
+  return unwrap(
+    api.post<ApiResponse<ChatMessage>>(
+      `/messages/conversations/${conversationId}`,
+      form,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 60_000,
+      },
+    ),
+  );
+};
 
 /** GET /messages/by-project/:projectId */
 export const fetchConversationByProject = (

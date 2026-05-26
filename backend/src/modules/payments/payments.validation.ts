@@ -1,9 +1,18 @@
 import { z } from "zod";
+import { phoneField } from "../../utils/fields";
 
 export const initiateCheckoutSchema = z.object({
-  paymentMethodId: z.number().int().positive(),
-  phone: z.string().min(10).max(15).optional(),
-  address: z.string().min(1).max(200).optional(),
+  paymentMethodId: z.coerce
+    .number({ error: "Select a payment method" })
+    .int("Select a payment method")
+    .positive("Select a payment method"),
+  phone: phoneField.optional(),
+  address: z
+    .string()
+    .trim()
+    .min(3, "Address must be at least 3 characters")
+    .max(200, "Address must be at most 200 characters")
+    .optional(),
 });
 
 export type InitiateCheckoutInput = z.infer<typeof initiateCheckoutSchema>;

@@ -1,12 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AxiosError } from "axios";
 import { authApi } from "../api/auth.api";
-
-type ApiErrorResponse = {
-  message?: string;
-};
+import { parseApiValidation } from "@/lib/validation";
 
 export function useRegister() {
   const router = useRouter();
@@ -24,8 +20,7 @@ export function useRegister() {
       await authApi.registerClient(data);
       router.push("/login?registered=true");
     } catch (err) {
-      const axiosError = err as AxiosError<ApiErrorResponse>;
-      setError(axiosError.response?.data?.message || "Something went wrong");
+      setError(parseApiValidation(err).message);
     } finally {
       setLoading(false);
     }
@@ -54,8 +49,7 @@ export function useRegister() {
       await authApi.registerEngineer(formData);
       router.push("/login?registered=true");
     } catch (err) {
-      const axiosError = err as AxiosError<ApiErrorResponse>;
-      setError(axiosError.response?.data?.message || "Something went wrong");
+      setError(parseApiValidation(err).message);
     } finally {
       setLoading(false);
     }

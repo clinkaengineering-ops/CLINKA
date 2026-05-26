@@ -1,25 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Card, Input } from "@/components/UI";
+import { Badge, Button, Card, Field, Input } from "@/components/UI";
 import { IconCheck } from "@/components/Icons";
 import { useI18n } from "@/i18n";
+import {
+  changePasswordFormSchema,
+  parseApiValidation,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import { changePassword } from "../api/settings.api";
-
-const Field = ({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) => (
-  <div>
-    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-      {label}
-    </label>
-    <div className="mt-1.5">{children}</div>
-  </div>
-);
 
 export function SecuritySettingsTab() {
   const { t } = useI18n();
@@ -27,20 +18,29 @@ export function SecuritySettingsTab() {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   async function handlePasswordUpdate() {
+    const result = validateForm(changePasswordFormSchema, {
+      oldPassword,
+      newPassword,
+    });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      return;
+    }
+    setFieldErrors({});
     setLoading(true);
     setMessage(null);
-    setError(null);
     try {
-      await changePassword({ oldPassword, newPassword });
+      await changePassword(result.data);
       setMessage("Password updated successfully.");
       setOldPassword("");
       setNewPassword("");
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setError(err?.response?.data?.message ?? err?.message ?? "Failed to update password");
+      const { message: msg, errors } = parseApiValidation(e);
+      setFieldErrors(errors);
+      setMessage(msg);
     } finally {
       setLoading(false);
     }
@@ -51,28 +51,36 @@ export function SecuritySettingsTab() {
       <Card className="p-6">
         <h2 className="font-bold">{t("st.password")}</h2>
         <div className="mt-4 grid sm:grid-cols-2 gap-4">
-          <Field label={t("st.curPass")}>
+          <Field label={t("st.curPass")} error={fieldErrors.oldPassword}>
             <Input
               type="password"
+              autoComplete="current-password"
               value={oldPassword}
+              error={!!fieldErrors.oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
             />
           </Field>
-          <Field label={t("st.newPass")}>
+          <Field label={t("st.newPass")} error={fieldErrors.newPassword}>
             <Input
               type="password"
+              autoComplete="new-password"
               value={newPassword}
+              error={!!fieldErrors.newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </Field>
         </div>
-        {message && <p className="mt-2 text-sm text-emerald-600">{message}</p>}
-        {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
-        <div className="mt-4 flex justify-end">
-          <Button
-            onClick={handlePasswordUpdate}
-            disabled={loading || !oldPassword || !newPassword}
+        {message && (
+          <p
+            className={`mt-2 text-sm ${
+              message.includes("success") ? "text-emerald-600" : "text-rose-500"
+            }`}
           >
+            {message}
+          </p>
+        )}
+        <div className="mt-4 flex justify-end">
+          <Button onClick={handlePasswordUpdate} disabled={loading}>
             {loading ? "Updating…" : t("st.updatePass")}
           </Button>
         </div>

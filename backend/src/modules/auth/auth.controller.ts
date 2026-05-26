@@ -22,6 +22,7 @@ import {
   requestEmailChange,
   verifyOtp,
 } from "./auth.service";
+import { verifyOtpSchema } from "./auth.validation";
 import ApiResponse from "../../utils/ApiResponse";
 import ApiError from "../../utils/ApiError";
 import { authCookieOptions } from "../../config/cookies";
@@ -190,7 +191,7 @@ export async function confirmEmailChangeController(
 
 export async function verifyOtpController(req: Request, res: Response, next: NextFunction) {
   try {
-    const { userId, otp } = req.body;
+    const { userId, otp } = verifyOtpSchema.parse(req.body);
     const result = await verifyOtp(userId, otp);
 
     res.cookie("token", result.token, authCookieOptions());

@@ -3,8 +3,13 @@ import db from "../config/db";
 export type NotificationType =
   | "NEW_BID"
   | "BID_ACCEPTED"
+  | "ESCROW_FUNDED"
   | "FUNDS_RELEASED"
-  | "NEW_MESSAGE";
+  | "NEW_MESSAGE"
+  | "WORK_DELIVERED"
+  | "ACCOUNT_BANNED";
+
+const FORCE_DELIVER_TYPES = new Set<NotificationType>(["ACCOUNT_BANNED"]);
 
 export interface NotificationPrefs {
   newBid?: boolean;
@@ -22,8 +27,11 @@ const DEFAULT_PREFS: Record<string, NotificationPrefs> = {
 const PREF_KEY: Record<NotificationType, keyof NotificationPrefs> = {
   NEW_BID: "newBid",
   BID_ACCEPTED: "bidAccepted",
+  ESCROW_FUNDED: "fundsReleased",
   FUNDS_RELEASED: "fundsReleased",
   NEW_MESSAGE: "newMessage",
+  WORK_DELIVERED: "newMessage",
+  ACCOUNT_BANNED: "newMessage",
 };
 
 export function mergeNotificationPrefs(
@@ -39,6 +47,7 @@ export async function createNotification(
   title: string,
   body?: string,
   link?: string,
+  options?: { force?: boolean },
 ) {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -46,12 +55,16 @@ export async function createNotification(
   });
   if (!user) return;
 
-  const prefs = mergeNotificationPrefs(
-    user.role,
-    user.notificationPrefs as NotificationPrefs | null,
-  );
-  const key = PREF_KEY[type];
-  if (prefs[key] === false) return;
+  const force = options?.force === true || FORCE_DELIVER_TYPES.has(type);
+
+  if (!force) {
+    const prefs = mergeNotificationPrefs(
+      user.role,
+      user.notificationPrefs as NotificationPrefs | null,
+    );
+    const key = PREF_KEY[type];
+    if (prefs[key] === false) return;
+  }
 
   await db.notification.create({
     data: { userId, type, title, body, link },

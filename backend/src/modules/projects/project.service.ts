@@ -2,6 +2,74 @@ import { CreateProjectInput, UpdateProjectInput } from "./project.validation";
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 
+
+import { createNotification } from "../../utils/notifications";
+import { assertUserNotBanned } from "../messages/ban.service";
+
+export async function markProjectFinished(engineerUserId: number, projectId: number) {
+  await assertUserNotBanned(engineerUserId, "update project status");
+
+  // Resolve engineer profile from user id
+  const profile = await db.engineerProfile.findUnique({
+    where: { userId: engineerUserId },
+  });
+  if (!profile) throw new ApiError(404, "Engineer profile not found");
+ 
+  // Load project with payment + accepted bid
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    include: {
+      payment: true,
+      bids: {
+        where: { status: "ACCEPTED", engineerId: profile.id },
+        take: 1,
+      },
+    },
+  });
+ 
+  if (!project) throw new ApiError(404, "Project not found");
+ 
+  // Must be the assigned engineer
+  if (project.bids.length === 0) {
+    throw new ApiError(403, "You are not the assigned engineer for this project");
+  }
+ 
+  // Project must be active
+  if (project.status !== "IN_PROGRESS") {
+    throw new ApiError(
+      400,
+      `Project is already ${project.status.toLowerCase().replace("_", " ")}`,
+    );
+  }
+ 
+  // Escrow must be funded before engineer can mark done
+  if (!project.payment || project.payment.status !== "FUNDED") {
+    throw new ApiError(
+      400,
+      "Escrow has not been funded yet. Ask the client to pay first.",
+    );
+  }
+ 
+  // Update project status
+  const updated = await db.project.update({
+    where: { id: projectId },
+    data: { status: "AWAITING_APPROVAL" },
+  });
+ 
+  // Notify the client
+  await createNotification(
+    project.clientId,
+    "WORK_DELIVERED",
+    "Work delivered",
+    `The engineer has marked "${project.title}" as finished. Please review and confirm.`,
+    `/messages?project=${projectId}`,
+  );
+ 
+  return updated;
+}
+
+
+
 export async function createProject(
   clientId: number,
   data: CreateProjectInput,
@@ -146,6 +214,8 @@ export async function deleteProject(clientId: number, projectId: number) {
 
 /** Projects where the engineer has an accepted bid (active contracts). */
 export async function getAssignedProjects(engineerUserId: number) {
+  await assertUserNotBanned(engineerUserId, "view assigned projects");
+
   const profile = await db.engineerProfile.findUnique({
     where: { userId: engineerUserId },
   });

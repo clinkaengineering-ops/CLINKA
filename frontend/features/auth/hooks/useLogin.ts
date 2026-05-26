@@ -1,12 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { AxiosError } from "axios";
 import { authApi } from "../api/auth.api";
-
-type ApiErrorResponse = {
-  message?: string;
-};
+import { parseApiValidation } from "@/lib/validation";
 
 export function useLogin() {
   const router = useRouter();
@@ -24,8 +20,7 @@ export function useLogin() {
       const next = searchParams.get("next");
       router.push(next ? `/verify-otp?next=${encodeURIComponent(next)}` : "/verify-otp");
     } catch (err) {
-      const axiosError = err as AxiosError<ApiErrorResponse>;
-      setError(axiosError.response?.data?.message || "Something went wrong");
+      setError(parseApiValidation(err).message);
     } finally {
       setLoading(false);
     }

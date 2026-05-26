@@ -11,8 +11,14 @@ interface SocketUser {
 // userId → Set of socketIds (user can have multiple tabs)
 const onlineUsers = new Map<number, Set<string>>();
 
+let io: SocketServer | null = null;
+
+export function broadcastNewMessage(conversationId: number, message: unknown) {
+  io?.to(`conv:${conversationId}`).emit("message:new", message);
+}
+
 export function initSocket(httpServer: HttpServer) {
-  const io = new SocketServer(httpServer, {
+  const socketServer = new SocketServer(httpServer, {
     cors: {
       origin: process.env.CLIENT_URL,
       credentials: true,
@@ -20,7 +26,9 @@ export function initSocket(httpServer: HttpServer) {
   });
 
   // Auth middleware — read token from cookie or handshake auth
-  io.use((socket, next) => {
+  io = socketServer;
+
+  socketServer.use((socket, next) => {
     try {
       // Try handshake auth first (frontend sends it), then cookie
       const token =
@@ -40,13 +48,13 @@ export function initSocket(httpServer: HttpServer) {
     }
   });
 
-  io.on("connection", (socket: Socket) => {
+  socketServer.on("connection", (socket: Socket) => {
     const user = (socket as any).user as SocketUser;
 
     // Track online presence
     if (!onlineUsers.has(user.userId)) onlineUsers.set(user.userId, new Set());
     onlineUsers.get(user.userId)!.add(socket.id);
-    io.emit("presence:update", { userId: user.userId, online: true });
+    socketServer.emit("presence:update", { userId: user.userId, online: true });
 
     // Join a conversation room
     socket.on("conversation:join", (conversationId: number) => {
@@ -67,7 +75,7 @@ export function initSocket(httpServer: HttpServer) {
             content: data.content,
           });
           // Broadcast to everyone in the room (including sender)
-          io.to(`conv:${data.conversationId}`).emit("message:new", message);
+          broadcastNewMessage(data.conversationId, message);
         } catch (err: any) {
           socket.emit("error", { message: err.message });
         }
@@ -90,11 +98,11 @@ export function initSocket(httpServer: HttpServer) {
         sockets.delete(socket.id);
         if (sockets.size === 0) {
           onlineUsers.delete(user.userId);
-          io.emit("presence:update", { userId: user.userId, online: false });
+          socketServer.emit("presence:update", { userId: user.userId, online: false });
         }
       }
     });
   });
 
-  return io;
+  return socketServer;
 }

@@ -3,6 +3,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRegister } from "@/features/auth/hooks/useRegister";
 import { startGoogleSignIn } from "@/features/auth/lib/googleAuth";
+import {
+  clientRegisterFormSchema,
+  engineerRegisterStep2Schema,
+  engineerRegisterStep3Schema,
+  engineerRegisterStep4Schema,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import { cn } from "@/utils/cn";
 import {
   Button,
@@ -31,10 +39,69 @@ export function RegisterForm() {
     documentType: "" as DocumentType,
     file: null as File | null,
   });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const stepLabels = ["Account type", "Your details", "Profile", "Verification"];
 
+  function validateCurrentStep(): boolean {
+    if (step === 1) {
+      if (!role) {
+        setFieldErrors({ _form: "Select whether you are a client or engineer" });
+        return false;
+      }
+      setFieldErrors({});
+      return true;
+    }
+    if (step === 2) {
+      const result = validateForm(engineerRegisterStep2Schema, form);
+      if (!result.success) {
+        setFieldErrors(result.errors);
+        return false;
+      }
+      setFieldErrors({});
+      return true;
+    }
+    if (step === 3 && role === "ENGINEER") {
+      const result = validateForm(engineerRegisterStep3Schema, {
+        specialty: form.specialty || undefined,
+        bio: form.bio || undefined,
+      });
+      if (!result.success) {
+        setFieldErrors(result.errors);
+        return false;
+      }
+      setFieldErrors({});
+      return true;
+    }
+    if (step === 4 && role === "ENGINEER") {
+      const result = validateForm(engineerRegisterStep4Schema, {
+        documentType: form.documentType || undefined,
+        file: form.file ?? undefined,
+      });
+      if (!result.success) {
+        setFieldErrors(result.errors);
+        return false;
+      }
+      setFieldErrors({});
+      return true;
+    }
+    return true;
+  }
+
+  function goNext() {
+    if (!validateCurrentStep()) return;
+    setStep(step + 1);
+  }
+
   async function handleDone() {
+    if (!validateCurrentStep()) return;
+    if (role === "CLIENT") {
+      const result = validateForm(clientRegisterFormSchema, form);
+      if (!result.success) {
+        setFieldErrors(result.errors);
+        return;
+      }
+    }
     if (role === "CLIENT") {
       await registerClient({
         name: form.name,
@@ -68,7 +135,10 @@ export function RegisterForm() {
         ))}
       </div>
 
-      {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+      {error && <p className="text-rose-500 text-sm mt-3">{error}</p>}
+      {fieldErrors._form && (
+        <p className="text-rose-500 text-sm mt-3">{fieldErrors._form}</p>
+      )}
 
       <div className="mt-6">
 
@@ -120,30 +190,33 @@ export function RegisterForm() {
                 <Divider />
               </>
             )}
-            <Field label="Full name">
+            <Field label="Full name" error={fieldErrors.name}>
               <Input
                 icon={<IconUser width={16} height={16} />}
                 type="text"
                 placeholder="Mohamed Talal"
                 value={form.name}
+                error={!!fieldErrors.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </Field>
-            <Field label="Email">
-              < Input
+            <Field label="Email" error={fieldErrors.email}>
+              <Input
                 icon={<IconMail width={16} height={16} />}
                 type="email"
                 placeholder="you@firm.com"
                 value={form.email}
+                error={!!fieldErrors.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
             </Field>
-            <Field label="Password">
+            <Field label="Password" error={fieldErrors.password}>
               <Input
                 icon={<IconLock width={16} height={16} />}
                 type="password"
                 placeholder="Min. 8 characters"
                 value={form.password}
+                error={!!fieldErrors.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
             </Field>
@@ -155,6 +228,9 @@ export function RegisterForm() {
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Specialty</label>
+              {fieldErrors.specialty && (
+                <p className="mt-1 text-xs text-rose-500">{fieldErrors.specialty}</p>
+              )}
               <div className="mt-1.5 grid grid-cols-2 gap-3">
                 {(["CIVIL", "ARCHITECTURAL"] as Specialty[]).map(s => (
                   <button
@@ -188,6 +264,11 @@ export function RegisterForm() {
         {step === 4 && role === "ENGINEER" && (
           <div className="space-y-4">
             <p className="text-sm text-slate-500">Upload one document to verify your engineering credentials</p>
+            {(fieldErrors.documentType || fieldErrors.file) && (
+              <p className="text-xs text-rose-500">
+                {fieldErrors.documentType ?? fieldErrors.file}
+              </p>
+            )}
             <div className="space-y-3">
               {([
                 { type: "collegeIdUrl", label: "College ID" },
@@ -236,8 +317,7 @@ export function RegisterForm() {
 
         {step < (role === "CLIENT" ? 2 : 4) ? (
           <Button
-            onClick={() => setStep(step + 1)}
-            disabled={step === 1 && !role}
+            onClick={goNext}
             icon={<IconArrow width={14} height={14} />}
           >
             Continue

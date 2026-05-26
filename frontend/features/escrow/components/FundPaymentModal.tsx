@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Input } from "@/components/UI";
+import { Button, Field, Input } from "@/components/UI";
 import { useI18n } from "@/i18n";
+import {
+  fundPaymentFormSchema,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import type { FawaterkPaymentMethod } from "../types";
 import { formatMoney } from "../utils/formatMoney";
 
@@ -23,18 +28,25 @@ export function FundPaymentModal({
   methods: FawaterkPaymentMethod[];
   methodsLoading: boolean;
   loading: boolean;
-  onConfirm: (paymentMethodId: number, phone: string) => Promise<void>;
+  onConfirm: (
+    paymentMethodId: number,
+    phone: string,
+    address: string,
+  ) => Promise<void>;
 }) {
   const { t, lang } = useI18n();
   const [methodId, setMethodId] = useState<number | null>(null);
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // Reset form state whenever the modal opens so stale selections don't persist
   useEffect(() => {
     if (open) {
       setMethodId(null);
       setPhone("");
+      setAddress(""); // ADD THIS
       setError(null);
     }
   }, [open]);
@@ -43,17 +55,26 @@ export function FundPaymentModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (methodId == null) {
-      setError(t("es.selectMethodRequired"));
+    const result = validateForm(fundPaymentFormSchema, {
+      paymentMethodId: methodId ?? 0,
+      phone,
+      address, // ADD THIS
+    });
+    if (!result.success) {
+      setFieldErrors(result.errors);
+      if (result.errors.paymentMethodId) {
+        setError(result.errors.paymentMethodId);
+      }
       return;
     }
-    if (phone.trim().length < 10) {
-      setError(t("es.phoneRequired"));
-      return;
-    }
+    setFieldErrors({});
     setError(null);
     try {
-      await onConfirm(methodId, phone.trim());
+      await onConfirm(
+        result.data.paymentMethodId,
+        result.data.phone,
+        result.data.address ?? "",
+      );
     } catch (err) {
       setError((err as Error).message);
     }
@@ -110,16 +131,23 @@ export function FundPaymentModal({
             )}
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-500 mb-1 block">
-              {t("es.phoneLabel")}
-            </label>
+          <Field label={t("es.phoneLabel")} error={fieldErrors.phone}>
             <Input
               placeholder="01012345678"
               value={phone}
+              error={!!fieldErrors.phone}
               onChange={(e) => setPhone(e.target.value)}
             />
-          </div>
+          </Field>
+          
+          <Field label="Address" error={fieldErrors.address}>
+            <Input
+              placeholder="Your billing address"
+              value={address}
+              error={!!fieldErrors.address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </Field>
 
           {error && (
             <p className="text-sm text-rose-500" role="alert">
@@ -128,7 +156,12 @@ export function FundPaymentModal({
           )}
 
           <div className="flex gap-2 justify-end pt-2">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              disabled={loading}
+            >
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={loading || methods.length === 0}>

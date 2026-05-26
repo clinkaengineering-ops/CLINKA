@@ -12,11 +12,18 @@ import {
   fetchMessages,
   fetchConversationByProject,
   sendMessage as sendMessageApi,
+  sendMessageWithAttachment,
 } from "../api/messages.api";
 import { useMessageSocket } from "../hooks/useMessageSocket";
 import type { ChatMessage, ConversationListItem } from "../types";
+import {
+  parseApiValidation,
+  sendMessageFormSchema,
+  validateForm,
+} from "@/lib/validation";
 import { DateSeparator } from "../components/DateSeparator";
 import { MessageBubble } from "../components/MessageBubble";
+import { MessageAttachment } from "../components/MessageAttachment";
 import { ProjectContextPanel } from "../components/ProjectContextPanel";
 import {
   groupConversationsByParticipant,
@@ -50,6 +57,19 @@ function isSameDay(a: string, b: string): boolean {
     da.getMonth() === db.getMonth() &&
     da.getDate() === db.getDate()
   );
+}
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ACCEPTED_FILE_TYPES =
+  "image/jpeg,image/png,image/gif,image/webp,application/pdf";
+
+function messagePreview(msg: ChatMessage): string {
+  const text = msg.content.trim();
+  if (text) return text;
+  if (msg.attachmentUrl) {
+    return msg.attachmentName ? `📎 ${msg.attachmentName}` : "📎 Attachment";
+  }
+  return "";
 }
 
 function dayLabel(iso: string, todayLabel: string): string {
@@ -92,8 +112,10 @@ export function MessagingPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handledNavKeyRef = useRef<string | null>(null);
 
@@ -138,7 +160,7 @@ export function MessagingPage() {
         c.id === msg.conversationId
           ? {
               ...c,
-              lastMessage: msg.content,
+              lastMessage: messagePreview(msg) || c.lastMessage,
               lastMessageAt: msg.createdAt,
             }
           : c,
@@ -313,27 +335,67 @@ export function MessagingPage() {
     typingTimeoutRef.current = setTimeout(() => emitTypingStop(), 1500);
   };
 
-  const handleSend = async () => {
-    const content = draft.trim();
-    if (!content || activeId == null || !user) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setSendError("File must be 10 MB or smaller");
+      return;
+    }
+    setSendError(null);
+    setPendingFile(file);
+  };
 
+  const handleSend = async () => {
+    if (activeId == null || !user) return;
+
+    const hasFile = pendingFile != null;
+    const trimmedDraft = draft.trim();
+
+    if (!hasFile && !trimmedDraft) {
+      setSendError("Message cannot be empty");
+      return;
+    }
+
+    if (!hasFile) {
+      const result = validateForm(sendMessageFormSchema, { content: draft });
+      if (!result.success) {
+        setSendError(result.errors.content ?? "Message cannot be empty");
+        return;
+      }
+    }
+
+    const content = trimmedDraft;
+    const fileToSend = pendingFile;
     setSending(true);
     setSendError(null);
     setDraft("");
+    setPendingFile(null);
     emitTypingStop();
 
     try {
-      const { getMessageSocket } = await import("../lib/socket");
-      if (getMessageSocket().connected) {
-        sendViaSocket(content);
-      } else {
-        const msg = await sendMessageApi(activeId, content);
+      if (fileToSend) {
+        const msg = await sendMessageWithAttachment(
+          activeId,
+          fileToSend,
+          content || undefined,
+        );
         handleNewSocketMessage(msg);
+      } else {
+        const { getMessageSocket } = await import("../lib/socket");
+        if (getMessageSocket().connected) {
+          sendViaSocket(content);
+        } else {
+          const msg = await sendMessageApi(activeId, content);
+          handleNewSocketMessage(msg);
+        }
       }
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setSendError(err?.response?.data?.message ?? err?.message ?? "Failed to send");
+      const { message } = parseApiValidation(e);
+      setSendError(message);
       setDraft(content);
+      if (fileToSend) setPendingFile(fileToSend);
     } finally {
       setSending(false);
     }
@@ -505,7 +567,15 @@ export function MessagingPage() {
                               name={msg.sender.name}
                               time={formatMessageTime(msg.createdAt)}
                             >
-                              {msg.content}
+                              <MessageAttachment
+                                message={msg}
+                                side={isMe ? "me" : "them"}
+                              />
+                              {msg.content.trim() ? (
+                                <p className="whitespace-pre-wrap break-words">
+                                  {msg.content}
+                                </p>
+                              ) : null}
                             </MessageBubble>
                           );
                         })}
@@ -519,12 +589,32 @@ export function MessagingPage() {
                   {sendError && (
                     <p className="text-xs text-rose-500 mb-2 px-1">{sendError}</p>
                   )}
+                  {pendingFile && (
+                    <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm">
+                      <span className="truncate flex-1">📎 {pendingFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingFile(null)}
+                        className="text-xs text-slate-500 hover:text-rose-500 shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ACCEPTED_FILE_TYPES}
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
                   <div className="flex items-end gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 focus-within:ring-2 focus-within:ring-electric-500/30">
                     <button
                       type="button"
-                      disabled
-                      title="Attachments coming soon"
-                      className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 opacity-50 cursor-not-allowed"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={sending}
+                      title="Attach file (images or PDF, max 10 MB)"
+                      className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 disabled:opacity-50"
                     >
                       <IconPaperclip width={16} height={16} />
                     </button>
@@ -544,7 +634,7 @@ export function MessagingPage() {
                     <button
                       type="button"
                       onClick={handleSend}
-                      disabled={sending || !draft.trim()}
+                      disabled={sending || (!draft.trim() && !pendingFile)}
                       className="h-9 w-9 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-50 text-white flex items-center justify-center shadow-md shadow-electric-500/30"
                     >
                       <IconSend width={16} height={16} />
@@ -561,7 +651,12 @@ export function MessagingPage() {
             )}
           </main>
 
-          <ProjectContextPanel conversation={activeConv} />
+          <ProjectContextPanel
+            conversation={activeConv}
+            onProjectUpdated={() => {
+              void loadConversations();
+            }}
+          />
         </div>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-05-21T16:21:01.751Z
-> Files: 297 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-05-24T14:03:33.400Z
+> Files: 316 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../.cursor/projects/home-mohamedtalal-Documents-CLINKA/agent-tools/
 
@@ -10,8 +10,10 @@
 
 ## ../../.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/
 
+- `image-50f3ccd2-3e54-4e00-88a0-184adfcaf4dd.png` (~19667 tok)
 - `image-68927a4f-fa09-428a-8114-3d72813b63cb.png` (~12106 tok)
 - `image-6c2738dd-b260-46a4-a99e-5f00ef616734.png` (~11592 tok)
+- `image-6e70b161-137f-4c87-b823-493fef5d54cf.png` (~4166 tok)
 - `image-7542314c-4f54-4745-ba28-e76bc553f6a4.png` (~15494 tok)
 - `image-a01cb81d-f2bd-449f-bcff-a350e5f2569b.png` (~16834 tok)
 
@@ -44,7 +46,7 @@
 
 ## backend/prisma/
 
-- `schema.prisma` — This is your Prisma schema file, (~1402 tok)
+- `schema.prisma` — This is your Prisma schema file, (~1587 tok)
 
 ## backend/prisma/migrations/
 
@@ -70,11 +72,23 @@
 
 - `migration.sql` — AlterTable (~38 tok)
 
+## backend/prisma/migrations/20260524180000_message_attachments/
+
+- `migration.sql` — AlterTable (~51 tok)
+
+## backend/prisma/migrations/20260524200000_add_ban_system/
+
+- `migration.sql` — CreateEnum (~225 tok)
+
+## backend/prisma/migrations/20260524210000_ban_trigger_message/
+
+- `migration.sql` — AlterTable (~18 tok)
+
 ## backend/src/
 
 - `app.ts` — API routes: GET (1 endpoints) (~253 tok)
 - `server.ts` — Declares PORT (~218 tok)
-- `socket.ts` — Exports initSocket (~881 tok)
+- `socket.ts` — Exports broadcastNewMessage, initSocket (~952 tok)
 
 ## backend/src/config/
 
@@ -116,39 +130,42 @@
 
 ## backend/src/middlewares/
 
-- `auth.middleware.ts` — Exports AuthRequest, authenticate, authorize (~342 tok)
-- `errorHandler.middleware.ts` — Exports errorHandler (~183 tok)
+- `auth.middleware.ts` — Sets req.user when a valid token is present; does not fail when absent. (~740 tok)
+- `chatUpload.middleware.ts` — Declares ALLOWED_MIME_TYPES (~219 tok)
+- `errorHandler.middleware.ts` — Exports errorHandler (~292 tok)
 - `upload.middleware.ts` — Declares storage (~104 tok)
 
 ## backend/src/modules/admin/
 
-- `admin.controller.ts` — Exports getAdminStatsController, getPendingVerificationsController, updateVerificationController (~365 tok)
-- `admin.routes.ts` — API routes: GET, PATCH (3 endpoints) (~155 tok)
-- `admin.service.ts` — Exports getAdminStats, getPendingVerifications, updateEngineerVerification (~709 tok)
-- `admin.validation.ts` — Zod schemas: updateVerificationSchema (~59 tok)
+- `admin.controller.ts` — Exports getAdminStatsController, getPendingVerificationsController, updateVerificationController, ge (~1077 tok)
+- `admin.routes.ts` — API routes: GET, PATCH, POST, DELETE (9 endpoints) (~303 tok)
+- `admin.service.ts` — Exports getAdminStats, getPendingVerifications, updateEngineerVerification, getAllBans + 5 more (~2138 tok)
+- `admin.validation.ts` — Zod schemas: updateVerificationSchema, banUserSchema (~119 tok)
 
 ## backend/src/modules/auth/
 
-- `auth.controller.ts` — Exports registerClientController, registerEngineerController, loginController, verifyEmailController (~1903 tok)
+- `auth.controller.ts` — Exports registerClientController, registerEngineerController, loginController, verifyEmailController (~1925 tok)
 - `auth.routes.ts` — API routes: POST, GET (15 endpoints) (~461 tok)
 - `auth.service.ts` — Exports registerClient, registerEngineer, login, verifyOtp + 7 more (~2340 tok)
-- `auth.validation.ts` — Zod schemas: clientRegisterSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema + 3 more (~532 tok)
+- `auth.validation.ts` — Zod schemas: clientRegisterSchema, loginSchema, verifyOtpSchema, forgotPasswordSchema + 3 more (~622 tok)
 - `google.service.ts` — Exports getGoogleAuthRedirectUrl, handleGoogleCallback (~2060 tok)
 
 ## backend/src/modules/bids/
 
-- `bids-mine.routes.ts` — API routes: GET (1 endpoints) (~86 tok)
+- `bids-mine.routes.ts` — API routes: GET (1 endpoints) (~104 tok)
 - `bids.controller.ts` — Exports createBidController, getBidsForProjectController, approveBidController, listMyBidsController (~490 tok)
-- `bids.routes.ts` — API routes: POST, GET, PUT (3 endpoints) (~132 tok)
-- `bids.service.ts` — Exports createBid, getBidsForProject, approveBid, listMyBids (~1360 tok)
-- `bids.validation.ts` — Zod schemas: createBidSchema (~73 tok)
+- `bids.routes.ts` — API routes: POST, GET, PUT (3 endpoints) (~149 tok)
+- `bids.service.ts` — Exports createBid, getBidsForProject, approveBid, listMyBids (~1413 tok)
+- `bids.validation.ts` — Zod schemas: createBidSchema (~93 tok)
 
 ## backend/src/modules/messages/
 
-- `messages.controller.ts` — Exports getMyConversationsController, getMessagesController, sendMessageController, unreadMessagesCo (~637 tok)
-- `messages.routes.ts` — API routes: GET, POST (5 endpoints) (~246 tok)
-- `messages.service.ts` — Exports getMyConversations, getUnreadMessagesCount, markConversationRead, getMessages + 3 more (~2187 tok)
-- `messages.validation.ts` — Zod schemas: sendMessageSchema (~52 tok)
+- `ban.service.ts` — Exports banUserFor30Days, isUserBanned, formatBanExpiry, bannedUserMessage, assertUserNotBanned (~754 tok)
+- `content.scanner.ts` — Exports scanMessageContent (~360 tok)
+- `messages.controller.ts` — Exports getMyConversationsController, getMessagesController, sendMessageController, unreadMessagesCo (~792 tok)
+- `messages.routes.ts` — API routes: GET, POST (5 endpoints) (~329 tok)
+- `messages.service.ts` — Exports getMyConversations, getUnreadMessagesCount, markConversationRead, getMessages + 3 more (~2595 tok)
+- `messages.validation.ts` — Zod schemas: sendMessageSchema (~115 tok)
 
 ## backend/src/modules/notifications/
 
@@ -164,15 +181,15 @@
 - `fawaterk.webhook.ts` — Validates paid-invoice webhook per Fawaterak docs (HMAC SHA256). (~290 tok)
 - `payments.controller.ts` — Exports getPaymentMethodsController, getCheckoutSessionController, initiateCheckoutController, getPr (~1214 tok)
 - `payments.routes.ts` — API routes: POST, GET (11 endpoints) (~468 tok)
-- `payments.service.ts` — Prepare Fawaterak IFrame checkout — creates pending payment + plugin config (~4546 tok)
-- `payments.validation.ts` — Zod schemas: initiateCheckoutSchema, paidWebhookSchema, expiredWebhookSchema (~245 tok)
+- `payments.service.ts` — Prepare Fawaterak IFrame checkout — creates pending payment + plugin config (~4717 tok)
+- `payments.validation.ts` — Zod schemas: initiateCheckoutSchema, paidWebhookSchema, expiredWebhookSchema (~318 tok)
 
 ## backend/src/modules/projects/
 
-- `project.controller.ts` — Exports createProjectController, getProjectsController, getProjectByIdController, getMyProjectsContr (~879 tok)
-- `project.routes.ts` — API routes: POST, GET, PUT, DELETE (7 endpoints) (~234 tok)
-- `project.service.ts` — Projects where the engineer has an accepted bid (active contracts). (~1339 tok)
-- `project.validation.ts` — Zod schemas: createProjectSchema, updateProjectSchema (~186 tok)
+- `project.controller.ts` — Exports markProjectFinishedController, createProjectController, getProjectsController, getProjectByI (~1111 tok)
+- `project.routes.ts` — API routes: POST, GET, PUT, DELETE, PATCH (8 endpoints) (~337 tok)
+- `project.service.ts` — Projects where the engineer has an accepted bid (active contracts). (~1893 tok)
+- `project.validation.ts` — Zod schemas: createProjectSchema, updateProjectSchema (~195 tok)
 
 ## backend/src/modules/public/
 
@@ -185,14 +202,14 @@
 - `reviews.controller.ts` — Exports createReviewController, getProjectReviewController, getEngineerReviewsController, listPendingReviewsController + 2 more (~722 tok)
 - `reviews.routes.ts` — API routes: GET, POST (6 endpoints) (~268 tok)
 - `reviews.service.ts` — Exports createProjectReview, getProjectReview, getEngineerReviews, listPendingReviews + 2 more (~1404 tok)
-- `reviews.validation.ts` — Zod schemas: createReviewSchema (~66 tok)
+- `reviews.validation.ts` — Zod schemas: createReviewSchema (~80 tok)
 
 ## backend/src/modules/users/
 
-- `user.controller.ts` — backend/features/users/user.controller.ts (~1064 tok)
+- `user.controller.ts` — backend/features/users/user.controller.ts (~1040 tok)
 - `user.routes.ts` — backend/features/users/user.routes.ts (~344 tok)
 - `user.service.ts` — backend/features/users/user.service.ts (~1750 tok)
-- `user.validation.ts` — backend/features/users/user.validation.ts (~206 tok)
+- `user.validation.ts` — Zod schemas: updateProfileSchema, searchQuerySchema, addPortfolioItemSchema (~257 tok)
 
 ## backend/src/routes/
 
@@ -202,9 +219,12 @@
 
 - `ApiError.ts` — Declares ApiError (~75 tok)
 - `ApiResponse.ts` — Declares ApiResponse (~60 tok)
+- `fields.ts` — Exports emailField, passwordField, nameField, otpField + 12 more (~694 tok)
 - `generateToken.ts` — Declares generateToken (~105 tok)
-- `notifications.ts` — Exports NotificationType, NotificationPrefs, mergeNotificationPrefs, createNotification (~443 tok)
+- `notifications.ts` — Exports NotificationType, NotificationPrefs, mergeNotificationPrefs, createNotification (~551 tok)
 - `sendVerificationEmail.ts` — Exports sendVerificationEmail (~260 tok)
+- `uploadErrors.ts` — Exports resolveUploadError (~540 tok)
+- `zodErrors.ts` — Exports FieldErrors, zodToFieldErrors, formatZodError (~190 tok)
 
 ## engineering-marketplace-frontend-development/
 
@@ -275,7 +295,7 @@
 
 ## frontend/app/(app)/
 
-- `layout.tsx` — navItems (~2976 tok)
+- `layout.tsx` — navItems (~2814 tok)
 
 ## frontend/app/(app)/admin/
 
@@ -343,7 +363,7 @@
 
 ## frontend/app/(auth)/reset-password/
 
-- `page.tsx` — ResetPasswordForm — renders form — uses useSearchParams, useRouter, useState (~838 tok)
+- `page.tsx` — ResetPasswordForm — renders form (~1004 tok)
 
 ## frontend/app/(auth)/verify-email/
 
@@ -370,19 +390,21 @@
 - `LangToggle.tsx` — LangToggle (~337 tok)
 - `Navbar.tsx` — navItems (~868 tok)
 - `NavbarActions.tsx` — NavbarActions (~1484 tok)
-- `theme.tsx` — No-op — theme is handled by ThemeProvider (~1097 tok)
-- `UI.tsx` — Button (~3914 tok)
+- `theme.tsx` — No-op — theme is handled by ThemeProvider (~1081 tok)
+- `UI.tsx` — Button (~4041 tok)
 
 ## frontend/features/admin/api/
 
-- `admin.api.ts` — Exports AdminStats, PendingVerification, fetchAdminStats, fetchPendingVerifications, updateVerification (~378 tok)
+- `admin.api.ts` — Exports AdminStats, PendingVerification, fetchAdminStats, fetchPendingVerifications + 13 more (~1202 tok)
 
 ## frontend/features/admin/components/
 
+- `AdminChatViewer.tsx` — axiosMessage (~2197 tok)
 - `AdminHeader.tsx` — AdminHeader (~237 tok)
 - `AdminPage.tsx` — formatMoney (~2026 tok)
 - `AdminStatsGrid.tsx` — formatMoney (~355 tok)
 - `AdminVerificationList.tsx` — AdminVerificationList (~993 tok)
+- `BanManagementPanel.tsx` — axiosMessage — renders table (~2740 tok)
 
 ## frontend/features/admin/hooks/
 
@@ -390,7 +412,7 @@
 
 ## frontend/features/admin/pages/
 
-- `AdminPage.tsx` — AdminPage (~717 tok)
+- `AdminPage.tsx` — AdminPage (~1068 tok)
 
 ## frontend/features/auth/api/
 
@@ -399,18 +421,18 @@
 ## frontend/features/auth/components/
 
 - `AuthProvider.tsx` — Client/engineer workspace routes — admins use /admin instead (~717 tok)
-- `ForgotPasswordForm.tsx` — ForgotPasswordForm (~636 tok)
+- `ForgotPasswordForm.tsx` — ForgotPasswordForm (~936 tok)
 - `index.ts` (~72 tok)
-- `LoginForm.tsx` — GoogleIcon (~1217 tok)
-- `RegisterForm.tsx` — RegisterForm (~2846 tok)
+- `LoginForm.tsx` — GoogleIcon (~1589 tok)
+- `RegisterForm.tsx` — RegisterForm (~3541 tok)
 - `VerifyEmailForm.tsx` — VerifyEmailForm (~768 tok)
-- `VerifyOtpForm.tsx` — VerifyOtpForm (~385 tok)
+- `VerifyOtpForm.tsx` — VerifyOtpForm (~696 tok)
 
 ## frontend/features/auth/hooks/
 
-- `useLogin.ts` — API routes: GET (1 endpoints) (~314 tok)
+- `useLogin.ts` — API routes: GET (1 endpoints) (~277 tok)
 - `useMe.ts` — features/users/hooks/useMe.ts (~481 tok)
-- `useRegister.ts` — Exports useRegister (~543 tok)
+- `useRegister.ts` — Exports useRegister (~481 tok)
 - `useVerifyOtp.ts` — API routes: GET (1 endpoints) (~394 tok)
 
 ## frontend/features/auth/lib/
@@ -432,7 +454,7 @@
 
 ## frontend/features/bids/components/
 
-- `BidForm.tsx` — BidForm (~1678 tok)
+- `BidForm.tsx` — BidForm (~2075 tok)
 - `MyBidsPage.tsx` — statusColor (~568 tok)
 
 ## frontend/features/bids/hooks/
@@ -498,7 +520,7 @@
 - `EscrowStatusBanner.tsx` — styles (~419 tok)
 - `EscrowTransactionTable.tsx` — EscrowTransactionTable — renders table (~1274 tok)
 - `FawryCodeModal.tsx` — FawryCodeModal (~326 tok)
-- `FundPaymentModal.tsx` — FundPaymentModal — renders form — uses useState (~1238 tok)
+- `FundPaymentModal.tsx` — FundPaymentModal — renders form (~1384 tok)
 - `PaymentMethodsPanel.tsx` — PaymentMethodsPanel (~660 tok)
 
 ## frontend/features/escrow/hooks/
@@ -536,17 +558,18 @@
 
 ## frontend/features/messages/
 
-- `types.ts` — Exports ConversationListItem, MessageSender, ChatMessage, MessagesPage, ConversationDetail (~254 tok)
+- `types.ts` — Exports ConversationListItem, MessageSender, ChatMessage, MessagesPage, ConversationDetail (~283 tok)
 
 ## frontend/features/messages/api/
 
-- `messages.api.ts` — GET /messages/conversations (~435 tok)
+- `messages.api.ts` — GET /messages/conversations (~599 tok)
 
 ## frontend/features/messages/components/
 
 - `DateSeparator.tsx` — DateSeparator (~114 tok)
+- `MessageAttachment.tsx` — MessageAttachment (~392 tok)
 - `MessageBubble.tsx` — MessageBubble (~304 tok)
-- `ProjectContextPanel.tsx` — STATUS_COLORS (~576 tok)
+- `ProjectContextPanel.tsx` — STATUS_COLORS (~3619 tok)
 
 ## frontend/features/messages/hooks/
 
@@ -558,7 +581,7 @@
 
 ## frontend/features/messages/pages/
 
-- `MessagingPage.tsx` — formatTime (~6120 tok)
+- `MessagingPage.tsx` — formatTime (~7029 tok)
 
 ## frontend/features/messages/utils/
 
@@ -582,7 +605,7 @@
 
 ## frontend/features/projects/components/
 
-- `PostProjectModal.tsx` — SERVICE_TYPES — uses useState (~1141 tok)
+- `PostProjectModal.tsx` — SERVICE_TYPES (~1361 tok)
 - `ProjectBidsList.tsx` — ProjectBidsList (~1045 tok)
 - `ProjectCard.tsx` — SERVICE_TYPE_LABELS (~800 tok)
 - `ProjectDetailPanel.tsx` — SERVICE_TYPE_LABELS (~1338 tok)
@@ -607,7 +630,7 @@
 
 - `PendingReviewsPanel.tsx` — PendingReviewsPanel (~768 tok)
 - `ProjectReviewSection.tsx` — ProjectReviewSection (~803 tok)
-- `ReviewForm.tsx` — ReviewForm — renders form — uses useState (~535 tok)
+- `ReviewForm.tsx` — ReviewForm — renders form (~726 tok)
 - `ReviewList.tsx` — ReviewList (~565 tok)
 - `ReviewsPage.tsx` — ReviewsPage (~1142 tok)
 - `StarRating.tsx` — StarRating (~298 tok)
@@ -623,10 +646,10 @@
 
 ## frontend/features/settings/components/
 
-- `AccountSettingsTab.tsx` — Field (~2918 tok)
+- `AccountSettingsTab.tsx` — AccountSettingsTab (~3360 tok)
 - `BillingSettingsTab.tsx` — BillingSettingsTab (~675 tok)
 - `NotificationsSettingsTab.tsx` — Toggle (~1096 tok)
-- `SecuritySettingsTab.tsx` — Field (~823 tok)
+- `SecuritySettingsTab.tsx` — SecuritySettingsTab (~891 tok)
 - `SettingsPage.tsx` — SettingsPage (~3324 tok)
 - `SettingsSidebar.tsx` — SettingsSidebar (~354 tok)
 
@@ -638,6 +661,10 @@
 
 - `SettingsPage.tsx` — SettingsPage (~471 tok)
 
+## frontend/features/upgrade/components/
+
+- `ProUpgradeCard.tsx` — Sidebar CTA for CLINKA Pro — enable via `featureFlags.proUpgrade`. (~275 tok)
+
 ## frontend/i18n/
 
 - `ar.json` (~6364 tok)
@@ -647,6 +674,13 @@
 ## frontend/lib/
 
 - `axios.ts` — Declares resolveApiBaseUrl (~364 tok)
+- `featureFlags.ts` — Feature toggles — flip to `true` when ready to ship. (~59 tok)
+
+## frontend/lib/validation/
+
+- `fields.ts` — Exports emailField, passwordField, nameField, otpField + 13 more (~776 tok)
+- `index.ts` — Merge server validation errors with a fallback message. (~643 tok)
+- `schemas.ts` — Zod schemas: loginFormSchema, clientRegisterFormSchema, engineerRegisterStep3Schema, engineerRegiste (~977 tok)
 
 ## frontend/store/
 

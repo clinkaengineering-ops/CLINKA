@@ -1,17 +1,23 @@
 import { z } from "zod";
+import {
+  budgetField,
+  projectDescriptionField,
+  projectTitleField,
+  serviceTypeField,
+} from "../../utils/fields";
 
 export const createProjectSchema = z.object({
-  title: z.string().min(3).max(100),
-  description: z.string().min(1).max(500),
-  budget: z.number().positive(),
-  serviceType: z.enum(["DESIGN", "SUPERVISION", "REVIEW"]),
+  title: projectTitleField,
+  description: projectDescriptionField,
+  budget: budgetField,
+  serviceType: serviceTypeField,
 });
 
 export const updateProjectSchema = z.object({
-  title: z.string().min(3).max(100).optional(),
-  description: z.string().max(500).optional(),
-  budget: z.number().positive().optional(),
-  serviceType: z.enum(["DESIGN", "SUPERVISION", "REVIEW"]).optional(),
+  title: projectTitleField.optional(),
+  description: projectDescriptionField.optional(),
+  budget: budgetField.optional(),
+  serviceType: serviceTypeField.optional(),
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

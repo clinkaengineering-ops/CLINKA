@@ -18,6 +18,7 @@ const STORAGE_KEY = "clinka-theme";
 
 type ThemeCtx = {
   theme: Theme;
+  mounted: boolean;
   setTheme: (t: Theme) => void;
   toggleTheme: () => void;
 };
@@ -38,10 +39,7 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof document === "undefined") return "light";
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  });
+  const [theme, setThemeState] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -80,8 +78,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [mounted]);
 
   const value = useMemo(
-    () => ({ theme, setTheme, toggleTheme }),
-    [theme, setTheme, toggleTheme],
+    () => ({ theme, mounted, setTheme, toggleTheme }),
+    [theme, mounted, setTheme, toggleTheme],
   );
 
   return (
@@ -111,8 +109,8 @@ export function ThemeToggle({
 
   if (!ctx) return null;
 
-  const { theme, toggleTheme } = ctx;
-  const isDark = theme === "dark";
+  const { theme, mounted, toggleTheme } = ctx;
+  const isDark = mounted && theme === "dark";
 
   return (
     <button
@@ -128,6 +126,7 @@ export function ThemeToggle({
       )}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       aria-pressed={isDark}
+      suppressHydrationWarning
     >
       {isDark ? (
         <IconSun width={18} height={18} aria-hidden />

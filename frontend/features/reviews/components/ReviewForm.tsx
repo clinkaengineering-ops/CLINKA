@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Textarea } from "@/components/UI";
+import { Button, Field, Textarea } from "@/components/UI";
 import { useI18n } from "@/i18n";
+import {
+  createReviewFormSchema,
+  validateForm,
+  type FieldErrors,
+} from "@/lib/validation";
 import { StarRating } from "./StarRating";
 
 export function ReviewForm({
@@ -19,21 +24,27 @@ export function ReviewForm({
   const { t } = useI18n();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (rating < 1) {
-      setError(t("rv.ratingRequired"));
+    const result = validateForm(createReviewFormSchema, {
+      rating,
+      comment: comment.trim() || undefined,
+    });
+    if (!result.success) {
+      setFieldErrors(result.errors);
       return;
     }
-    setError(null);
+    setFieldErrors({});
+    setFormError(null);
     try {
-      await onSubmit(rating, comment.trim());
+      await onSubmit(result.data.rating, result.data.comment ?? "");
       setComment("");
       setRating(5);
     } catch (err) {
-      setError((err as Error).message);
+      setFormError((err as Error).message);
     }
   }
 
@@ -50,16 +61,22 @@ export function ReviewForm({
           {t("rv.yourRating")}
         </p>
         <StarRating value={rating} onChange={setRating} size={24} />
+        {fieldErrors.rating && (
+          <p className="mt-1 text-xs text-rose-500">{fieldErrors.rating}</p>
+        )}
       </div>
-      <Textarea
-        placeholder={t("rv.commentPlaceholder")}
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        rows={4}
-      />
-      {error && (
+      <Field label="Comment (optional)" error={fieldErrors.comment}>
+        <Textarea
+          placeholder={t("rv.commentPlaceholder")}
+          value={comment}
+          error={!!fieldErrors.comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={4}
+        />
+      </Field>
+      {(formError || fieldErrors._form) && (
         <p className="text-sm text-rose-500" role="alert">
-          {error}
+          {formError ?? fieldErrors._form}
         </p>
       )}
       <Button type="submit" disabled={loading} className="w-full sm:w-auto">

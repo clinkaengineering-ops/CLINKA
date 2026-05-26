@@ -12,9 +12,9 @@ const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
 
 /** GET /payments/methods */
 export const fetchPaymentMethods = (): Promise<FawaterkPaymentMethod[]> =>
-  unwrap(api.get<ApiResponse<FawaterkPaymentMethod[]>>("/payments/methods")).then(
-    (d) => d ?? [],
-  );
+  unwrap(
+    api.get<ApiResponse<FawaterkPaymentMethod[]>>("/payments/methods"),
+  ).then((d) => d ?? []);
 
 /** GET /payments/escrow */
 export const fetchEscrowPayments = (): Promise<EscrowPaymentItem[]> =>
@@ -57,10 +57,15 @@ export interface CheckoutSession {
 }
 
 /** GET /payments/projects/:projectId/checkout-session — Fawaterak IFrame config */
-export const fetchCheckoutSession = (projectId: number): Promise<CheckoutSession> =>
+export const fetchCheckoutSession = (
+  projectId: number,
+  phone?: string,
+  address?: string,
+): Promise<CheckoutSession> =>
   unwrap(
     api.get<ApiResponse<CheckoutSession>>(
       `/payments/projects/${projectId}/checkout-session`,
+      { params: { phone, address } },
     ),
   );
 

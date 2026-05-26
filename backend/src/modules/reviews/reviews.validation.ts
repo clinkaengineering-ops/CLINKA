@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { reviewCommentField, reviewRatingField } from "../../utils/fields";
 
 export const createReviewSchema = z.object({
-  rating: z.number().int().min(1).max(5),
-  comment: z.string().max(1000).optional(),
+  rating: reviewRatingField,
+  comment: reviewCommentField,
 });
 
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;

@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { authenticate } from "../../middlewares/auth.middleware";
+import {
+  authenticate,
+  rejectIfBanned,
+} from "../../middlewares/auth.middleware";
+import chatUpload from "../../middlewares/chatUpload.middleware";
 import {
   getMyConversationsController,
   getMessagesController,
@@ -10,7 +14,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, rejectIfBanned());
 
 // GET  /api/messages/conversations
 router.get("/conversations", getMyConversationsController);
@@ -19,8 +23,13 @@ router.get("/unread-count", unreadMessagesCountController);
 // GET  /api/messages/conversations/:id?page=1&limit=30
 router.get("/conversations/:id", getMessagesController);
 
-// POST /api/messages/conversations/:id
-router.post("/conversations/:id", sendMessageController);
+// POST /api/messages/conversations/:id  (JSON text or multipart file + optional caption)
+router.post("/conversations/:id", (req, res, next) => {
+  chatUpload.single("file")(req, res, (err) => {
+    if (err) return next(err);
+    void sendMessageController(req, res, next);
+  });
+});
 
 // GET  /api/messages/by-project/:projectId
 router.get("/by-project/:projectId", getConversationByProjectController);

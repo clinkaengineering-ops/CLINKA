@@ -1,7 +1,18 @@
 import { z } from "zod";
 
+const optionalContentField = z
+  .string()
+  .trim()
+  .max(5000, "Message must be at most 5000 characters")
+  .optional()
+  .default("");
+
 export const sendMessageSchema = z.object({
-  content: z.string().min(1).max(5000),
+  content: optionalContentField,
 });
 
-export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+export type SendMessageInput = z.infer<typeof sendMessageSchema> & {
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentMime?: string;
+};

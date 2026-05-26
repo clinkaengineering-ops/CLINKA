@@ -118,8 +118,8 @@ export const Badge = ({
 /* ---------- Input ---------- */
 export const Input = forwardRef<
   HTMLInputElement,
-  InputHTMLAttributes<HTMLInputElement> & { icon?: ReactNode }
->(({ className, icon, ...props }, ref) => (
+  InputHTMLAttributes<HTMLInputElement> & { icon?: ReactNode; error?: boolean }
+>(({ className, icon, error, ...props }, ref) => (
   <div className="relative">
     {icon && (
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -128,8 +128,12 @@ export const Input = forwardRef<
     )}
     <input
       ref={ref}
+      aria-invalid={error ? true : undefined}
       className={cn(
-        "w-full h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-electric-500/30 transition",
+        "w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 transition",
+        error
+          ? "border-rose-500 focus:ring-rose-500/30 dark:border-rose-500"
+          : "border-slate-200 dark:border-slate-800 focus:ring-electric-500/30",
         icon && "pl-10",
         className,
       )}
@@ -142,12 +146,16 @@ Input.displayName = "Input";
 /* ---------- Textarea ---------- */
 export const Textarea = forwardRef<
   HTMLTextAreaElement,
-  TextareaHTMLAttributes<HTMLTextAreaElement>
->(({ className, ...props }, ref) => (
+  TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: boolean }
+>(({ className, error, ...props }, ref) => (
   <textarea
     ref={ref}
+    aria-invalid={error ? true : undefined}
     className={cn(
-      "w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-electric-500/30 transition",
+      "w-full rounded-lg border bg-white dark:bg-slate-900 p-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 transition",
+      error
+        ? "border-rose-500 focus:ring-rose-500/30 dark:border-rose-500"
+        : "border-slate-200 dark:border-slate-800 focus:ring-electric-500/30",
       className,
     )}
     {...props}
@@ -283,10 +291,12 @@ export const StatCard = ({
 export const Field = ({
   label,
   right,
+  error,
   children,
 }: {
   label: string;
   right?: ReactNode;
+  error?: string;
   children: ReactNode;
 }) => (
   <div>
@@ -297,6 +307,7 @@ export const Field = ({
       {right}
     </div>
     {children}
+    {error ? <p className="mt-1 text-xs text-rose-500">{error}</p> : null}
   </div>
 );
 

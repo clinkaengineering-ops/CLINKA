@@ -20,6 +20,9 @@ export interface ChatMessage {
   conversationId: number;
   senderId: number;
   content: string;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentMime?: string | null;
   createdAt: string;
   sender: MessageSender;
 }

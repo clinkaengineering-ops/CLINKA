@@ -120,3 +120,7 @@ export const updateProject = (
 /** DELETE /projects/:id */
 export const deleteProject = (id: number): Promise<void> =>
   api.delete(`/projects/${id}`).then(() => undefined);
+
+export async function markProjectFinished(projectId: number): Promise<void> {
+  await api.patch(`/projects/${projectId}/finish`);
+}

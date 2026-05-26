@@ -1,34 +1,66 @@
 import { z } from "zod";
+import {
+  emailField,
+  nameField,
+  otpField,
+  optionalBioField,
+  passwordField,
+} from "../../utils/fields";
 
 export const clientRegisterSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
+  name: nameField,
+  email: emailField,
+  password: passwordField,
 });
 
 export const engineerRegisterSchema = clientRegisterSchema.extend({
-  specialty: z.enum(["CIVIL", "ARCHITECTURAL"]),
-  bio: z.string().optional(),
-  documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"]),
+  specialty: z.enum(["CIVIL", "ARCHITECTURAL"], {
+    error: "Select civil or architectural specialty",
+  }),
+  bio: optionalBioField,
+  documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
+    error: "Select a document type to upload",
+  }),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
+  email: emailField,
+  password: passwordField,
+});
+
+export const verifyOtpSchema = z.object({
+  userId: z.coerce
+    .number({ error: "Invalid session" })
+    .int("Invalid session")
+    .positive("Invalid session"),
+  otp: otpField,
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: emailField,
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Token is required"),
-  newPassword: z.string().min(8, "Password must be at least 8 characters long"),
+  token: z.string().min(1, "Reset link is invalid or expired"),
+  newPassword: passwordField,
 });
 
-export const changePasswordSchema = z.object({
-  oldPassword: z.string().min(8),
-  newPassword: z.string().min(8),
+export const changePasswordSchema = z
+  .object({
+    oldPassword: passwordField,
+    newPassword: passwordField,
+  })
+  .refine((data) => data.oldPassword !== data.newPassword, {
+    message: "New password must be different from your current password",
+    path: ["newPassword"],
+  });
+
+export const requestEmailChangeSchema = z.object({
+  newEmail: emailField,
+});
+
+export const confirmEmailChangeSchema = z.object({
+  otp: otpField,
 });
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
@@ -36,14 +68,7 @@ export type clientRegisterInput = z.infer<typeof clientRegisterSchema>;
 export type engineerRegisterInput = z.infer<typeof engineerRegisterSchema>;
 export type loginInput = z.infer<typeof loginSchema>;
 export type forgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
-export const requestEmailChangeSchema = z.object({
-  newEmail: z.string().email("Invalid email address"),
-});
-
-export const confirmEmailChangeSchema = z.object({
-  otp: z.string().length(6, "OTP must be 6 digits"),
-});
-
 export type resetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type RequestEmailChangeInput = z.infer<typeof requestEmailChangeSchema>;
 export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>;
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;

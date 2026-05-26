@@ -1,10 +1,14 @@
-import {z} from "zod";
+import { z } from "zod";
+import {
+  bidDescriptionField,
+  bidDurationField,
+  bidPriceField,
+} from "../../utils/fields";
 
 export const createBidSchema = z.object({
-    price : z.number().positive(),
-    duration: z.string().min(1).max(20),
-    description: z.string().min(1).max(500),
+  price: bidPriceField,
+  duration: bidDurationField,
+  description: bidDescriptionField,
 });
-
 
 export type CreateBidInput = z.infer<typeof createBidSchema>;

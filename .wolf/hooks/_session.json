@@ -1,624 +1,1046 @@
 {
-  "session_id": "session-2026-05-21-1853",
-  "started": "2026-05-21T15:53:54.268Z",
+  "session_id": "session-2026-05-24-1558",
+  "started": "2026-05-24T12:58:49.629Z",
   "files_read": {
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/engineers/components/EngineerProfilePage.tsx": {
-      "count": 2,
-      "tokens": 2704,
-      "first_read": "2026-05-21T15:54:07.109Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/api/messages.api.ts": {
-      "count": 1,
-      "tokens": 435,
-      "first_read": "2026-05-21T15:54:07.204Z"
-    },
-    "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/terminals/1.txt": {
-      "count": 2,
-      "tokens": 0,
-      "first_read": "2026-05-21T15:54:07.507Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(app)/engineers/[id]/page.tsx": {
-      "count": 1,
-      "tokens": 76,
-      "first_read": "2026-05-21T15:54:09.739Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/engineers/hooks/useEngineerById.ts": {
-      "count": 1,
-      "tokens": 209,
-      "first_read": "2026-05-21T15:54:10.086Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/public/public.service.ts": {
-      "count": 1,
-      "tokens": 839,
-      "first_read": "2026-05-21T15:54:10.273Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/engineers/api/engineer.api.ts": {
-      "count": 1,
-      "tokens": 896,
-      "first_read": "2026-05-21T15:54:13.037Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/users/user.service.ts": {
-      "count": 2,
-      "tokens": 1750,
-      "first_read": "2026-05-21T15:54:13.252Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx": {
-      "count": 4,
-      "tokens": 5777,
-      "first_read": "2026-05-21T15:54:13.434Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/prisma/schema.prisma": {
-      "count": 4,
-      "tokens": 1396,
-      "first_read": "2026-05-21T15:54:16.616Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts": {
-      "count": 2,
-      "tokens": 1668,
-      "first_read": "2026-05-21T15:54:16.840Z"
-    },
-    "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/terminals/2.txt": {
-      "count": 2,
-      "tokens": 0,
-      "first_read": "2026-05-21T15:54:20.806Z"
-    },
-    "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/terminals/3.txt": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-05-21T15:54:21.289Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/types/index.ts": {
-      "count": 2,
-      "tokens": 1369,
-      "first_read": "2026-05-21T15:54:21.529Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/global-error.tsx": {
-      "count": 1,
-      "tokens": 219,
-      "first_read": "2026-05-21T15:54:29.131Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/types.ts": {
-      "count": 1,
-      "tokens": 254,
-      "first_read": "2026-05-21T15:54:29.321Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/engineers/components/EngineerCard.tsx": {
-      "count": 1,
-      "tokens": 633,
-      "first_read": "2026-05-21T15:54:40.301Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/lib/axios.ts": {
-      "count": 2,
-      "tokens": 358,
-      "first_read": "2026-05-21T15:54:47.044Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/ApiResponse.ts": {
-      "count": 1,
-      "tokens": 60,
-      "first_read": "2026-05-21T15:54:47.101Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/users/user.controller.ts": {
-      "count": 1,
-      "tokens": 1064,
-      "first_read": "2026-05-21T15:54:47.313Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/users/user.routes.ts": {
-      "count": 1,
-      "tokens": 344,
-      "first_read": "2026-05-21T15:54:49.928Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(app)/layout.tsx": {
-      "count": 1,
-      "tokens": 2976,
-      "first_read": "2026-05-21T15:54:50.097Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids.service.ts": {
-      "count": 3,
-      "tokens": 1287,
-      "first_read": "2026-05-21T15:54:54.067Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(app)/messages/page.tsx": {
-      "count": 1,
-      "tokens": 83,
-      "first_read": "2026-05-21T15:54:54.078Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/projects/components/ProjectDetailPage.tsx": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-05-21T15:55:00.941Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.routes.ts": {
-      "count": 1,
-      "tokens": 246,
-      "first_read": "2026-05-21T15:55:20.198Z"
-    },
     "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx": {
       "count": 2,
-      "tokens": 485,
-      "first_read": "2026-05-21T15:55:46.279Z"
+      "tokens": 576,
+      "first_read": "2026-05-24T13:01:10.551Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.controller.ts": {
-      "count": 1,
-      "tokens": 637,
-      "first_read": "2026-05-21T15:55:59.877Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx": {
-      "count": 2,
-      "tokens": 1174,
-      "first_read": "2026-05-21T15:58:25.984Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/layout.tsx": {
-      "count": 2,
-      "tokens": 197,
-      "first_read": "2026-05-21T15:58:27.754Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/components/UI.tsx": {
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.service.ts": {
       "count": 4,
-      "tokens": 3712,
-      "first_read": "2026-05-21T15:58:27.912Z"
+      "tokens": 1339,
+      "first_read": "2026-05-24T13:01:10.781Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/globals.css": {
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/payments/payments.service.ts": {
+      "count": 5,
+      "tokens": 4546,
+      "first_read": "2026-05-24T13:01:11.042Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.routes.ts": {
       "count": 3,
-      "tokens": 792,
-      "first_read": "2026-05-21T15:58:28.356Z"
+      "tokens": 234,
+      "first_read": "2026-05-24T13:01:14.634Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/components/Icons.tsx": {
-      "count": 1,
-      "tokens": 2192,
-      "first_read": "2026-05-21T15:58:30.498Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/package.json": {
-      "count": 1,
-      "tokens": 86,
-      "first_read": "2026-05-21T15:58:33.672Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(marketing)/layout.tsx": {
-      "count": 1,
-      "tokens": 126,
-      "first_read": "2026-05-21T15:58:33.950Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/components/Navbar.tsx": {
-      "count": 1,
-      "tokens": 868,
-      "first_read": "2026-05-21T15:58:42.842Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(auth)/login/page.tsx": {
-      "count": 1,
-      "tokens": 35,
-      "first_read": "2026-05-21T16:00:01.030Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/pages/LoginPage.tsx": {
-      "count": 1,
-      "tokens": 80,
-      "first_read": "2026-05-21T16:00:02.770Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(auth)/layout.tsx": {
-      "count": 1,
-      "tokens": 48,
-      "first_read": "2026-05-21T16:00:02.933Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/LoginForm.tsx": {
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids.service.ts": {
       "count": 2,
-      "tokens": 847,
-      "first_read": "2026-05-21T16:00:04.358Z"
+      "tokens": 1360,
+      "first_read": "2026-05-24T13:01:26.934Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/RegisterForm.tsx": {
-      "count": 1,
-      "tokens": 2692,
-      "first_read": "2026-05-21T16:00:26.281Z"
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx": {
+      "count": 7,
+      "tokens": 6195,
+      "first_read": "2026-05-24T13:01:27.230Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/ForgotPasswordForm.tsx": {
+    "/home/mohamedtalal/Documents/CLINKA/backend/prisma/schema.prisma": {
+      "count": 5,
+      "tokens": 1434,
+      "first_read": "2026-05-24T13:01:44.449Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/notifications.ts": {
       "count": 2,
-      "tokens": 623,
-      "first_read": "2026-05-21T16:00:26.472Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/VerifyOtpForm.tsx": {
-      "count": 2,
-      "tokens": 378,
-      "first_read": "2026-05-21T16:00:26.637Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/VerifyEmailForm.tsx": {
-      "count": 2,
-      "tokens": 761,
-      "first_read": "2026-05-21T16:00:26.798Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.routes.ts": {
-      "count": 2,
-      "tokens": 386,
-      "first_read": "2026-05-21T16:01:39.260Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.service.ts": {
-      "count": 2,
-      "tokens": 2340,
-      "first_read": "2026-05-21T16:01:39.440Z"
+      "tokens": 443,
+      "first_read": "2026-05-24T13:11:50.835Z"
     },
     "/home/mohamedtalal/Documents/CLINKA/backend/package.json": {
       "count": 1,
       "tokens": 86,
-      "first_read": "2026-05-21T16:01:39.503Z"
+      "first_read": "2026-05-24T13:12:06.309Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.controller.ts": {
-      "count": 2,
-      "tokens": 1443,
-      "first_read": "2026-05-21T16:01:42.584Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/hooks/useLogin.ts": {
+    "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/terminals/4.txt": {
       "count": 1,
-      "tokens": 314,
-      "first_read": "2026-05-21T16:01:42.828Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/.env.example": {
-      "count": 2,
       "tokens": 0,
-      "first_read": "2026-05-21T16:01:42.892Z"
+      "first_read": "2026-05-24T13:16:40.434Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/config/cookies.ts": {
-      "count": 1,
-      "tokens": 188,
-      "first_read": "2026-05-21T16:01:49.402Z"
+    "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx": {
+      "count": 2,
+      "tokens": 1097,
+      "first_read": "2026-05-24T13:16:57.240Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/AuthProvider.tsx": {
+    "/home/mohamedtalal/Documents/CLINKA/frontend/app/layout.tsx": {
       "count": 1,
+      "tokens": 307,
+      "first_read": "2026-05-24T13:17:22.219Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts": {
+      "count": 4,
+      "tokens": 2421,
+      "first_read": "2026-05-24T13:20:47.100Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.routes.ts": {
+      "count": 4,
+      "tokens": 289,
+      "first_read": "2026-05-24T13:20:47.943Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/upload.middleware.ts": {
+      "count": 1,
+      "tokens": 104,
+      "first_read": "2026-05-24T13:20:53.509Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.validation.ts": {
+      "count": 2,
+      "tokens": 66,
+      "first_read": "2026-05-24T13:20:53.690Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.controller.ts": {
+      "count": 2,
+      "tokens": 637,
+      "first_read": "2026-05-24T13:20:53.693Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts": {
+      "count": 3,
+      "tokens": 952,
+      "first_read": "2026-05-24T13:20:56.742Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/api/messages.api.ts": {
+      "count": 3,
+      "tokens": 588,
+      "first_read": "2026-05-24T13:20:57.157Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/types.ts": {
+      "count": 2,
+      "tokens": 254,
+      "first_read": "2026-05-24T13:20:57.562Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/MessageBubble.tsx": {
+      "count": 2,
+      "tokens": 304,
+      "first_read": "2026-05-24T13:20:58.063Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/hooks/useMessageSocket.ts": {
+      "count": 1,
+      "tokens": 650,
+      "first_read": "2026-05-24T13:21:01.560Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/users/user.controller.ts": {
+      "count": 1,
+      "tokens": 1040,
+      "first_read": "2026-05-24T13:21:01.974Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/fields.ts": {
+      "count": 1,
+      "tokens": 694,
+      "first_read": "2026-05-24T13:21:02.364Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/lib/socket.ts": {
+      "count": 1,
+      "tokens": 454,
+      "first_read": "2026-05-24T13:21:05.028Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/lib/validation/fields.ts": {
+      "count": 1,
+      "tokens": 776,
+      "first_read": "2026-05-24T13:21:05.542Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/server.ts": {
+      "count": 1,
+      "tokens": 218,
+      "first_read": "2026-05-24T13:21:19.130Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/chatUpload.middleware.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:21:57.249Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260524180000_message_attachments/migration.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:22:03.393Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/MessageAttachment.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:22:48.657Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/errorHandler.middleware.ts": {
+      "count": 2,
+      "tokens": 220,
+      "first_read": "2026-05-24T13:27:49.629Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/lib/validation/index.ts": {
+      "count": 2,
+      "tokens": 430,
+      "first_read": "2026-05-24T13:27:50.125Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/lib/axios.ts": {
+      "count": 1,
+      "tokens": 364,
+      "first_read": "2026-05-24T13:27:58.151Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/ApiResponse.ts": {
+      "count": 1,
+      "tokens": 60,
+      "first_read": "2026-05-24T13:27:58.534Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/uploadErrors.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:28:26.606Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.service.ts": {
+      "count": 2,
+      "tokens": 709,
+      "first_read": "2026-05-24T13:35:46.462Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.routes.ts": {
+      "count": 2,
+      "tokens": 155,
+      "first_read": "2026-05-24T13:35:46.740Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.controller.ts": {
+      "count": 2,
+      "tokens": 365,
+      "first_read": "2026-05-24T13:35:49.834Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/pages/AdminPage.tsx": {
+      "count": 2,
       "tokens": 717,
-      "first_read": "2026-05-21T16:01:49.473Z"
+      "first_read": "2026-05-24T13:35:50.115Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/api/auth.api.ts": {
-      "count": 1,
-      "tokens": 270,
-      "first_read": "2026-05-21T16:01:49.489Z"
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/api/admin.api.ts": {
+      "count": 2,
+      "tokens": 378,
+      "first_read": "2026-05-24T13:35:50.200Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/config/cors.ts": {
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.validation.ts": {
+      "count": 2,
+      "tokens": 76,
+      "first_read": "2026-05-24T13:35:57.606Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/hooks/useAdmin.ts": {
       "count": 1,
-      "tokens": 85,
-      "first_read": "2026-05-21T16:01:49.569Z"
+      "tokens": 580,
+      "first_read": "2026-05-24T13:35:57.895Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260524200000_add_ban_system/migration.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:36:15.817Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/content.scanner.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:36:21.615Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/ban.service.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:36:26.778Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:37:54.094Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/AdminChatViewer.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:38:12.530Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260524210000_ban_trigger_message/migration.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-05-24T13:50:10.060Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids.routes.ts": {
+      "count": 2,
+      "tokens": 132,
+      "first_read": "2026-05-24T13:53:46.246Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.controller.ts": {
+      "count": 2,
+      "tokens": 879,
+      "first_read": "2026-05-24T13:53:54.399Z"
     },
     "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/auth.middleware.ts": {
-      "count": 1,
+      "count": 2,
       "tokens": 342,
-      "first_read": "2026-05-21T16:01:53.302Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/next.config.ts": {
-      "count": 1,
-      "tokens": 30,
-      "first_read": "2026-05-21T16:01:54.727Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/.env.local": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-05-21T16:01:54.909Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/hooks/useRegister.ts": {
-      "count": 1,
-      "tokens": 543,
-      "first_read": "2026-05-21T16:02:14.114Z"
+      "first_read": "2026-05-24T13:53:54.520Z"
     },
     "/home/mohamedtalal/Documents/CLINKA/backend/src/app.ts": {
       "count": 1,
       "tokens": 253,
-      "first_read": "2026-05-21T16:02:14.138Z"
+      "first_read": "2026-05-24T13:54:22.678Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260521140000_google_auth/migration.sql": {
+    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids-mine.routes.ts": {
+      "count": 2,
+      "tokens": 86,
+      "first_read": "2026-05-24T13:54:45.331Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(app)/layout.tsx": {
+      "count": 2,
+      "tokens": 2976,
+      "first_read": "2026-05-24T14:03:15.522Z"
+    },
+    "/home/mohamedtalal/Documents/CLINKA/frontend/lib/featureFlags.ts": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-05-21T16:02:32.623Z"
+      "first_read": "2026-05-24T14:03:25.406Z"
     },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/config/google.ts": {
+    "/home/mohamedtalal/Documents/CLINKA/frontend/features/upgrade/components/ProUpgradeCard.tsx": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-05-21T16:02:36.394Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/google.service.ts": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-05-21T16:02:48.069Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/lib/googleAuth.ts": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-05-21T16:03:13.732Z"
-    },
-    "/home/mohamedtalal/Documents/CLINKA/frontend/app/(auth)/auth/callback/page.tsx": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-05-21T16:03:20.277Z"
+      "first_read": "2026-05-24T14:03:29.602Z"
     }
   },
   "files_written": [
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids.service.ts",
-      "action": "create",
-      "tokens": 1360,
-      "at": "2026-05-21T15:56:06.356Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
-      "action": "create",
-      "tokens": 2187,
-      "at": "2026-05-21T15:56:11.341Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/engineers/components/EngineerProfilePage.tsx",
-      "action": "create",
-      "tokens": 2762,
-      "at": "2026-05-21T15:56:12.981Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/engineers/components/EngineerProfilePage.tsx",
-      "action": "create",
-      "tokens": 2767,
-      "at": "2026-05-21T15:56:13.517Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
-      "action": "create",
-      "tokens": 5793,
-      "at": "2026-05-21T15:56:15.668Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
-      "action": "create",
-      "tokens": 6086,
-      "at": "2026-05-21T15:56:21.067Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
-      "action": "create",
-      "tokens": 6106,
-      "at": "2026-05-21T15:56:21.633Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
-      "action": "create",
-      "tokens": 6111,
-      "at": "2026-05-21T15:56:23.030Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx",
-      "action": "create",
-      "tokens": 531,
-      "at": "2026-05-21T15:56:24.137Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx",
-      "action": "create",
-      "tokens": 548,
-      "at": "2026-05-21T15:56:25.238Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx",
-      "action": "create",
-      "tokens": 576,
-      "at": "2026-05-21T15:56:26.263Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
-      "action": "create",
-      "tokens": 6120,
-      "at": "2026-05-21T15:56:28.797Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/app/globals.css",
-      "action": "create",
-      "tokens": 825,
-      "at": "2026-05-21T15:58:56.531Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/app/layout.tsx",
-      "action": "create",
-      "tokens": 307,
-      "at": "2026-05-21T15:58:58.683Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx",
-      "action": "create",
-      "tokens": 1056,
-      "at": "2026-05-21T15:59:04.435Z"
-    },
-    {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx",
-      "action": "create",
-      "tokens": 1097,
-      "at": "2026-05-21T15:59:13.891Z"
-    },
-    {
-      "file": "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-68927a4f-fa09-428a-8114-3d72813b63cb.png",
+      "file": "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-50f3ccd2-3e54-4e00-88a0-184adfcaf4dd.png",
       "action": "create",
       "tokens": 0,
-      "at": "2026-05-21T15:59:43.057Z"
+      "at": "2026-05-24T13:00:44.954Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/components/UI.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/payments/payments.service.ts",
       "action": "create",
-      "tokens": 3914,
-      "at": "2026-05-21T16:00:26.271Z"
+      "tokens": 4659,
+      "at": "2026-05-24T13:02:21.029Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/LoginForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/payments/payments.service.ts",
       "action": "create",
-      "tokens": 853,
-      "at": "2026-05-21T16:00:26.940Z"
+      "tokens": 4717,
+      "at": "2026-05-24T13:02:22.716Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/RegisterForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx",
       "action": "create",
-      "tokens": 2698,
-      "at": "2026-05-21T16:00:27.286Z"
+      "tokens": 3654,
+      "at": "2026-05-24T13:02:23.750Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/ForgotPasswordForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx",
       "action": "create",
-      "tokens": 629,
-      "at": "2026-05-21T16:00:29.116Z"
+      "tokens": 3660,
+      "at": "2026-05-24T13:02:24.192Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/ForgotPasswordForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx",
       "action": "create",
-      "tokens": 636,
-      "at": "2026-05-21T16:00:29.929Z"
+      "tokens": 3616,
+      "at": "2026-05-24T13:02:24.678Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/VerifyOtpForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/ProjectContextPanel.tsx",
       "action": "create",
-      "tokens": 385,
-      "at": "2026-05-21T16:00:30.651Z"
+      "tokens": 3619,
+      "at": "2026-05-24T13:02:26.028Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/VerifyEmailForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
       "action": "create",
-      "tokens": 768,
-      "at": "2026-05-21T16:00:30.816Z"
+      "tokens": 6195,
+      "at": "2026-05-24T13:02:27.063Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/LoginForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/notifications.ts",
       "action": "create",
-      "tokens": 862,
-      "at": "2026-05-21T16:00:40.362Z"
+      "tokens": 464,
+      "at": "2026-05-24T13:12:04.684Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260521140000_google_auth/migration.sql",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/notifications.ts",
       "action": "create",
-      "tokens": 40,
-      "at": "2026-05-21T16:02:33.028Z"
+      "tokens": 474,
+      "at": "2026-05-24T13:12:06.167Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6208,
+      "at": "2026-05-24T13:17:28.682Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx",
+      "action": "create",
+      "tokens": 1103,
+      "at": "2026-05-24T13:17:29.762Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx",
+      "action": "create",
+      "tokens": 1062,
+      "at": "2026-05-24T13:17:31.686Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx",
+      "action": "create",
+      "tokens": 1067,
+      "at": "2026-05-24T13:17:32.796Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/components/theme.tsx",
+      "action": "create",
+      "tokens": 1081,
+      "at": "2026-05-24T13:17:39.889Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/chatUpload.middleware.ts",
+      "action": "create",
+      "tokens": 138,
+      "at": "2026-05-24T13:21:58.348Z"
     },
     {
       "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/schema.prisma",
       "action": "create",
-      "tokens": 1502,
-      "at": "2026-05-21T16:02:33.998Z"
+      "tokens": 1536,
+      "at": "2026-05-24T13:22:00.510Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/config/google.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260524180000_message_attachments/migration.sql",
       "action": "create",
-      "tokens": 197,
-      "at": "2026-05-21T16:02:36.890Z"
+      "tokens": 54,
+      "at": "2026-05-24T13:22:03.878Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/google.service.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.validation.ts",
       "action": "create",
-      "tokens": 2020,
-      "at": "2026-05-21T16:02:48.463Z"
+      "tokens": 115,
+      "at": "2026-05-24T13:22:06.434Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.controller.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts",
       "action": "create",
-      "tokens": 1485,
-      "at": "2026-05-21T16:02:49.397Z"
+      "tokens": 936,
+      "at": "2026-05-24T13:22:08.690Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.controller.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts",
       "action": "create",
-      "tokens": 1890,
-      "at": "2026-05-21T16:02:53.953Z"
+      "tokens": 946,
+      "at": "2026-05-24T13:22:09.514Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.controller.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts",
       "action": "create",
-      "tokens": 1903,
-      "at": "2026-05-21T16:02:58.871Z"
+      "tokens": 948,
+      "at": "2026-05-24T13:22:10.108Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.routes.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts",
       "action": "create",
-      "tokens": 412,
-      "at": "2026-05-21T16:02:59.737Z"
+      "tokens": 951,
+      "at": "2026-05-24T13:22:11.348Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/auth.routes.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts",
       "action": "create",
-      "tokens": 461,
-      "at": "2026-05-21T16:03:01.067Z"
+      "tokens": 947,
+      "at": "2026-05-24T13:22:12.192Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/auth/google.service.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts",
       "action": "create",
-      "tokens": 2060,
-      "at": "2026-05-21T16:03:04.191Z"
+      "tokens": 950,
+      "at": "2026-05-24T13:22:13.152Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/lib/googleAuth.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/socket.ts",
       "action": "create",
-      "tokens": 240,
-      "at": "2026-05-21T16:03:14.225Z"
+      "tokens": 952,
+      "at": "2026-05-24T13:22:13.962Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/app/(auth)/auth/callback/page.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
       "action": "create",
-      "tokens": 660,
-      "at": "2026-05-21T16:03:20.834Z"
+      "tokens": 2196,
+      "at": "2026-05-24T13:22:19.338Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/lib/axios.ts",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
       "action": "create",
-      "tokens": 364,
-      "at": "2026-05-21T16:03:21.604Z"
+      "tokens": 2296,
+      "at": "2026-05-24T13:22:21.158Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/LoginForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
       "action": "create",
-      "tokens": 1138,
-      "at": "2026-05-21T16:03:27.365Z"
+      "tokens": 2421,
+      "at": "2026-05-24T13:22:30.221Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/LoginForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.controller.ts",
       "action": "create",
-      "tokens": 1199,
-      "at": "2026-05-21T16:03:28.843Z"
+      "tokens": 665,
+      "at": "2026-05-24T13:22:31.724Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/LoginForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.controller.ts",
       "action": "create",
-      "tokens": 1217,
-      "at": "2026-05-21T16:03:30.103Z"
+      "tokens": 792,
+      "at": "2026-05-24T13:22:35.827Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/RegisterForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.routes.ts",
       "action": "create",
-      "tokens": 2720,
-      "at": "2026-05-21T16:03:40.367Z"
+      "tokens": 265,
+      "at": "2026-05-24T13:22:36.855Z"
     },
     {
-      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/auth/components/RegisterForm.tsx",
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.routes.ts",
       "action": "create",
-      "tokens": 2846,
-      "at": "2026-05-21T16:03:41.213Z"
+      "tokens": 289,
+      "at": "2026-05-24T13:22:38.110Z"
     },
     {
-      "file": "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-a01cb81d-f2bd-449f-bcff-a350e5f2569b.png",
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/components/MessageAttachment.tsx",
+      "action": "create",
+      "tokens": 392,
+      "at": "2026-05-24T13:22:49.269Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/types.ts",
+      "action": "create",
+      "tokens": 283,
+      "at": "2026-05-24T13:22:51.008Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/api/messages.api.ts",
+      "action": "create",
+      "tokens": 588,
+      "at": "2026-05-24T13:22:54.801Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6216,
+      "at": "2026-05-24T13:23:00.115Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6236,
+      "at": "2026-05-24T13:23:00.752Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6343,
+      "at": "2026-05-24T13:23:03.390Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6378,
+      "at": "2026-05-24T13:23:05.168Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6386,
+      "at": "2026-05-24T13:23:07.177Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6641,
+      "at": "2026-05-24T13:23:15.918Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 6756,
+      "at": "2026-05-24T13:23:18.574Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 7024,
+      "at": "2026-05-24T13:23:26.691Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/pages/MessagingPage.tsx",
+      "action": "create",
+      "tokens": 7029,
+      "at": "2026-05-24T13:23:27.692Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/chatUpload.middleware.ts",
+      "action": "create",
+      "tokens": 132,
+      "at": "2026-05-24T13:23:50.144Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/uploadErrors.ts",
+      "action": "create",
+      "tokens": 540,
+      "at": "2026-05-24T13:28:27.132Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/errorHandler.middleware.ts",
+      "action": "create",
+      "tokens": 292,
+      "at": "2026-05-24T13:28:28.991Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/chatUpload.middleware.ts",
+      "action": "create",
+      "tokens": 168,
+      "at": "2026-05-24T13:28:30.351Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/chatUpload.middleware.ts",
+      "action": "create",
+      "tokens": 219,
+      "at": "2026-05-24T13:28:32.053Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.routes.ts",
+      "action": "create",
+      "tokens": 318,
+      "at": "2026-05-24T13:28:33.982Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/lib/validation/index.ts",
+      "action": "create",
+      "tokens": 643,
+      "at": "2026-05-24T13:28:39.108Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/messages/api/messages.api.ts",
+      "action": "create",
+      "tokens": 599,
+      "at": "2026-05-24T13:28:40.894Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/schema.prisma",
+      "action": "create",
+      "tokens": 1552,
+      "at": "2026-05-24T13:36:10.126Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/schema.prisma",
+      "action": "create",
+      "tokens": 1689,
+      "at": "2026-05-24T13:36:13.116Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260524200000_add_ban_system/migration.sql",
+      "action": "create",
+      "tokens": 241,
+      "at": "2026-05-24T13:36:16.380Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/content.scanner.ts",
+      "action": "create",
+      "tokens": 360,
+      "at": "2026-05-24T13:36:22.247Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/ban.service.ts",
+      "action": "create",
+      "tokens": 474,
+      "at": "2026-05-24T13:36:27.236Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/ban.service.ts",
+      "action": "create",
+      "tokens": 534,
+      "at": "2026-05-24T13:36:38.208Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
+      "action": "create",
+      "tokens": 2472,
+      "at": "2026-05-24T13:36:39.523Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
+      "action": "create",
+      "tokens": 2624,
+      "at": "2026-05-24T13:36:41.867Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/notifications.ts",
+      "action": "create",
+      "tokens": 502,
+      "at": "2026-05-24T13:36:43.424Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/notifications.ts",
+      "action": "create",
+      "tokens": 511,
+      "at": "2026-05-24T13:36:44.626Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/utils/notifications.ts",
+      "action": "create",
+      "tokens": 551,
+      "at": "2026-05-24T13:36:48.308Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.service.ts",
+      "action": "create",
+      "tokens": 762,
+      "at": "2026-05-24T13:36:52.820Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.service.ts",
+      "action": "create",
+      "tokens": 2127,
+      "at": "2026-05-24T13:37:08.001Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.validation.ts",
+      "action": "create",
+      "tokens": 119,
+      "at": "2026-05-24T13:37:09.288Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.controller.ts",
+      "action": "create",
+      "tokens": 419,
+      "at": "2026-05-24T13:37:11.346Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.controller.ts",
+      "action": "create",
+      "tokens": 1077,
+      "at": "2026-05-24T13:37:18.835Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.routes.ts",
+      "action": "create",
+      "tokens": 201,
+      "at": "2026-05-24T13:37:20.093Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.routes.ts",
+      "action": "create",
+      "tokens": 303,
+      "at": "2026-05-24T13:37:21.810Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/api/admin.api.ts",
+      "action": "create",
+      "tokens": 1192,
+      "at": "2026-05-24T13:37:34.499Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2111,
+      "at": "2026-05-24T13:37:54.950Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/AdminChatViewer.tsx",
+      "action": "create",
+      "tokens": 2212,
+      "at": "2026-05-24T13:38:13.054Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/pages/AdminPage.tsx",
+      "action": "create",
+      "tokens": 770,
+      "at": "2026-05-24T13:38:14.325Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/pages/AdminPage.tsx",
+      "action": "create",
+      "tokens": 789,
+      "at": "2026-05-24T13:38:15.121Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/pages/AdminPage.tsx",
+      "action": "create",
+      "tokens": 805,
+      "at": "2026-05-24T13:38:16.419Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/pages/AdminPage.tsx",
+      "action": "create",
+      "tokens": 1068,
+      "at": "2026-05-24T13:38:20.493Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/AdminChatViewer.tsx",
+      "action": "create",
+      "tokens": 2197,
+      "at": "2026-05-24T13:38:27.997Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2123,
+      "at": "2026-05-24T13:46:14.930Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2261,
+      "at": "2026-05-24T13:46:17.907Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2900,
+      "at": "2026-05-24T13:46:24.380Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2402,
+      "at": "2026-05-24T13:46:30.272Z"
+    },
+    {
+      "file": "/home/mohamedtalal/.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-6e70b161-137f-4c87-b823-493fef5d54cf.png",
       "action": "create",
       "tokens": 0,
-      "at": "2026-05-21T16:21:01.767Z"
+      "at": "2026-05-24T13:49:37.796Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/schema.prisma",
+      "action": "create",
+      "tokens": 1700,
+      "at": "2026-05-24T13:50:09.610Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/prisma/migrations/20260524210000_ban_trigger_message/migration.sql",
+      "action": "create",
+      "tokens": 19,
+      "at": "2026-05-24T13:50:10.760Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/ban.service.ts",
+      "action": "create",
+      "tokens": 568,
+      "at": "2026-05-24T13:50:15.246Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
+      "action": "create",
+      "tokens": 2646,
+      "at": "2026-05-24T13:50:16.300Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/admin/admin.service.ts",
+      "action": "create",
+      "tokens": 2138,
+      "at": "2026-05-24T13:50:24.947Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/api/admin.api.ts",
+      "action": "create",
+      "tokens": 1202,
+      "at": "2026-05-24T13:50:26.029Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2499,
+      "at": "2026-05-24T13:50:28.885Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2541,
+      "at": "2026-05-24T13:50:30.876Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/admin/components/BanManagementPanel.tsx",
+      "action": "create",
+      "tokens": 2740,
+      "at": "2026-05-24T13:50:36.154Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/ban.service.ts",
+      "action": "create",
+      "tokens": 581,
+      "at": "2026-05-24T13:54:27.858Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/ban.service.ts",
+      "action": "create",
+      "tokens": 754,
+      "at": "2026-05-24T13:54:31.239Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/auth.middleware.ts",
+      "action": "create",
+      "tokens": 368,
+      "at": "2026-05-24T13:54:32.792Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/middlewares/auth.middleware.ts",
+      "action": "create",
+      "tokens": 740,
+      "at": "2026-05-24T13:54:38.513Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
+      "action": "create",
+      "tokens": 2648,
+      "at": "2026-05-24T13:54:39.467Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.service.ts",
+      "action": "create",
+      "tokens": 2595,
+      "at": "2026-05-24T13:54:40.682Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.routes.ts",
+      "action": "create",
+      "tokens": 324,
+      "at": "2026-05-24T13:54:41.630Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/messages/messages.routes.ts",
+      "action": "create",
+      "tokens": 329,
+      "at": "2026-05-24T13:54:42.332Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids.service.ts",
+      "action": "create",
+      "tokens": 1394,
+      "at": "2026-05-24T13:54:44.156Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids.routes.ts",
+      "action": "create",
+      "tokens": 149,
+      "at": "2026-05-24T13:54:45.599Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids-mine.routes.ts",
+      "action": "create",
+      "tokens": 104,
+      "at": "2026-05-24T13:54:51.111Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.routes.ts",
+      "action": "create",
+      "tokens": 307,
+      "at": "2026-05-24T13:54:52.267Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.routes.ts",
+      "action": "create",
+      "tokens": 314,
+      "at": "2026-05-24T13:54:52.661Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.routes.ts",
+      "action": "create",
+      "tokens": 328,
+      "at": "2026-05-24T13:54:54.075Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.routes.ts",
+      "action": "create",
+      "tokens": 337,
+      "at": "2026-05-24T13:54:55.197Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.controller.ts",
+      "action": "create",
+      "tokens": 1040,
+      "at": "2026-05-24T13:54:56.161Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.controller.ts",
+      "action": "create",
+      "tokens": 1075,
+      "at": "2026-05-24T13:54:57.460Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.controller.ts",
+      "action": "create",
+      "tokens": 1111,
+      "at": "2026-05-24T13:55:11.684Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/bids/bids.service.ts",
+      "action": "create",
+      "tokens": 1413,
+      "at": "2026-05-24T13:55:18.577Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.service.ts",
+      "action": "create",
+      "tokens": 1872,
+      "at": "2026-05-24T13:55:20.254Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/backend/src/modules/projects/project.service.ts",
+      "action": "create",
+      "tokens": 1893,
+      "at": "2026-05-24T13:55:26.708Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/lib/featureFlags.ts",
+      "action": "create",
+      "tokens": 59,
+      "at": "2026-05-24T14:03:25.921Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/features/upgrade/components/ProUpgradeCard.tsx",
+      "action": "create",
+      "tokens": 275,
+      "at": "2026-05-24T14:03:30.176Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/app/(app)/layout.tsx",
+      "action": "create",
+      "tokens": 3014,
+      "at": "2026-05-24T14:03:31.230Z"
+    },
+    {
+      "file": "/home/mohamedtalal/Documents/CLINKA/frontend/app/(app)/layout.tsx",
+      "action": "create",
+      "tokens": 2814,
+      "at": "2026-05-24T14:03:33.412Z"
     }
   ],
   "edit_counts": {
-    "backend/src/modules/bids/bids.service.ts": 1,
-    "backend/src/modules/messages/messages.service.ts": 1,
-    "frontend/features/engineers/components/EngineerProfilePage.tsx": 2,
-    "frontend/features/messages/pages/MessagingPage.tsx": 5,
-    "frontend/features/messages/components/ProjectContextPanel.tsx": 3,
-    "frontend/app/globals.css": 1,
-    "frontend/app/layout.tsx": 1,
-    "frontend/components/theme.tsx": 2,
-    "../../.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-68927a4f-fa09-428a-8114-3d72813b63cb.png": 1,
-    "frontend/components/UI.tsx": 1,
-    "frontend/features/auth/components/LoginForm.tsx": 5,
-    "frontend/features/auth/components/RegisterForm.tsx": 3,
-    "frontend/features/auth/components/ForgotPasswordForm.tsx": 2,
-    "frontend/features/auth/components/VerifyOtpForm.tsx": 1,
-    "frontend/features/auth/components/VerifyEmailForm.tsx": 1,
-    "backend/prisma/migrations/20260521140000_google_auth/migration.sql": 1,
-    "backend/prisma/schema.prisma": 1,
-    "backend/src/config/google.ts": 1,
-    "backend/src/modules/auth/google.service.ts": 2,
-    "backend/src/modules/auth/auth.controller.ts": 3,
-    "backend/src/modules/auth/auth.routes.ts": 2,
-    "frontend/features/auth/lib/googleAuth.ts": 1,
-    "frontend/app/(auth)/auth/callback/page.tsx": 1,
-    "frontend/lib/axios.ts": 1,
-    "../../.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-a01cb81d-f2bd-449f-bcff-a350e5f2569b.png": 1
+    "../../.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-50f3ccd2-3e54-4e00-88a0-184adfcaf4dd.png": 1,
+    "backend/src/modules/payments/payments.service.ts": 2,
+    "frontend/features/messages/components/ProjectContextPanel.tsx": 4,
+    "frontend/features/messages/pages/MessagingPage.tsx": 11,
+    "backend/src/utils/notifications.ts": 5,
+    "frontend/components/theme.tsx": 4,
+    "backend/src/middlewares/chatUpload.middleware.ts": 4,
+    "backend/prisma/schema.prisma": 4,
+    "backend/prisma/migrations/20260524180000_message_attachments/migration.sql": 1,
+    "backend/src/modules/messages/messages.validation.ts": 1,
+    "backend/src/socket.ts": 7,
+    "backend/src/modules/messages/messages.service.ts": 8,
+    "backend/src/modules/messages/messages.controller.ts": 2,
+    "backend/src/modules/messages/messages.routes.ts": 5,
+    "frontend/features/messages/components/MessageAttachment.tsx": 1,
+    "frontend/features/messages/types.ts": 1,
+    "frontend/features/messages/api/messages.api.ts": 2,
+    "backend/src/utils/uploadErrors.ts": 1,
+    "backend/src/middlewares/errorHandler.middleware.ts": 1,
+    "frontend/lib/validation/index.ts": 1,
+    "backend/prisma/migrations/20260524200000_add_ban_system/migration.sql": 1,
+    "backend/src/modules/messages/content.scanner.ts": 1,
+    "backend/src/modules/messages/ban.service.ts": 5,
+    "backend/src/modules/admin/admin.service.ts": 3,
+    "backend/src/modules/admin/admin.validation.ts": 1,
+    "backend/src/modules/admin/admin.controller.ts": 2,
+    "backend/src/modules/admin/admin.routes.ts": 2,
+    "frontend/features/admin/api/admin.api.ts": 2,
+    "frontend/features/admin/components/BanManagementPanel.tsx": 8,
+    "frontend/features/admin/components/AdminChatViewer.tsx": 2,
+    "frontend/features/admin/pages/AdminPage.tsx": 4,
+    "../../.cursor/projects/home-mohamedtalal-Documents-CLINKA/assets/image-6e70b161-137f-4c87-b823-493fef5d54cf.png": 1,
+    "backend/prisma/migrations/20260524210000_ban_trigger_message/migration.sql": 1,
+    "backend/src/middlewares/auth.middleware.ts": 2,
+    "backend/src/modules/bids/bids.service.ts": 2,
+    "backend/src/modules/bids/bids.routes.ts": 1,
+    "backend/src/modules/bids/bids-mine.routes.ts": 1,
+    "backend/src/modules/projects/project.routes.ts": 4,
+    "backend/src/modules/projects/project.controller.ts": 3,
+    "backend/src/modules/projects/project.service.ts": 2,
+    "frontend/lib/featureFlags.ts": 1,
+    "frontend/features/upgrade/components/ProUpgradeCard.tsx": 1,
+    "frontend/app/(app)/layout.tsx": 2
   },
-  "anatomy_hits": 52,
-  "anatomy_misses": 11,
-  "repeated_reads_warned": 31,
+  "anatomy_hits": 42,
+  "anatomy_misses": 13,
+  "repeated_reads_warned": 50,
   "cerebrum_warnings": 0,
-  "stop_count": 6
+  "stop_count": 11
 }
