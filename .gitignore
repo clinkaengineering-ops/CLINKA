@@ -1,9 +1,8 @@
 /engineering-marketplace-frontend-development
 
-/home/mohamedtalal/Documents/CLINKA/breif  for programer.pdf
-/home/mohamedtalal/Documents/CLINKA/PROJECT_ARCHITECTURE_REVIEW.md
-
-
-.claude
-.wolf
+/.claude
+/.wolf
+*.pdf
+ngrok.yml
 CLAUDE.md
+CLINKA_AI_PROJECT_BRIEF.md
