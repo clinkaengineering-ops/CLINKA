@@ -78,6 +78,18 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
       <div className="mt-3 flex flex-wrap gap-1">
         <Badge>{label}</Badge>
         {project.client && <Badge color="slate">{project.client.name}</Badge>}
+        {project.status === "IN_PROGRESS" && project.payment?.status !== "FUNDED" && (
+          <Badge color="slate">{t("pay.status.needsPayment")}</Badge>
+        )}
+        {project.status === "IN_PROGRESS" && project.payment?.status === "FUNDED" && (
+          <Badge color="blue">{t("pay.status.inProgress")}</Badge>
+        )}
+        {project.status === "AWAITING_APPROVAL" && (
+          <Badge color="amber">{t("pay.status.reviewWork")}</Badge>
+        )}
+        {project.status === "COMPLETED" && (
+          <Badge color="green">{t("pay.status.completed")}</Badge>
+        )}
       </div>
     </Card>
   );

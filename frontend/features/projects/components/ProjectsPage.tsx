@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button, Card } from "@/components/UI";
 import { IconFilter, IconSearch, IconBriefcase, IconArrow } from "@/components/Icons";
 import { cn } from "@/utils/cn";
@@ -7,6 +8,7 @@ import { useI18n } from "@/i18n";
 import { useProjects } from "../hooks/useProjects";
 import { PostProjectModal } from "./PostProjectModal";
 import { Badge } from "@/components/UI";
+import type { ServiceType } from "../api/project.api";
 
 const SERVICE_LABELS: Record<string, string> = {
   DESIGN: "Design",
@@ -25,11 +27,31 @@ const categoryLabels: Record<string, string> = {
 export function ProjectsPage() {
   const { t } = useI18n();
   const { data: allProjects, loading, error, refetch } = useProjects();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [active, setActive] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const projects = allProjects ?? [];
+
+  const initialDraft = useMemo(() => {
+    const create = searchParams.get("create");
+    if (create !== "1") return null;
+    const title = searchParams.get("title") ?? undefined;
+    const description = searchParams.get("description") ?? undefined;
+    const budget = searchParams.get("budget") ?? undefined;
+    const serviceType = searchParams.get("service") as ServiceType | null;
+    const normalizedService =
+      serviceType === "DESIGN" || serviceType === "SUPERVISION" || serviceType === "REVIEW"
+        ? serviceType
+        : undefined;
+    return { title, description, budget, serviceType: normalizedService };
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!initialDraft) return;
+    setIsModalOpen(true);
+  }, [initialDraft]);
 
   const filtered = projects.filter((p) => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
@@ -43,6 +65,10 @@ export function ProjectsPage() {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onCreated={() => refetch()}
+        initialTitle={initialDraft?.title}
+        initialDescription={initialDraft?.description}
+        initialBudget={initialDraft?.budget}
+        initialServiceType={initialDraft?.serviceType}
       />
 
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">

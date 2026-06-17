@@ -14,6 +14,7 @@ import { ClientProfile } from "../components/ClientProfile";
 import { DashboardStatsRow } from "../components/DashboardStats";
 import { DashboardActiveProjects } from "../components/DashboardActiveProjects";
 import { DashboardQuickActions } from "../components/DashboardQuickActions";
+import { DashboardEscrowOverview } from "../components/DashboardEscrowOverview";
 
 export function ClientDashboardPage() {
   const router = useRouter();
@@ -46,6 +47,8 @@ export function ClientDashboardPage() {
         messages={messagesState.data ?? []}
         notifications={notificationsState.data ?? []}
       />
+
+      <DashboardEscrowOverview />
 
       <DashboardActiveProjects
         projects={projectsState.data ?? []}

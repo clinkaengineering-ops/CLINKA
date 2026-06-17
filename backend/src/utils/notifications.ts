@@ -4,6 +4,8 @@ export type NotificationType =
   | "NEW_BID"
   | "BID_ACCEPTED"
   | "ESCROW_FUNDED"
+  | "ESCROW_REFUNDED"
+  | "FUND_REMINDER"
   | "FUNDS_RELEASED"
   | "NEW_MESSAGE"
   | "WORK_DELIVERED"
@@ -28,6 +30,8 @@ const PREF_KEY: Record<NotificationType, keyof NotificationPrefs> = {
   NEW_BID: "newBid",
   BID_ACCEPTED: "bidAccepted",
   ESCROW_FUNDED: "fundsReleased",
+  ESCROW_REFUNDED: "fundsReleased",
+  FUND_REMINDER: "fundsReleased",
   FUNDS_RELEASED: "fundsReleased",
   NEW_MESSAGE: "newMessage",
   WORK_DELIVERED: "newMessage",

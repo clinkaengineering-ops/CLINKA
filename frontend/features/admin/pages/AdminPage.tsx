@@ -12,8 +12,14 @@ import { AdminStatsGrid } from "../components/AdminStatsGrid";
 import { AdminVerificationList } from "../components/AdminVerificationList";
 import { BanManagementPanel } from "../components/BanManagementPanel";
 import { AdminChatViewer } from "../components/AdminChatViewer";
+import { AdminUserDirectory } from "../components/AdminUserDirectory";
+import { AdminProjectsPanel } from "../components/AdminProjectsPanel";
+import { AdminReviewsPanel } from "../components/AdminReviewsPanel";
+import { AdminFinancialsPanel } from "../components/AdminFinancialsPanel";
+import { AdminAnalytics } from "../components/AdminAnalytics";
+import { AdminSystemLogs } from "../components/AdminSystemLogs";
 
-type AdminTab = "overview" | "bans" | "chats";
+type AdminTab = "overview" | "users" | "projects" | "reviews" | "financials" | "bans" | "chats" | "analytics" | "logs";
 
 export function AdminPage() {
   const { t } = useI18n();
@@ -79,8 +85,14 @@ export function AdminPage() {
         {(
           [
             ["overview", "Overview"],
+            ["users", "Directory"],
+            ["projects", "Projects"],
+            ["reviews", "Reviews"],
+            ["financials", "Financials"],
             ["bans", "Bans"],
             ["chats", "Chats"],
+            ["analytics", "Analytics"],
+            ["logs", "System Logs"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -99,9 +111,21 @@ export function AdminPage() {
         ))}
       </div>
 
+      {tab === "users" && <AdminUserDirectory />}
+      
+      {tab === "projects" && <AdminProjectsPanel />}
+
+      {tab === "reviews" && <AdminReviewsPanel />}
+
+      {tab === "financials" && <AdminFinancialsPanel />}
+
       {tab === "bans" && <BanManagementPanel />}
 
       {tab === "chats" && <AdminChatViewer />}
+
+      {tab === "analytics" && <AdminAnalytics />}
+
+      {tab === "logs" && <AdminSystemLogs />}
 
       {tab === "overview" &&
         (loading ? (

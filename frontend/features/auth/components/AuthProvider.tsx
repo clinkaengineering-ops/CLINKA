@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/admin",
   "/messages",
   "/escrow",
+  "/balance",
   "/reviews",
   "/checkout",
 ];
@@ -22,6 +23,7 @@ const ADMIN_BLOCKED_PREFIXES = [
   "/dashboard",
   "/messages",
   "/escrow",
+  "/balance",
   "/reviews",
   "/my-bids",
 ];
@@ -29,14 +31,16 @@ const ADMIN_BLOCKED_PREFIXES = [
 export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, setUser, sessionReady, setSessionReady } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const sessionReady = useAuthStore((s) => s.sessionReady);
+  const setUser = useAuthStore((s) => s.setUser);
+  const setSessionReady = useAuthStore((s) => s.setSessionReady);
   const [bootstrapping, setBootstrapping] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     async function bootstrap() {
-      setSessionReady(false);
       try {
         const me = await getMe();
         if (!cancelled) setUser(me);
@@ -44,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setUser(null);
       } finally {
         if (!cancelled) {
-          setSessionReady(true);
           setBootstrapping(false);
         }
       }
@@ -54,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [setUser, setSessionReady]);
+  }, []); // run once on mount
 
   useEffect(() => {
     if (bootstrapping || !sessionReady) return;

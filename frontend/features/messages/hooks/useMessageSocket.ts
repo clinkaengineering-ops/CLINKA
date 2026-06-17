@@ -27,6 +27,8 @@ export function useMessageSocket(
       onMessage: (msg: ChatMessage) => onNewMessageRef.current(msg),
       onPresence: ({ userId, online }: PresenceUpdate) => {
         setOnlineUsers((prev) => {
+          if (online && prev.has(userId)) return prev;
+          if (!online && !prev.has(userId)) return prev;
           const next = new Set(prev);
           if (online) next.add(userId);
           else next.delete(userId);
@@ -46,9 +48,26 @@ export function useMessageSocket(
     };
   }, []);
 
+  const [connected, setConnected] = useState(false);
+
   useEffect(() => {
     const sock = getMessageSocket();
-    if (!sock.connected) return;
+    const handleConnect = () => setConnected(true);
+    const handleDisconnect = () => setConnected(false);
+
+    sock.on("connect", handleConnect);
+    sock.on("disconnect", handleDisconnect);
+    setConnected(sock.connected);
+
+    return () => {
+      sock.off("connect", handleConnect);
+      sock.off("disconnect", handleDisconnect);
+    };
+  }, []);
+
+  useEffect(() => {
+    const sock = getMessageSocket();
+    if (!connected) return;
 
     if (conversationId != null) {
       sock.emit("conversation:join", conversationId);
@@ -56,7 +75,7 @@ export function useMessageSocket(
         sock.emit("conversation:leave", conversationId);
       };
     }
-  }, [conversationId]);
+  }, [conversationId, connected]);
 
   const sendViaSocket = (content: string) => {
     if (conversationId == null) return;
@@ -77,6 +96,6 @@ export function useMessageSocket(
     sendViaSocket,
     emitTypingStart,
     emitTypingStop,
-    isConnected: getMessageSocket().connected,
+    isConnected: connected,
   };
 }

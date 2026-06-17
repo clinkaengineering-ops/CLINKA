@@ -11,19 +11,17 @@ function GoogleCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setUser = useAuthStore((s) => s.setUser);
-  const [message, setMessage] = useState("Signing you in…");
+  const error = searchParams.get("error");
+  const success = searchParams.get("success");
+  const initialMessage = error
+    ? decodeURIComponent(error)
+    : success !== "1"
+      ? "Google sign-in was cancelled."
+      : "Signing you in…";
+  const [message, setMessage] = useState(initialMessage);
 
   useEffect(() => {
-    const error = searchParams.get("error");
-    if (error) {
-      setMessage(decodeURIComponent(error));
-      return;
-    }
-
-    if (searchParams.get("success") !== "1") {
-      setMessage("Google sign-in was cancelled.");
-      return;
-    }
+    if (error || success !== "1") return;
 
     let cancelled = false;
 
@@ -49,7 +47,7 @@ function GoogleCallbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, router, setUser]);
+  }, [error, success, searchParams, router, setUser]);
 
   const isError =
     searchParams.get("error") ||

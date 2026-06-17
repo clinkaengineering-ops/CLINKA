@@ -12,7 +12,7 @@ import {
   IconShield, IconSettings, IconLogo, IconMenu, IconClose,
   IconLogout,
 } from "@/components/Icons";
-import { Avatar, Badge, Button } from "@/components/UI";
+import { Avatar, Button } from "@/components/UI";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
 import { featureFlags } from "@/lib/featureFlags";
@@ -28,7 +28,8 @@ const navItems = [
   // Workspace
   { href: "/dashboard", label: "side.clientDash", icon: IconChart, section: "side.workspace" },
   { href: "/messages", label: "side.messages", icon: IconMessage, section: "side.workspace" },
-  { href: "/escrow", label: "side.escrow", icon: IconWallet, section: "side.workspace" },
+  { href: "/escrow", label: "side.escrow", icon: IconWallet, section: "side.workspace", roles: ["CLIENT"] as const },
+  { href: "/balance", label: "side.balance", icon: IconWallet, section: "side.workspace", roles: ["ENGINEER"] as const },
   { href: "/reviews", label: "side.reviews", icon: IconStar, section: "side.workspace" },
 
   // Operations
@@ -69,13 +70,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
     return navItems.filter((item) => {
       if (item.href === "/admin") return false;
       if (item.href === "/reviews" && user?.role !== "CLIENT") return false;
-      if (item.href === "/escrow" && user?.role !== "CLIENT" && user?.role !== "ENGINEER") {
+      if (item.href === "/escrow" && user?.role !== "CLIENT") return false;
+      if (item.href === "/balance" && user?.role !== "ENGINEER") return false;
+      const roleScope = (item as { roles?: readonly string[] }).roles;
+      if (roleScope && user?.role && !roleScope.includes(user.role)) {
         return false;
       }
       if (item.href === "/my-bids" && user?.role !== "ENGINEER") return false;
       return true;
     });
-  }, [user?.role]);
+  }, [user]);
 
   async function handleLogout() {
     await logout();

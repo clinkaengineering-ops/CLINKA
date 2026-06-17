@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Card, StatCard } from "@/components/UI";
-import { IconBriefcase, IconMessage, IconShield } from "@/components/Icons";
+import { IconBriefcase, IconMessage } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import { useMe } from "@/features/auth/hooks/useMe";
 import { useMyBids } from "@/features/bids/hooks/useMyBids";
 import { fetchConversations } from "@/features/messages/api/messages.api";
 import { useEffect, useState } from "react";
+import { fetchEngineerBalance } from "@/features/escrow/api/payments.api";
+import { EngineerFinancialOverview } from "./EngineerFinancialOverview";
+import type { EngineerBalanceSummary } from "@/features/escrow/types";
 
 export function EngineerDashboardPage() {
   const { t } = useI18n();
@@ -16,11 +19,15 @@ export function EngineerDashboardPage() {
   const { me, loading } = useMe();
   const { activeContracts, bids } = useMyBids();
   const [inboxCount, setInboxCount] = useState(0);
+  const [balance, setBalance] = useState<EngineerBalanceSummary | null>(null);
 
   useEffect(() => {
     fetchConversations()
       .then((c) => setInboxCount(c.length))
       .catch(() => setInboxCount(0));
+    fetchEngineerBalance()
+      .then((b) => setBalance(b))
+      .catch(() => setBalance(null));
   }, []);
 
   const verification = me?.profile?.verificationStatus ?? "PENDING";
@@ -44,7 +51,9 @@ export function EngineerDashboardPage() {
         </Button>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <EngineerFinancialOverview balance={balance} loading={loading && !balance} />
+
+      <div className="grid sm:grid-cols-3 gap-4">
         <StatCard
           label={t("ed.activeContracts")}
           value={String(activeCount)}
@@ -60,11 +69,6 @@ export function EngineerDashboardPage() {
           value={String(inboxCount)}
           icon={<IconMessage width={20} height={20} />}
         />
-        <StatCard
-          label={t("ep.verifications")}
-          value={verification}
-          icon={<IconShield width={20} height={20} />}
-        />
       </div>
 
       <Card className="p-6">
@@ -79,6 +83,9 @@ export function EngineerDashboardPage() {
           </Link>
           <Link href="/messages">
             <Button variant="secondary">{t("side.messages")}</Button>
+          </Link>
+          <Link href="/balance">
+            <Button variant="secondary">{t("side.balance")}</Button>
           </Link>
           <Link href="/settings">
             <Button variant="ghost">{t("side.settings")}</Button>

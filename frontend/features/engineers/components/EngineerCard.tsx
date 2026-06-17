@@ -25,7 +25,10 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
               <VerifiedBadge size={16} />
             )}
           </div>
-          <p className="text-xs text-slate-500">{engineer.profile?.specialty}</p>
+          <p className="text-xs text-slate-500">
+            {engineer.profile?.specialty}
+            {engineer.profile?.nationality && ` · ${engineer.profile.nationality}`}
+          </p>
           <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
             <IconStar width={12} height={12} className="text-amber-500" />
             <span className="font-semibold text-slate-900 dark:text-white">

@@ -8,6 +8,7 @@ import useAuthStore from "@/store/authStore";
 import type { Project, ServiceType } from "../api/project.api";
 import { BidForm } from "@/features/bids/components/BidForm";
 import { ProjectBidsList } from "./ProjectBidsList";
+import { ProjectPaymentCard } from "./ProjectPaymentCard";
 import { ProjectReviewSection } from "@/features/reviews/components/ProjectReviewSection";
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
@@ -102,6 +103,8 @@ export function ProjectDetailPanel({
           canManage={isOwner && user?.role === "CLIENT"}
           onUpdated={onRefresh}
         />
+
+        <ProjectPaymentCard project={project} onUpdated={onRefresh} />
 
         {isOwner && project.status === "IN_PROGRESS" && (
           <Link

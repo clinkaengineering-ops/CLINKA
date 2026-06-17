@@ -32,7 +32,7 @@ export function useAccountSettings() {
   }, [refetch]);
 
   const save = useCallback(
-    async (payload: { name?: string; bio?: string }) => {
+    async (payload: { name?: string; bio?: string; nationality?: string }) => {
       setSaving(true);
       setError(null);
       try {

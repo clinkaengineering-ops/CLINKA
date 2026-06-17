@@ -18,6 +18,7 @@ export const engineerRegisterSchema = clientRegisterSchema.extend({
     error: "Select civil or architectural specialty",
   }),
   bio: optionalBioField,
+  nationality: z.string().min(1, "Nationality is required"),
   documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
     error: "Select a document type to upload",
   }),

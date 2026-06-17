@@ -2,6 +2,7 @@ import api from "@/lib/axios";
 import type { ApiResponse } from "@/features/engineers/api/engineer.api";
 import type {
   CheckoutResult,
+  EngineerBalanceSummary,
   EscrowPaymentItem,
   FawaterkPaymentMethod,
   InitiateCheckoutPayload,
@@ -27,6 +28,12 @@ export const fetchEngineerEscrowPayments = (): Promise<EscrowPaymentItem[]> =>
   unwrap(
     api.get<ApiResponse<EscrowPaymentItem[]>>("/payments/engineer/escrow"),
   ).then((d) => d ?? []);
+
+/** GET /payments/engineer/balance */
+export const fetchEngineerBalance = (): Promise<EngineerBalanceSummary> =>
+  unwrap(
+    api.get<ApiResponse<EngineerBalanceSummary>>("/payments/engineer/balance"),
+  );
 
 export interface CheckoutSession {
   hashKey: string;

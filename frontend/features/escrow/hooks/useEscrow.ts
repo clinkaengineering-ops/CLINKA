@@ -26,26 +26,31 @@ function axiosMessage(err: unknown): string {
 
 function toContractRows(
   payments: EscrowPaymentItem[],
-  inProgressProjects: {
+  activeProjects: {
     id: number;
     title: string;
+    status: string;
     budget: number;
     bids?: { price: number; status: string }[];
   }[],
 ): EscrowContractRow[] {
+  const projectStatusById = new Map(
+    activeProjects.map((p) => [p.id, p.status]),
+  );
   const byProject = new Map(payments.map((p) => [p.projectId, p]));
 
   const rows: EscrowContractRow[] = payments.map((p) => ({
     paymentId: p.id,
     projectId: p.projectId,
     projectTitle: p.projectTitle,
+    projectStatus: p.projectStatus ?? projectStatusById.get(p.projectId),
     amount: p.amount,
     commission: p.commission,
     status: p.status,
     updatedAt: p.updatedAt,
   }));
 
-  for (const project of inProgressProjects) {
+  for (const project of activeProjects) {
     if (byProject.has(project.id)) continue;
     const accepted = project.bids?.find((b) => b.status === "ACCEPTED");
     if (!accepted) continue;
@@ -53,6 +58,7 @@ function toContractRows(
       paymentId: null,
       projectId: project.id,
       projectTitle: project.title,
+      projectStatus: project.status,
       amount: accepted.price ?? project.budget,
       commission: 0,
       status: "Pending",
@@ -85,7 +91,9 @@ export function useEscrow() {
         fetchEscrowPayments(),
         fetchMyProjects(),
       ]);
-      const inProgress = projects.filter((p) => p.status === "IN_PROGRESS");
+      const inProgress = projects.filter((p) =>
+        ["IN_PROGRESS", "AWAITING_APPROVAL"].includes(p.status),
+      );
       setPayments(escrow);
       setContracts(toContractRows(escrow, inProgress));
     } catch (err) {
@@ -159,7 +167,7 @@ export function useEscrow() {
         await load();
         setBanner({
           type: "success",
-          message: "Funds released to the engineer.",
+          message: "Payment sent to the engineer.",
         });
       } catch (err) {
         throw new Error(axiosMessage(err));

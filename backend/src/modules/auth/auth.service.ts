@@ -41,7 +41,7 @@ export async function registerEngineer(
   fileUrl: string,
   documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl",
 ) {
-  const { name, email, password, specialty, bio } = data;
+  const { name, email, password, specialty, bio, nationality } = data;
 
   const existingUser = await db.user.findUnique({ where: { email } });
   if (existingUser) {
@@ -53,6 +53,7 @@ export async function registerEngineer(
   const profileData: any = {
     specialty,
     bio,
+    nationality,
     [documentType]: fileUrl,
   };
 

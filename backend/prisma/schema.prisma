@@ -107,6 +107,7 @@ model EngineerProfile {
   id                 Int                @id @default(autoincrement())
   userId             Int                @unique
   specialty          EngineerSpecialty
+  nationality        String?
   bio                String?
   coverImageUrl      String?
   verificationStatus VerificationStatus @default(PENDING)
@@ -145,6 +146,7 @@ model Project {
   budget      Float
   serviceType ServiceType
   status      ProjectStatus @default(OPEN)
+  isFlagged   Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -242,4 +244,10 @@ model Review {
   project  Project         @relation(fields: [projectId], references: [id])
   engineer EngineerProfile @relation(fields: [engineerId], references: [id])
   client   User            @relation(fields: [clientId], references: [id])
+}
+
+model PlatformSettings {
+  id                 Int      @id @default(autoincrement())
+  platformFeePercent Float    @default(10.0)
+  updatedAt          DateTime @updatedAt
 }

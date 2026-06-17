@@ -14,6 +14,7 @@ const navItems = [
   { href: "/", label: "side.home" },
   { href: "/engineers", label: "side.findEngineers" },
   { href: "/projects", label: "side.findProjects" },
+  { href: "/about", label: "nav.about" },
 ];
 
 export function Navbar() {

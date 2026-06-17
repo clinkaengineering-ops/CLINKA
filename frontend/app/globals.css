@@ -15,6 +15,8 @@
   --primary-foreground: #ffffff;
   --accent: #243f6e;
   --ring: rgba(14, 165, 233, 0.35);
+  /* Local font fallback to avoid remote Google Fonts requests in dev */
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
 .dark {

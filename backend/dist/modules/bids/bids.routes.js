@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const bids_controller_1 = require("./bids.controller");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const router = (0, express_1.Router)();
+router.post("/:projectId/bids", auth_middleware_1.authenticate, (0, auth_middleware_1.rejectIfBanned)("ENGINEER"), bids_controller_1.createBidController);
+router.get("/:projectId/bids", bids_controller_1.getBidsForProjectController);
+router.put("/approve/:bidId", auth_middleware_1.authenticate, bids_controller_1.approveBidController);
+exports.default = router;

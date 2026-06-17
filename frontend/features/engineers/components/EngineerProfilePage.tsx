@@ -1,11 +1,7 @@
 // features/users/components/EngineerProfilePage.tsx
 "use client";
 import { Avatar, Button, Card } from "@/components/UI";
-import {
-  IconStar,
-  IconMessage,
-  IconBriefcase,
-} from "@/components/Icons";
+import { IconStar, IconMessage, IconBriefcase, IconClose, IconArrow } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,10 +14,44 @@ export function EngineerProfilePage({ id }: { id: number }) {
   const router = useRouter();
   const { engineer, loading, error } = useEngineerById(id);
   const currentUser = useAuthStore((s) => s.user);
-  const [messageConversationId, setMessageConversationId] = useState<number | null>(
-    null,
-  );
+  const [messageConversationId, setMessageConversationId] = useState<
+    number | null
+  >(null);
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const isAdmin = currentUser?.role === "ADMIN";
+
+  const goPrev = () => {
+    const portfolio = engineer?.profile?.portfolio;
+    if (!portfolio) return;
+    setActivePhotoIndex((prev) => {
+      if (prev === null) return null;
+      return prev === 0 ? portfolio.length - 1 : prev - 1;
+    });
+  };
+
+  const goNext = () => {
+    const portfolio = engineer?.profile?.portfolio;
+    if (!portfolio) return;
+    setActivePhotoIndex((prev) => {
+      if (prev === null) return null;
+      return prev === portfolio.length - 1 ? 0 : prev + 1;
+    });
+  };
+
+  useEffect(() => {
+    if (activePhotoIndex === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActivePhotoIndex(null);
+      } else if (e.key === "ArrowLeft") {
+        goPrev();
+      } else if (e.key === "ArrowRight") {
+        goNext();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activePhotoIndex, engineer?.profile?.portfolio]);
 
   useEffect(() => {
     if (!currentUser || isAdmin) return;
@@ -96,7 +126,10 @@ export function EngineerProfilePage({ id }: { id: number }) {
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{engineer.name}</h1>
-            <p className="mt-1 text-slate-500">{profile?.specialty}</p>
+            <p className="mt-1 text-slate-500">
+              {profile?.specialty}
+              {profile?.nationality && ` · ${profile.nationality}`}
+            </p>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
               <span className="flex items-center gap-1">
                 <IconStar width={14} height={14} className="text-amber-500" />
@@ -160,16 +193,17 @@ export function EngineerProfilePage({ id }: { id: number }) {
                 <h2 className="text-lg font-bold">{t("ep.portfolio")}</h2>
               </div>
               <div className="p-6 grid sm:grid-cols-2 gap-4">
-                {profile.portfolio.map((item) => (
+                {profile.portfolio.map((item, index) => (
                   <div
                     key={item.id}
-                    className="group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-electric-500/50 transition"
+                    onClick={() => setActivePhotoIndex(index)}
+                    className="group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-electric-500/50 hover:shadow-lg cursor-pointer transition duration-300"
                   >
-                    <div className="h-40 relative bg-slate-100 dark:bg-slate-800">
+                    <div className="h-40 relative bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <img
                         src={item.imageUrl}
                         alt={item.description}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                       />
                     </div>
                     <div className="p-4">
@@ -242,14 +276,80 @@ export function EngineerProfilePage({ id }: { id: number }) {
             </p>
             <p className="mt-1 font-semibold">{profile?.specialty ?? "—"}</p>
           </div>
+          {profile?.nationality && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {t("em.nationality")}
+              </p>
+              <p className="mt-1 font-semibold">{profile.nationality}</p>
+            </div>
+          )}
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Completed projects
             </p>
-            <p className="mt-1 text-2xl font-bold text-electric-600">{completed}</p>
+            <p className="mt-1 text-2xl font-bold text-electric-600">
+              {completed}
+            </p>
           </div>
         </Card>
       </div>
+
+      {activePhotoIndex !== null && profile?.portfolio && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-md transition-all duration-300">
+          {/* Close button */}
+          <button
+            onClick={() => setActivePhotoIndex(null)}
+            className="absolute top-4 right-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+            aria-label="Close"
+          >
+            <IconClose width={24} height={24} />
+          </button>
+
+          {/* Left Arrow */}
+          {profile.portfolio.length > 1 && (
+            <button
+              onClick={goPrev}
+              className="absolute left-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+              aria-label="Previous"
+            >
+              <IconArrow width={24} height={24} className="rotate-180" />
+            </button>
+          )}
+
+          {/* Image and Meta Container */}
+          <div className="relative max-w-5xl w-full max-h-[85vh] px-4 flex flex-col items-center justify-center gap-4">
+            <div className="relative max-w-full max-h-[70vh] rounded-xl overflow-hidden shadow-2xl bg-black/40 border border-white/5">
+              <img
+                src={profile.portfolio[activePhotoIndex].imageUrl}
+                alt={profile.portfolio[activePhotoIndex].description}
+                className="max-w-full max-h-[70vh] object-contain select-none transition-all duration-300"
+              />
+            </div>
+            
+            {/* Description & counter */}
+            <div className="w-full text-center max-w-2xl px-6 py-3 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10">
+              <p className="text-white text-sm sm:text-base font-medium">
+                {profile.portfolio[activePhotoIndex].description}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {activePhotoIndex + 1} of {profile.portfolio.length}
+              </p>
+            </div>
+          </div>
+
+          {/* Right Arrow */}
+          {profile.portfolio.length > 1 && (
+            <button
+              onClick={goNext}
+              className="absolute right-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+              aria-label="Next"
+            >
+              <IconArrow width={24} height={24} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

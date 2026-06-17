@@ -31,6 +31,7 @@ export function AccountSettingsTab() {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
+  const [nationality, setNationality] = useState("");
   const [emailStep, setEmailStep] = useState<"idle" | "otp">("idle");
   const [otp, setOtp] = useState("");
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
@@ -43,7 +44,8 @@ export function AccountSettingsTab() {
     setName(me?.name ?? "");
     setBio(me?.profile?.bio ?? "");
     setEmail(me?.email ?? "");
-  }, [me?.name, me?.profile?.bio, me?.email]);
+    setNationality(me?.profile?.nationality ?? "");
+  }, [me?.name, me?.profile?.bio, me?.email, me?.profile?.nationality]);
 
   if (loading) {
     return <Card className="p-6 text-sm text-slate-500">{t("common.loading")}</Card>;
@@ -117,16 +119,25 @@ export function AccountSettingsTab() {
   }
 
   async function handleSaveProfile() {
+    if (me?.role === "ENGINEER" && !nationality) {
+      setFieldErrors({ nationality: "Select your nationality" });
+      return;
+    }
     const result = validateForm(updateProfileFormSchema, {
       name,
       bio: me?.role === "ENGINEER" ? bio : undefined,
+      nationality: me?.role === "ENGINEER" ? nationality : undefined,
     });
     if (!result.success) {
       setFieldErrors(result.errors);
       return;
     }
     setFieldErrors({});
-    await save({ name: result.data.name, bio: result.data.bio });
+    await save({
+      name: result.data.name,
+      bio: result.data.bio,
+      nationality: result.data.nationality,
+    });
   }
 
   return (
@@ -232,17 +243,141 @@ export function AccountSettingsTab() {
           )}
         </Field>
         {me?.role === "ENGINEER" && (
-          <div className="sm:col-span-2">
-            <Field label="Bio">
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={4}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
-                placeholder="Tell others about yourself…"
-              />
-            </Field>
-          </div>
+          <>
+            <div className="sm:col-span-2">
+              <Field label={t("em.nationality") || "Nationality"} error={fieldErrors.nationality}>
+                <select
+                  value={nationality}
+                  onChange={(e) => setNationality(e.target.value)}
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
+                >
+                  <option value="">Select nationality...</option>
+                  {[
+                    "Afghan",
+                    "Albanian",
+                    "Algerian",
+                    "Argentine",
+                    "Armenian",
+                    "Australian",
+                    "Austrian",
+                    "Azerbaijani",
+                    "Bangladeshi",
+                    "Belarusian",
+                    "Belgian",
+                    "Bolivian",
+                    "Bosnian",
+                    "Brazilian",
+                    "British",
+                    "Bulgarian",
+                    "Cambodian",
+                    "Cameroonian",
+                    "Canadian",
+                    "Chilean",
+                    "Chinese",
+                    "Colombian",
+                    "Congolese",
+                    "Croatian",
+                    "Cuban",
+                    "Czech",
+                    "Danish",
+                    "Dutch",
+                    "Ecuadorian",
+                    "Egyptian",
+                    "Emirati",
+                    "English",
+                    "Estonian",
+                    "Ethiopian",
+                    "Finnish",
+                    "French",
+                    "Georgian",
+                    "German",
+                    "Ghanaian",
+                    "Greek",
+                    "Guatemalan",
+                    "Hungarian",
+                    "Indian",
+                    "Indonesian",
+                    "Iranian",
+                    "Iraqi",
+                    "Irish",
+                    "Israeli",
+                    "Italian",
+                    "Jamaican",
+                    "Japanese",
+                    "Jordanian",
+                    "Kazakh",
+                    "Kenyan",
+                    "Kuwaiti",
+                    "Lebanese",
+                    "Libyan",
+                    "Lithuanian",
+                    "Malaysian",
+                    "Mexican",
+                    "Mongolian",
+                    "Moroccan",
+                    "Nepalese",
+                    "New Zealander",
+                    "Nigerian",
+                    "Norwegian",
+                    "Omani",
+                    "Pakistani",
+                    "Palestinian",
+                    "Peruvian",
+                    "Philippine",
+                    "Polish",
+                    "Portuguese",
+                    "Qatari",
+                    "Romanian",
+                    "Russian",
+                    "Saudi",
+                    "Scottish",
+                    "Serbian",
+                    "Singaporean",
+                    "Slovak",
+                    "Slovenian",
+                    "Somali",
+                    "South African",
+                    "South Korean",
+                    "Spanish",
+                    "Sri Lankan",
+                    "Sudanese",
+                    "Swedish",
+                    "Swiss",
+                    "Syrian",
+                    "Taiwanese",
+                    "Tanzanian",
+                    "Thai",
+                    "Tunisian",
+                    "Turkish",
+                    "Ukrainian",
+                    "Uruguayan",
+                    "American",
+                    "Uzbek",
+                    "Venezuelan",
+                    "Vietnamese",
+                    "Yemeni",
+                    "Zimbabwean",
+                    "Other",
+                  ].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div className="sm:col-span-2">
+              <Field label="Bio">
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
+                  placeholder="Tell others about yourself…"
+                />
+              </Field>
+            </div>
+          </>
         )}
       </div>
 
@@ -253,6 +388,7 @@ export function AccountSettingsTab() {
             setName(me?.name ?? "");
             setBio(me?.profile?.bio ?? "");
             setEmail(me?.email ?? "");
+            setNationality(me?.profile?.nationality ?? "");
           }}
         >
           {t("common.cancel")}

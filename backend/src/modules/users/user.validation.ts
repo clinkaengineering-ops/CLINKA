@@ -9,11 +9,13 @@ export const updateProfileSchema = z.object({
     .url("Cover image must be a valid URL")
     .optional()
     .nullable(),
+  nationality: z.string().optional().nullable(),
 });
 
 export const searchQuerySchema = z.object({
   q: z.string().trim().max(100, "Search query is too long").optional(),
   specialty: z.enum(["CIVIL", "ARCHITECTURAL"]).optional(),
+  nationality: z.string().optional(),
 });
 
 export const addPortfolioItemSchema = z.object({

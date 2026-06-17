@@ -169,3 +169,91 @@ export const fetchAdminConversationMessages = (
     if (!d) throw new Error("Failed to load messages");
     return d;
   });
+
+export const impersonateUserAdmin = (userId: number): Promise<any> =>
+  unwrap(api.post<ApiResponse<any>>(`/admin/impersonate/${userId}`));
+
+export const updateProfileAdmin = (
+  userId: number,
+  data: { specialty?: "CIVIL" | "ARCHITECTURAL"; bio?: string },
+): Promise<any> =>
+  unwrap(api.patch<ApiResponse<any>>(`/admin/profiles/${userId}`, data));
+
+export interface AdminProject {
+  id: number;
+  title: string;
+  description: string;
+  budget: number;
+  serviceType: string;
+  status: string;
+  isFlagged: boolean;
+  createdAt: string;
+  client: { name: string; email: string };
+}
+
+export const fetchAdminProjects = (page = 1, limit = 20) =>
+  unwrap(api.get<ApiResponse<{ projects: AdminProject[]; totalPages: number }>>("/admin/projects", { params: { page, limit } }));
+
+export const updateAdminProject = (projectId: number, data: { status?: string; isFlagged?: boolean }) =>
+  unwrap(api.patch<ApiResponse<any>>(`/admin/projects/${projectId}/status`, data));
+
+export interface AdminReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  client: { name: string };
+  engineer: { user: { name: string } };
+  project: { title: string };
+}
+
+export const fetchAdminReviews = (page = 1, limit = 20) =>
+  unwrap(api.get<ApiResponse<{ reviews: AdminReview[]; totalPages: number }>>("/admin/reviews", { params: { page, limit } }));
+
+export const deleteAdminReview = (reviewId: number) =>
+  unwrap(api.delete<ApiResponse<any>>(`/admin/reviews/${reviewId}`));
+
+export interface PlatformSettings {
+  platformFeePercent: number;
+}
+
+export const fetchPlatformSettings = () =>
+  unwrap(api.get<ApiResponse<PlatformSettings>>("/admin/settings"));
+
+export const updatePlatformSettings = (data: { platformFeePercent: number }) =>
+  unwrap(api.patch<ApiResponse<any>>("/admin/settings", data));
+
+export interface AdminPayment {
+  id: number;
+  amount: number;
+  commission: number;
+  status: string;
+  createdAt: string;
+  client: { name: string; email: string };
+  engineer: { user: { name: string; email: string } };
+  project: { title: string };
+}
+
+export const fetchAdminPayments = (page = 1, limit = 20) =>
+  unwrap(api.get<ApiResponse<{ payments: AdminPayment[]; totalPages: number }>>("/admin/payments", { params: { page, limit } }));
+
+export const overrideAdminPayment = (paymentId: number, status: "RELEASED" | "REFUNDED") =>
+  unwrap(api.patch<ApiResponse<any>>(`/admin/payments/${paymentId}/override`, { status }));
+
+export interface AnalyticsData {
+  dailySignups: Array<{ date: string; count: number }>;
+  dailyGmv: Array<{ date: string; amount: number }>;
+}
+
+export const fetchAdminAnalytics = () =>
+  unwrap(api.get<ApiResponse<AnalyticsData>>("/admin/analytics"));
+
+export interface SystemLog {
+  timestamp: string;
+  level: "INFO" | "WARN" | "ERROR" | "DEBUG";
+  message: string;
+}
+
+export const fetchSystemLogs = () =>
+  unwrap(api.get<ApiResponse<SystemLog[]>>("/admin/logs"));
+

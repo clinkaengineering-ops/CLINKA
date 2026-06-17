@@ -53,6 +53,7 @@ export interface EngineerProfile {
   syndicateCardUrl: string | null;
   portfolio: PortfolioItem[];
   reviews: Review[];
+  nationality: string | null;
 }
 
 // ── Full "me" shape returned by GET /users/me ─────────────────────────────────

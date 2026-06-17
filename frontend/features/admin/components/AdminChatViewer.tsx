@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/UI";
@@ -63,7 +64,10 @@ export function AdminChatViewer() {
   }, []);
 
   useEffect(() => {
-    loadConversations();
+    const id = window.setTimeout(() => {
+      loadConversations();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [loadConversations]);
 
   useEffect(() => {

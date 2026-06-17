@@ -11,7 +11,7 @@ const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
 
 export type ServiceType = "DESIGN" | "SUPERVISION" | "REVIEW";
 
-export type ProjectStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type ProjectStatus = "OPEN" | "IN_PROGRESS" | "AWAITING_APPROVAL" | "COMPLETED" | "CANCELLED";
 
 export interface ProjectClient {
   id: number;
@@ -55,6 +55,7 @@ export interface Project {
   client?: ProjectClient;
   bids?: ProjectBid[];
   review?: ProjectReview | null;
+  payment?: { id: number; status: string; amount: number; commission: number; } | null;
   _count?: { bids: number };
 }
 

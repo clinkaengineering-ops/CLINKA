@@ -1,26 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { Avatar, Badge, Button, Card, SectionHeader, VerifiedBadge } from "@/components/UI";
+import { Badge, Button, Card, SectionHeader } from "@/components/UI";
 import {
   IconArrow,
   IconBolt,
   IconBriefcase,
   IconCheck,
-  IconCompass,
+  IconShield,
+  IconWallet,
   IconCube,
   IconLayers,
-  IconShield,
-  IconStar,
   IconTrend,
-  IconWallet,
-  IconLogo,
-  IconGlobe,
+  IconCompass,
 } from "@/components/Icons";
-import { useLandingContent } from "../hooks/useLandingContent";
+import { useI18n } from "@/i18n";
+import { marketingFeatures, howItWorksSteps } from "../api/landing.api";
+
+const iconMap: Record<string, React.ComponentType<{ width?: number; height?: number; className?: string }>> = {
+  "verified-credentials": IconShield,
+  "milestone-escrow": IconWallet,
+  "bim-native-workflows": IconCube,
+  "discipline-bidding": IconLayers,
+  "operations-analytics": IconTrend,
+  "global-compliance": IconCompass,
+};
 
 export function LandingPage() {
-  const { hero, features, steps, stats, cta, trustedBy, talent, testimonials } = useLandingContent();
+  const { t } = useI18n();
+
+  const features = marketingFeatures.map((f) => ({
+    ...f,
+    title: t(f.titleKey),
+    description: t(f.descriptionKey),
+    Icon: iconMap[f.id] ?? IconCompass,
+  }));
+
+  const steps = howItWorksSteps.map((s) => ({
+    ...s,
+    title: t(s.titleKey),
+    description: t(s.descriptionKey),
+  }));
 
   return (
     <div>
@@ -29,90 +49,122 @@ export function LandingPage() {
         <div className="absolute inset-0 grid-bg" />
         <div className="absolute inset-x-0 -top-40 h-[600px] bg-gradient-to-b from-electric-500/15 via-electric-500/5 to-transparent blur-3xl" />
         <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-24 lg:pt-28 lg:pb-32">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-7 animate-fade-up">
-              <Badge color="electric">
-                <span className="h-1.5 w-1.5 rounded-full bg-electric-500 animate-pulse" /> {hero.badge}
-              </Badge>
-              <h1 className="mt-6 text-5xl lg:text-7xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.05]">
-                {hero.title1}
-                <span className="block bg-gradient-to-r from-electric-400 via-electric-500 to-navy-600 bg-clip-text text-transparent">{hero.title2}</span>
-              </h1>
-              <p className="mt-6 text-lg text-slate-600 dark:text-slate-400 max-w-xl">{hero.subtitle}</p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link href={hero.primaryHref} className="inline-block">
-                  <Button size="lg" icon={<IconBriefcase width={18} height={18} />}>{hero.primaryLabel}</Button>
-                </Link>
-                <Link href={hero.secondaryHref} className="inline-block">
-                  <Button size="lg" variant="secondary" icon={<IconBolt width={18} height={18} />}>{hero.secondaryLabel}</Button>
-                </Link>
-              </div>
-              <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
-                {hero.points.map((p, i) => (
-                  <div key={i} className="flex items-center gap-2"><IconCheck width={16} height={16} className="text-electric-500" /> {p}</div>
-                ))}
-              </div>
+          <div className="max-w-3xl mx-auto text-center animate-fade-up">
+            <Badge color="electric">
+              <span className="h-1.5 w-1.5 rounded-full bg-electric-500 animate-pulse" />
+              {t("hero.badge2") || "The marketplace for the built environment"}
+            </Badge>
+            <h1 className="mt-6 text-5xl lg:text-7xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.05]">
+              {t("hero.title1")}
+              <span className="block bg-gradient-to-r from-electric-400 via-electric-500 to-navy-600 bg-clip-text text-transparent">
+                {t("hero.title2")}
+              </span>
+            </h1>
+            <p className="mt-6 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+              {t("hero.subtitle")}
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link href="/register" className="inline-block">
+                <Button size="lg" icon={<IconBriefcase width={18} height={18} />}>
+                  {t("hero.hire")}
+                </Button>
+              </Link>
+              <Link href="/login" className="inline-block">
+                <Button size="lg" variant="secondary" icon={<IconBolt width={18} height={18} />}>
+                  {t("hero.findWork")}
+                </Button>
+              </Link>
             </div>
-
-            {/* Hero card mock */}
-            <div className="lg:col-span-5 animate-fade-up" style={{ animationDelay: "120ms" }}>
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-br from-electric-400/30 to-navy-600/30 blur-3xl rounded-[2rem]" />
-                <Card className="relative shadow-2xl shadow-navy-900/10 dark:shadow-electric-500/10 overflow-hidden">
-                  <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{hero.live}</p>
-                    </div>
-                    <Badge color="electric">{"Featured"}</Badge>
-                  </div>
-                  <div className="p-5">
-                    <h3 className="text-lg font-bold">Project Listing</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">12-Story Mixed-Use Tower</p>
-                    <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-                      <Stat label={"Budget"} value={"$25K"} />
-                      <Stat label={"Timeline"} value={"10w"} />
-                      <Stat label={"Bids"} value={"14"} />
-                    </div>
-                    <div className="mt-5 space-y-3">
-                      {talent.slice(0, 3).map((e, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-electric-500/50 transition">
-                          <Avatar name={e.name} size={36} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-semibold truncate">{e.name}</p>
-                              <VerifiedBadge size={14} />
-                            </div>
-                            <p className="text-xs text-slate-500 truncate">{e.role}</p>
-                          </div>
-                          <div className="text-end">
-                            <p className="text-sm font-bold text-electric-600 dark:text-electric-400">{"$22,400"}</p>
-                            <p className="text-[10px] text-slate-500 flex items-center gap-1 justify-end"><IconStar width={10} height={10} className="text-amber-500" />{e.rating}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-                <div className="absolute -end-4 -bottom-4 hidden md:flex items-center gap-2 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl animate-float">
-                  <div className="h-9 w-9 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center"><IconWallet width={18} height={18} /></div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{hero.escrowReleased}</p>
-                    <p className="text-sm font-bold">$12,500.00</p>
-                  </div>
+            <div className="mt-10 flex flex-wrap justify-center items-center gap-x-8 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
+              {[t("hero.f1"), t("hero.f2"), t("hero.f3")].map((p, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <IconCheck width={16} height={16} className="text-electric-500" /> {p}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Logo bar */}
-          <div className="mt-20">
-            <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-400">{hero.trustedBy}</p>
-            <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 opacity-70 dark:opacity-60">
-              {trustedBy.map((l) => (
-                <div key={l} className="text-center text-lg font-bold tracking-wider text-slate-500 dark:text-slate-400">{l}</div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* POST YOUR DRAWINGS (CONCIERGE) */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-12 gap-6 items-stretch">
+            <Card className="lg:col-span-8 p-7 md:p-9 overflow-hidden relative">
+              <div className="absolute -top-24 -end-24 h-64 w-64 rounded-full bg-electric-500/10 blur-3xl" />
+              <div className="relative">
+                <Badge color="electric">New</Badge>
+                <h2 className="mt-4 text-3xl md:text-4xl font-bold tracking-tight">
+                  Post your drawings — we'll do the work for you.
+                </h2>
+                <p className="mt-3 text-slate-600 dark:text-slate-400 max-w-2xl">
+                  Upload plans, get matched to verified engineers, and pay securely through milestone escrow.
+                  When you confirm delivery, funds are sent to the engineer.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href={
+                      "/projects?create=1&service=REVIEW" +
+                      "&title=" +
+                      encodeURIComponent("Drawing review & corrections") +
+                      "&description=" +
+                      encodeURIComponent(
+                        "I want an engineer to review my drawings, mark corrections, and deliver an updated PDF set. Attach files in chat after accepting a bid.",
+                      ) +
+                      "&budget=" +
+                      encodeURIComponent("2500")
+                    }
+                    className="inline-block"
+                  >
+                    <Button size="lg" icon={<IconArrow width={18} height={18} />}>
+                      Get started
+                    </Button>
+                  </Link>
+                  <Link href="/projects" className="inline-block">
+                    <Button size="lg" variant="secondary">
+                      Browse projects
+                    </Button>
+                  </Link>
+                </div>
+                <div className="mt-6 grid sm:grid-cols-3 gap-3 text-sm">
+                  <Card className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Step 1</p>
+                    <p className="mt-1 font-semibold">Post drawings</p>
+                  </Card>
+                  <Card className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Step 2</p>
+                    <p className="mt-1 font-semibold">Pay to start</p>
+                  </Card>
+                  <Card className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Step 3</p>
+                    <p className="mt-1 font-semibold">Confirm delivery</p>
+                  </Card>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="lg:col-span-4 p-7 md:p-9 bg-gradient-to-br from-navy-950 to-slate-950 text-white border-slate-800">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/70">
+                <IconShield width={16} height={16} className="text-electric-300" />
+                Escrow protection
+              </div>
+              <p className="mt-3 text-2xl font-bold">Pay only when the work is delivered.</p>
+              <p className="mt-3 text-sm text-white/70">
+                Funds are secured once you pay. Engineers start immediately, and you release payment after reviewing the deliverables.
+              </p>
+              <div className="mt-6 flex items-center gap-2 text-sm text-white/80">
+                <IconCheck width={16} height={16} className="text-emerald-300" />
+                10% platform fee, transparent
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-sm text-white/80">
+                <IconCheck width={16} height={16} className="text-emerald-300" />
+                Chat + file sharing included
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-sm text-white/80">
+                <IconCheck width={16} height={16} className="text-emerald-300" />
+                Arabic + English support
+              </div>
+            </Card>
           </div>
         </div>
       </section>
@@ -120,14 +172,19 @@ export function LandingPage() {
       {/* FEATURES */}
       <section className="relative py-24 bg-slate-50 dark:bg-slate-900/30 border-y border-slate-200 dark:border-slate-900">
         <div className="max-w-7xl mx-auto px-6">
-          <SectionHeader eyebrow={"Features"} title={"Platform features"} subtitle={"Everything you need to hire and manage engineers."} center />
+          <SectionHeader
+            eyebrow={t("feat.eyebrow")}
+            title={t("feat.title")}
+            subtitle={t("feat.subtitle")}
+            center
+          />
           <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((f, i) => {
-              const IconComp = f.icon;
+              const IconComp = f.Icon;
               return (
                 <Card key={i} className="p-6 hover:border-electric-500/40 hover:shadow-xl hover:shadow-electric-500/5 transition group">
                   <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-electric-500/15 to-navy-700/15 text-electric-600 dark:text-electric-400 flex items-center justify-center group-hover:scale-110 transition">
-                    {IconComp ? <IconComp width={22} height={22} /> : null}
+                    <IconComp width={22} height={22} />
                   </div>
                   <h3 className="mt-4 text-lg font-bold">{f.title}</h3>
                   <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{f.description}</p>
@@ -138,52 +195,17 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* TRUSTED ENGINEERS */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHeader eyebrow={"Talent"} title={"Trusted engineers"} subtitle={"Browse verified engineering professionals."} />
-            <Link href="/engineers"><Button variant="outline" icon={<IconArrow width={16} height={16} />}>Browse</Button></Link>
-          </div>
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {talent.map((e) => (
-              <Link key={e.name} href="/engineers">
-              <Card className="p-5 hover:-translate-y-1 hover:border-electric-500/40 hover:shadow-xl transition h-full">
-                <div className="flex items-center gap-3">
-                  <Avatar name={e.name} size={48} />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-bold truncate">{e.name}</p>
-                      <VerifiedBadge size={14} />
-                    </div>
-                    <p className="text-xs text-slate-500 truncate">{e.role}</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-sm">
-                  <span className="flex items-center gap-1 font-semibold"><IconStar width={14} height={14} className="text-amber-500" />{e.rating}</span>
-                  <span className="text-slate-400">·</span>
-                  <span className="text-slate-500">{e.projects} projects</span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {e.skills.map((s) => (
-                    <Badge key={s}>{s}</Badge>
-                  ))}
-                </div>
-              </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* HOW IT WORKS */}
       <section className="relative py-24 bg-navy-950 text-white overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-50" />
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-96 w-[800px] bg-electric-500/20 blur-[120px] rounded-full" />
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto">
-            <span className="inline-flex items-center gap-2 rounded-full border border-electric-500/30 bg-electric-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-electric-300">How it works</span>
-            <h2 className="mt-4 text-4xl font-bold">{"How it works"}</h2>
+            <span className="inline-flex items-center gap-2 rounded-full border border-electric-500/30 bg-electric-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-electric-300">
+              {t("how.eyebrow")}
+            </span>
+            <h2 className="mt-4 text-4xl font-bold">{t("how.title")}</h2>
+            <p className="mt-4 text-slate-400">{t("how.subtitle")}</p>
           </div>
           <div className="mt-16 grid md:grid-cols-4 gap-6">
             {steps.map((s, i) => (
@@ -197,28 +219,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <SectionHeader eyebrow={"Testimonials"} title={"What clients say"} center />
-          <div className="mt-14 grid md:grid-cols-3 gap-6">
-            {testimonials.map((tt, i) => (
-              <Card key={i} className="p-6 hover:border-electric-500/40 transition">
-                <div className="flex items-center gap-1 text-amber-500">{[...Array(5)].map((_, k) => <IconStar key={k} width={14} height={14} />)}</div>
-                <p className="mt-4 text-slate-700 dark:text-slate-300 leading-relaxed">"{tt.quote}"</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <Avatar name={tt.name} size={40} />
-                  <div>
-                    <p className="text-sm font-bold">{tt.name}</p>
-                    <p className="text-xs text-slate-500">{tt.role}</p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-6">
@@ -227,26 +227,23 @@ export function LandingPage() {
             <div className="absolute -end-20 -top-20 h-80 w-80 bg-electric-400/40 blur-[100px] rounded-full" />
             <div className="relative grid md:grid-cols-2 gap-10 items-center">
               <div>
-                <h2 className="text-4xl lg:text-5xl font-bold leading-tight">{cta.title}</h2>
-                <p className="mt-4 text-white/70 text-lg">{cta.subtitle}</p>
+                <h2 className="text-4xl lg:text-5xl font-bold leading-tight">{t("cta.title")}</h2>
+                <p className="mt-4 text-white/70 text-lg">{t("cta.subtitle")}</p>
               </div>
               <div className="flex flex-col sm:flex-row md:justify-end gap-3">
-                <Link href={cta.primaryHref}><Button size="lg">{cta.primaryLabel}</Button></Link>
-                <Link href={"/engineers"}><Button size="lg" variant="secondary" className="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20">{cta.secondaryLabel}</Button></Link>
+                <Link href="/register">
+                  <Button size="lg">{t("cta.create")}</Button>
+                </Link>
+                <Link href="/projects">
+                  <Button size="lg" variant="secondary" className="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20">
+                    {t("cta.explore")}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </section>
-
-      
     </div>
   );
 }
-
-const Stat = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2.5">
-    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{label}</p>
-    <p className="mt-0.5 font-bold text-slate-900 dark:text-white">{value}</p>
-  </div>
-);

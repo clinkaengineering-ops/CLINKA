@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/components/UI";
 import { IconCheck } from "@/components/Icons";
+import { useI18n } from "@/i18n";
 import { approveBid } from "@/features/bids/api/bids.api";
 import type { Project, ProjectBid } from "../api/project.api";
 
@@ -18,6 +19,7 @@ export function ProjectBidsList({
   canManage,
   onUpdated,
 }: ProjectBidsListProps) {
+  const { t } = useI18n();
   const bids = project.bids ?? [];
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function ProjectBidsList({
               </Button>
             </Link>
             <Link href={`/checkout?projectId=${project.id}`}>
-              <Button size="sm">Fund escrow</Button>
+              <Button size="sm">{t("pay.fundEscrow")}</Button>
             </Link>
           </div>
         </div>

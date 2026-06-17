@@ -4,10 +4,38 @@ export type EscrowDisplayStatus =
   | "Released"
   | "Refunded";
 
+export type EngineerPaymentStatus =
+  | "awaiting_payment"
+  | "in_progress"
+  | "awaiting_release"
+  | "paid"
+  | "refunded";
+
+export interface EngineerBalanceTransaction {
+  id: number;
+  projectId: number;
+  projectTitle: string;
+  amount: number;
+  netAmount: number;
+  commission: number;
+  status: EngineerPaymentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EngineerBalanceSummary {
+  availableBalance: number;
+  securedBalance: number;
+  awaitingClientPayment: number;
+  awaitingRelease: number;
+  transactions: EngineerBalanceTransaction[];
+}
+
 export interface EscrowPaymentItem {
   id: number;
   projectId: number;
   projectTitle: string;
+  projectStatus?: string;
   amount: number;
   commission: number;
   status: EscrowDisplayStatus;
@@ -20,6 +48,7 @@ export interface EscrowContractRow {
   paymentId: number | null;
   projectId: number;
   projectTitle: string;
+  projectStatus?: string;
   amount: number;
   commission: number;
   status: EscrowDisplayStatus;

@@ -51,8 +51,8 @@ export async function getEngineersController(
   next: NextFunction
 ) {
   try {
-    const { q, specialty } = searchQuerySchema.parse(req.query);
-    const engineers = await getEngineers({ q, specialty });
+    const { q, specialty, nationality } = searchQuerySchema.parse(req.query);
+    const engineers = await getEngineers({ q, specialty, nationality });
     res
       .status(200)
       .json(ApiResponse(200, "Engineers fetched successfully", engineers));

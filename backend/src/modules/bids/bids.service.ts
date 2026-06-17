@@ -157,8 +157,8 @@ await db.conversation.upsert({
       engineerUser.id,
       "BID_ACCEPTED",
       "Bid accepted",
-      `Your bid on "${project.title}" was accepted`,
-      `/my-bids`,
+      `Your bid on "${project.title}" was accepted. The client will pay to start — you'll get a message when payment is received.`,
+      `/messages?project=${project.id}`,
     );
   }
 

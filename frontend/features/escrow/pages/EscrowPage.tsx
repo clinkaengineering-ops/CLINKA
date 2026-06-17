@@ -13,8 +13,6 @@ import { EscrowStatusBanner } from "../components/EscrowStatusBanner";
 import { EscrowStats } from "../components/EscrowStats";
 import { EscrowContractsList } from "../components/EscrowContractsList";
 import { EscrowTransactionTable } from "../components/EscrowTransactionTable";
-import { useEngineerEscrow } from "../hooks/useEngineerEscrow";
-import { formatMoney } from "../utils/formatMoney";
 import { checkoutPath } from "../utils/goToCheckout";
 
 export function EscrowPage() {
@@ -41,7 +39,10 @@ export function EscrowPage() {
 
   const isClient = user?.role === "CLIENT";
   const isEngineer = user?.role === "ENGINEER";
-  const engineerEscrow = useEngineerEscrow();
+
+  useEffect(() => {
+    if (isEngineer) router.replace("/balance");
+  }, [isEngineer, router]);
 
   function handleFund(row: EscrowContractRow) {
     router.push(checkoutPath(row.projectId));
@@ -73,73 +74,10 @@ export function EscrowPage() {
   }
 
   if (isEngineer) {
-    const { payments, stats: eStats, loading: eLoading, error: eError } =
-      engineerEscrow;
     return (
-      <div className="space-y-6 max-w-7xl mx-auto">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("es.title")}</h1>
-          <p className="mt-1 text-slate-500">{t("es.engineerSubtitle")}</p>
-        </div>
-        {eError && (
-          <Card className="p-4 text-sm text-rose-500">{eError}</Card>
-        )}
-        {eLoading ? (
-          <Card className="p-12 text-center text-slate-500">
-            {t("common.loading")}
-          </Card>
-        ) : payments.length === 0 ? (
-          <Card className="p-8 text-center text-slate-500">
-            <p>{t("es.engineerEmpty")}</p>
-            <Link href="/projects" className="inline-block mt-4">
-              <Button variant="secondary">{t("side.findProjects")}</Button>
-            </Link>
-          </Card>
-        ) : (
-          <>
-            <div className="grid sm:grid-cols-3 gap-4 text-sm">
-              <Card className="p-4">
-                <p className="text-slate-500">{t("es.s.inEscrow")}</p>
-                <p className="text-xl font-bold mt-1">
-                  {formatMoney(eStats.inEscrow)}
-                </p>
-              </Card>
-              <Card className="p-4">
-                <p className="text-slate-500">{t("es.s.released")}</p>
-                <p className="text-xl font-bold mt-1">
-                  {formatMoney(eStats.released)}
-                </p>
-              </Card>
-              <Card className="p-4">
-                <p className="text-slate-500">{t("es.s.pending")}</p>
-                <p className="text-xl font-bold mt-1">
-                  {formatMoney(eStats.pending)}
-                </p>
-              </Card>
-            </div>
-            <Card className="divide-y divide-slate-100 dark:divide-slate-800">
-              {payments.map((p) => (
-                <div
-                  key={p.id}
-                  className="p-4 flex flex-wrap items-center justify-between gap-3"
-                >
-                  <div>
-                    <p className="font-semibold">{p.projectTitle}</p>
-                    <p className="text-sm text-slate-500">
-                      {formatMoney(p.amount)} · {p.status}
-                    </p>
-                  </div>
-                  <Link href={`/projects?id=${p.projectId}`}>
-                    <Button size="sm" variant="secondary">
-                      {t("es.openProject")}
-                    </Button>
-                  </Link>
-                </div>
-              ))}
-            </Card>
-          </>
-        )}
-      </div>
+      <Card className="p-12 text-center text-slate-500 max-w-7xl mx-auto">
+        {t("common.loading")}
+      </Card>
     );
   }
 

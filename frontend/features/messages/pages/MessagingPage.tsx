@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Avatar, Badge, Card } from "@/components/UI";
-import { IconSearch, IconPaperclip, IconSend, IconMore } from "@/components/Icons";
+import {
+  IconSearch,
+  IconPaperclip,
+  IconSend,
+  IconMore,
+} from "@/components/Icons";
 import { cn } from "@/utils/cn";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
@@ -98,7 +103,9 @@ export function MessagingPage() {
   const searchParams = useSearchParams();
   const user = useAuthStore((s) => s.user);
 
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [conversations, setConversations] = useState<ConversationListItem[]>(
+    [],
+  );
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -118,6 +125,7 @@ export function MessagingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handledNavKeyRef = useRef<string | null>(null);
+  const resolvingURLRef = useRef(false);
 
   const loadConversations = useCallback(async () => {
     setLoadingList(true);
@@ -127,8 +135,13 @@ export function MessagingPage() {
       setConversations(list);
       return list;
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setListError(err?.response?.data?.message ?? err?.message ?? "Failed to load inbox");
+      const err = e as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      setListError(
+        err?.response?.data?.message ?? err?.message ?? "Failed to load inbox",
+      );
       return [];
     } finally {
       setLoadingList(false);
@@ -142,8 +155,15 @@ export function MessagingPage() {
       const page = await fetchMessages(conversationId, 1, 100);
       setMessages(page.messages);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setSendError(err?.response?.data?.message ?? err?.message ?? "Failed to load messages");
+      const err = e as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      setSendError(
+        err?.response?.data?.message ??
+          err?.message ??
+          "Failed to load messages",
+      );
       setMessages([]);
     } finally {
       setLoadingMessages(false);
@@ -168,8 +188,13 @@ export function MessagingPage() {
     );
   }, []);
 
-  const { onlineUsers, typingUserId, sendViaSocket, emitTypingStart, emitTypingStop } =
-    useMessageSocket(activeId, handleNewSocketMessage);
+  const {
+    onlineUsers,
+    typingUserId,
+    sendViaSocket,
+    emitTypingStart,
+    emitTypingStop,
+  } = useMessageSocket(activeId, handleNewSocketMessage);
 
   const inboxGroups = useMemo(
     () => groupConversationsByParticipant(conversations),
@@ -203,7 +228,7 @@ export function MessagingPage() {
 
   // Open conversation from URL ?c=, ?project=, or ?engineer=
   useEffect(() => {
-    if (!user || loadingList) return;
+    if (!user || loadingList || resolvingURLRef.current) return;
 
     const convParam = searchParams.get("c");
     const projectParam = searchParams.get("project");
@@ -215,61 +240,51 @@ export function MessagingPage() {
     handledNavKeyRef.current = navKey;
 
     async function resolveInitial() {
-      if (convParam) {
-        const id = Number(convParam);
-        if (!Number.isNaN(id)) {
-          setActiveId(id);
-          const match = conversations.find((c) => c.id === id);
-          if (match) setActiveParticipantId(match.participantId);
-        }
-        router.replace("/messages", { scroll: false });
-        return;
-      }
-
-      if (engineerParam) {
-        const engineerId = Number(engineerParam);
-        if (!Number.isNaN(engineerId)) {
-          const group = inboxGroups.find((g) => g.participantId === engineerId);
-          if (group) {
-            setActiveParticipantId(engineerId);
-            setActiveId(group.conversations[0].id);
-          } else {
+      resolvingURLRef.current = true;
+      try {
+        if (convParam) {
+          const id = Number(convParam);
+          if (!Number.isNaN(id)) {
+            setActiveId(id);
+            const match = conversations.find((c) => c.id === id);
+            if (match) setActiveParticipantId(match.participantId);
+          }
+        } else if (engineerParam) {
+          const engineerId = Number(engineerParam);
+          if (!Number.isNaN(engineerId)) {
+            const group = inboxGroups.find((g) => g.participantId === engineerId);
+            if (group) {
+              setActiveParticipantId(engineerId);
+              setActiveId(group.conversations[0].id);
+            } else {
+              setListError(
+                "No conversation yet. Post a project and wait for a bid, or open Messages after they bid on your project.",
+              );
+            }
+          }
+        } else if (projectParam) {
+          try {
+            const conv = await fetchConversationByProject(Number(projectParam));
+            setActiveId(conv.id);
+            setActiveParticipantId(
+              conv.clientId === user!.id ? conv.engineerId : conv.clientId,
+            );
+            await loadConversations();
+          } catch {
             setListError(
-              "No conversation yet. Post a project and wait for a bid, or open Messages after they bid on your project.",
+              "No conversation for this project yet. Wait for a bid or accept one to start chatting.",
             );
           }
         }
+        // Cleanup URL after resolving
         router.replace("/messages", { scroll: false });
-        return;
-      }
-
-      if (projectParam) {
-        try {
-          const conv = await fetchConversationByProject(Number(projectParam));
-          setActiveId(conv.id);
-          setActiveParticipantId(
-            conv.clientId === user!.id ? conv.engineerId : conv.clientId,
-          );
-          await loadConversations();
-        } catch {
-          setListError(
-            "No conversation for this project yet. Wait for a bid or accept one to start chatting.",
-          );
-        }
-        router.replace("/messages", { scroll: false });
+      } finally {
+        resolvingURLRef.current = false;
       }
     }
 
     resolveInitial();
-  }, [
-    searchParams,
-    user,
-    router,
-    loadConversations,
-    conversations,
-    inboxGroups,
-    loadingList,
-  ]);
+  }, [searchParams, user, router, loadConversations, loadingList, conversations, inboxGroups]);
 
   useEffect(() => {
     if (activeId == null) return;
@@ -300,10 +315,11 @@ export function MessagingPage() {
     [conversations, activeId],
   );
 
+  const todayLabel = t("msg.today");
   const groupedMessages = useMemo(() => {
     const groups: { label: string; items: ChatMessage[] }[] = [];
     for (const msg of messages) {
-      const label = dayLabel(msg.createdAt, t("msg.today"));
+      const label = dayLabel(msg.createdAt, todayLabel);
       const last = groups[groups.length - 1];
       if (last?.label === label) {
         last.items.push(msg);
@@ -312,7 +328,7 @@ export function MessagingPage() {
       }
     }
     return groups;
-  }, [messages, t]);
+  }, [messages, todayLabel]);
 
   const handleSelectGroup = (group: ParticipantInboxGroup) => {
     setActiveParticipantId(group.participantId);
@@ -446,8 +462,8 @@ export function MessagingPage() {
                 <div className="p-6 text-center text-sm text-slate-500">
                   <p className="font-medium">No conversations yet</p>
                   <p className="mt-2 text-xs">
-                    A chat opens when an engineer bids on your project (or when you
-                    accept their bid).
+                    A chat opens when an engineer bids on your project (or when
+                    you accept their bid).
                   </p>
                 </div>
               ) : (
@@ -501,30 +517,30 @@ export function MessagingPage() {
               <>
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800 shrink-0 space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar name={activeConv.participantName} size={40} />
-                    <div className="min-w-0">
-                      <p className="font-semibold truncate">
-                        {activeConv.participantName}
-                      </p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {activeConv.projectTitle}
-                      </p>
-                      {(participantOnline || isTyping) && (
-                        <p className="text-xs text-emerald-500 flex items-center gap-1 mt-0.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          {isTyping ? t("msg.typing") : "Online"}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar name={activeConv.participantName} size={40} />
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">
+                          {activeConv.participantName}
                         </p>
-                      )}
+                        <p className="text-xs text-slate-500 truncate">
+                          {activeConv.projectTitle}
+                        </p>
+                        {(participantOnline || isTyping) && (
+                          <p className="text-xs text-emerald-500 flex items-center gap-1 mt-0.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            {isTyping ? t("msg.typing") : "Online"}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center shrink-0"
-                    aria-label="More options"
-                  >
-                    <IconMore />
-                  </button>
+                    <button
+                      type="button"
+                      className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center shrink-0"
+                      aria-label="More options"
+                    >
+                      <IconMore />
+                    </button>
                   </div>
                   {activeGroup && activeGroup.conversations.length > 1 && (
                     <div className="flex gap-2 overflow-x-auto pb-1">
@@ -549,7 +565,9 @@ export function MessagingPage() {
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-1 bg-slate-50/50 dark:bg-slate-950/40 min-h-0">
                   {loadingMessages ? (
-                    <p className="text-center text-sm text-slate-500">Loading messages…</p>
+                    <p className="text-center text-sm text-slate-500">
+                      Loading messages…
+                    </p>
                   ) : messages.length === 0 ? (
                     <p className="text-center text-sm text-slate-500">
                       No messages yet. Say hello!
@@ -587,11 +605,15 @@ export function MessagingPage() {
 
                 <div className="p-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
                   {sendError && (
-                    <p className="text-xs text-rose-500 mb-2 px-1">{sendError}</p>
+                    <p className="text-xs text-rose-500 mb-2 px-1">
+                      {sendError}
+                    </p>
                   )}
                   {pendingFile && (
                     <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm">
-                      <span className="truncate flex-1">📎 {pendingFile.name}</span>
+                      <span className="truncate flex-1">
+                        📎 {pendingFile.name}
+                      </span>
                       <button
                         type="button"
                         onClick={() => setPendingFile(null)}

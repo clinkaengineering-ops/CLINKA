@@ -32,6 +32,7 @@ export function useRegister() {
     password: string;
     specialty: "CIVIL" | "ARCHITECTURAL";
     bio?: string;
+    nationality?: string;
     documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl";
     file: File;
   }) {
@@ -45,6 +46,7 @@ export function useRegister() {
       formData.append("specialty", data.specialty);
       formData.append("documentType", data.documentType);
       if (data.bio) formData.append("bio", data.bio);
+      if (data.nationality) formData.append("nationality", data.nationality); 
       formData.append("document", data.file);
       await authApi.registerEngineer(formData);
       router.push("/login?registered=true");

@@ -4,7 +4,10 @@ import type { updateProfileInput } from "./user.validation";
 import db from "../../config/db";
 
 // ── Helper: strip password from any user object ───────────────────────────────
-function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
+function stripPassword<T extends { password: string }>({
+  password: _,
+  ...safe
+}: T) {
   return safe;
 }
 
@@ -32,7 +35,7 @@ export async function getMe(userId: number) {
 // FIX 1: Always includes profile in the response so the frontend Me type is complete.
 // FIX 2: bio can be "" (empty string) — use `bio !== undefined` not `bio &&`.
 export async function updateMe(userId: number, data: updateProfileInput) {
-  const { name, bio, coverImageUrl } = data;
+  const { name, bio, coverImageUrl, nationality } = data;
 
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -50,6 +53,9 @@ export async function updateMe(userId: number, data: updateProfileInput) {
         : {}),
       ...(coverImageUrl !== undefined && user.profile
         ? { profile: { update: { coverImageUrl } } }
+        : {}),
+      ...(nationality !== undefined && user.profile
+        ? { profile: { update: { nationality } } }
         : {}),
     },
     // Always return the full Me shape including profile
@@ -99,31 +105,64 @@ export async function updateCoverImage(userId: number, coverImageUrl: string) {
 }
 
 // ── getEngineers ──────────────────────────────────────────────────────────────
-export async function getEngineers(query?: { q?: string; specialty?: string }) {
+export async function getEngineers(query?: {
+  q?: string;
+  specialty?: string;
+  nationality?: string;
+}) {
   const q = query?.q?.trim();
+
   const engineers = await db.user.findMany({
     where: {
       role: "ENGINEER",
       profile: {
         verificationStatus: "APPROVED",
-        ...(query?.specialty ? { specialty: query.specialty as "CIVIL" | "ARCHITECTURAL" } : {}),
+        ...(query?.specialty
+          ? {
+              specialty: query.specialty as "CIVIL" | "ARCHITECTURAL",
+            }
+          : {}),
+        ...(query?.nationality ? { nationality: query.nationality } : {}),
       },
+
       ...(q
         ? {
             OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { profile: { bio: { contains: q, mode: "insensitive" } } },
+              {
+                name: {
+                  contains: q,
+                  mode: "insensitive",
+                },
+              },
+              {
+                profile: {
+                  bio: {
+                    contains: q,
+                    mode: "insensitive",
+                  },
+                },
+              },
             ],
           }
         : {}),
     },
+
     include: {
       profile: {
         include: {
           portfolio: true,
           reviews: {
-            include: { client: { select: { id: true, name: true } } },
-            orderBy: { createdAt: "desc" },
+            include: {
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
           },
         },
       },
@@ -172,7 +211,7 @@ export async function getEngineerById(engineerId: number) {
 // ── addPortfolioItem ──────────────────────────────────────────────────────────
 export async function addPortfolioItem(
   userId: number,
-  data: { imageUrl: string; description: string }
+  data: { imageUrl: string; description: string },
 ) {
   const profile = await db.engineerProfile.findUnique({ where: { userId } });
   if (!profile) throw new ApiError(404, "Engineer profile not found");

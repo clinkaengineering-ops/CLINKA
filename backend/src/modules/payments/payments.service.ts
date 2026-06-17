@@ -177,10 +177,13 @@ export async function initiateProjectCheckout(
   }
 
   const bid = await getAcceptedBidForProject(projectId);
-  const engineerUserId = bid.engineer.user.id;
+  // bid.engineerId is the EngineerProfile.id — correct foreign key for Payment.engineerId
+  const engineerProfileId = bid.engineerId;
   const config = getFawaterkConfig();
   const amount = bid.price;
   const commission = Math.round(amount * config.commissionRate * 100) / 100;
+  // Client is charged amount + commission so the platform fee is actually collected
+  const totalCharged = Math.round((amount + commission) * 100) / 100;
   const { first_name, last_name } = splitCustomerName(project.client.name);
 
   const payment =
@@ -189,7 +192,7 @@ export async function initiateProjectCheckout(
       data: {
         projectId,
         clientId,
-        engineerId: engineerUserId,
+        engineerId: engineerProfileId,
         amount,
         commission,
         status: "PENDING",
@@ -199,7 +202,7 @@ export async function initiateProjectCheckout(
   const redirectionUrls = getRedirectionUrls();
   const fawaterkData = await initiateFawaterkPayment({
     payment_method_id: input.paymentMethodId,
-    cartTotal: String(amount),
+    cartTotal: String(totalCharged),
     currency: config.currency,
     customer: {
       first_name,
@@ -212,7 +215,7 @@ export async function initiateProjectCheckout(
     cartItems: [
       {
         name: project.title.slice(0, 100),
-        price: String(amount),
+        price: String(totalCharged),
         quantity: "1",
       },
     ],
@@ -276,10 +279,13 @@ export async function prepareProjectCheckoutSession(
   }
 
   const bid = await getAcceptedBidForProject(projectId);
-  const engineerUserId = bid.engineer.user.id;
+  // bid.engineerId is the EngineerProfile.id — correct foreign key for Payment.engineerId
+  const engineerProfileId = bid.engineerId;
   const config = getFawaterkConfig();
   const amount = bid.price;
   const commission = Math.round(amount * config.commissionRate * 100) / 100;
+  // Client is charged amount + commission so the platform fee is actually collected
+  const totalCharged = Math.round((amount + commission) * 100) / 100;
   const { first_name, last_name } = splitCustomerName(project.client.name);
 
   const payment =
@@ -288,7 +294,7 @@ export async function prepareProjectCheckoutSession(
       data: {
         projectId,
         clientId,
-        engineerId: engineerUserId,
+        engineerId: engineerProfileId,
         amount,
         commission,
         status: "PENDING",
@@ -305,8 +311,10 @@ export async function prepareProjectCheckoutSession(
     projectTitle: project.title,
     paymentId: payment.id,
     amount,
+    commission,
+    totalCharged,
     pluginRequest: {
-      cartTotal: String(amount),
+      cartTotal: String(totalCharged),
       currency: config.currency,
       customer: {
         first_name,
@@ -323,7 +331,7 @@ export async function prepareProjectCheckoutSession(
       cartItems: [
         {
           name: project.title.slice(0, 100),
-          price: String(amount),
+          price: String(totalCharged),
           quantity: "1",
         },
       ],
@@ -380,15 +388,18 @@ export async function handleFawaterkWebhook(body: unknown) {
         gatewayInvoiceId: String(payload.invoice_id),
         gatewayInvoiceKey: payload.invoice_key,
       },
-      include: { project: { select: { title: true } } },
+      include: {
+        project: { select: { title: true } },
+        engineer: { include: { user: { select: { id: true } } } },
+      },
     });
 
     const { createNotification } = await import("../../utils/notifications");
     await createNotification(
-      updated.engineerId,
+      updated.engineer.user.id,
       "ESCROW_FUNDED",
-      "Escrow funded",
-      `The client funded escrow for "${updated.project.title}". You can start work.`,
+      "Payment received",
+      `The client paid for "${updated.project.title}". You can start working.`,
       `/messages?project=${updated.projectId}`,
     );
 
@@ -430,25 +441,137 @@ export async function handleFawaterkWebhook(body: unknown) {
   return { handled: false };
 }
 
-export async function listEngineerEscrow(engineerUserId: number) {
+function netEngineerAmount(amount: number, commission: number) {
+  return Math.round((amount - commission) * 100) / 100;
+}
+
+export type EngineerPaymentDisplayStatus =
+  | "awaiting_payment"
+  | "in_progress"
+  | "awaiting_release"
+  | "paid"
+  | "refunded";
+
+function mapEngineerPaymentStatus(
+  paymentStatus: string,
+  projectStatus: string,
+): EngineerPaymentDisplayStatus {
+  if (paymentStatus === "PENDING") return "awaiting_payment";
+  if (paymentStatus === "REFUNDED") return "refunded";
+  if (paymentStatus === "RELEASED") return "paid";
+  if (paymentStatus === "FUNDED" && projectStatus === "AWAITING_APPROVAL") {
+    return "awaiting_release";
+  }
+  if (paymentStatus === "FUNDED") return "in_progress";
+  return "awaiting_payment";
+}
+
+export async function getEngineerBalance(engineerUserId: number) {
+  const profile = await db.engineerProfile.findUnique({
+    where: { userId: engineerUserId },
+    select: { id: true },
+  });
+  if (!profile) {
+    return {
+      availableBalance: 0,
+      securedBalance: 0,
+      awaitingClientPayment: 0,
+      awaitingRelease: 0,
+      transactions: [] as Array<{
+        id: number;
+        projectId: number;
+        projectTitle: string;
+        amount: number;
+        netAmount: number;
+        commission: number;
+        status: EngineerPaymentDisplayStatus;
+        createdAt: Date;
+        updatedAt: Date;
+      }>,
+    };
+  }
+
   const payments = await db.payment.findMany({
-    where: { engineerId: engineerUserId },
+    where: { engineerId: profile.id },
     include: {
       project: { select: { id: true, title: true, status: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
 
-  return payments.map((payment) => ({
-    id: payment.id,
-    projectId: payment.projectId,
-    projectTitle: payment.project.title,
-    amount: payment.amount,
-    commission: payment.commission,
-    status: mapPaymentStatusToEscrow(payment.status),
-    createdAt: payment.createdAt,
-    updatedAt: payment.updatedAt,
+  let availableBalance = 0;
+  let securedBalance = 0;
+  let awaitingClientPayment = 0;
+  let awaitingRelease = 0;
+
+  const transactions = payments.map((payment) => {
+    const netAmount = netEngineerAmount(payment.amount, payment.commission);
+    const status = mapEngineerPaymentStatus(
+      payment.status,
+      payment.project.status,
+    );
+
+    if (status === "paid") availableBalance += netAmount;
+    else if (status === "in_progress") securedBalance += netAmount;
+    else if (status === "awaiting_release") {
+      securedBalance += netAmount;
+      awaitingRelease += netAmount;
+    } else if (status === "awaiting_payment") {
+      awaitingClientPayment += netAmount;
+    }
+
+    return {
+      id: payment.id,
+      projectId: payment.projectId,
+      projectTitle: payment.project.title,
+      amount: payment.amount,
+      netAmount,
+      commission: payment.commission,
+      status,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
+    };
+  });
+
+  return {
+    availableBalance,
+    securedBalance,
+    awaitingClientPayment,
+    awaitingRelease,
+    transactions,
+  };
+}
+
+export async function listEngineerEscrow(engineerUserId: number) {
+  const balance = await getEngineerBalance(engineerUserId);
+  return balance.transactions.map((tx) => ({
+    id: tx.id,
+    projectId: tx.projectId,
+    projectTitle: tx.projectTitle,
+    amount: tx.netAmount,
+    commission: tx.commission,
+    status: mapEngineerEscrowLegacyStatus(tx.status),
+    createdAt: tx.createdAt,
+    updatedAt: tx.updatedAt,
   }));
+}
+
+function mapEngineerEscrowLegacyStatus(
+  status: EngineerPaymentDisplayStatus,
+): "Pending" | "In escrow" | "Released" | "Refunded" {
+  switch (status) {
+    case "awaiting_payment":
+      return "Pending";
+    case "in_progress":
+    case "awaiting_release":
+      return "In escrow";
+    case "paid":
+      return "Released";
+    case "refunded":
+      return "Refunded";
+    default:
+      return "Pending";
+  }
 }
 
 export async function listClientEscrow(clientId: number) {
@@ -464,6 +587,7 @@ export async function listClientEscrow(clientId: number) {
     id: payment.id,
     projectId: payment.projectId,
     projectTitle: payment.project.title,
+    projectStatus: payment.project.status,
     amount: payment.amount,
     commission: payment.commission,
     status: mapPaymentStatusToEscrow(payment.status),
@@ -525,14 +649,22 @@ export async function releaseEscrowPayment(
     return released;
   });
 
+  // Resolve engineer User.id from profile id for the notification
+  const engineerProfile = await db.engineerProfile.findUnique({
+    where: { id: payment.engineerId },
+    select: { userId: true },
+  });
+
   const { createNotification } = await import("../../utils/notifications");
-  await createNotification(
-    payment.engineerId,
-    "FUNDS_RELEASED",
-    "Funds released",
-    `Escrow for "${projectTitle}" was released to you`,
-    `/escrow`,
-  );
+  if (engineerProfile) {
+    await createNotification(
+      engineerProfile.userId,
+      "FUNDS_RELEASED",
+      "Payment sent to you",
+      `The client released payment for "${projectTitle}". It is now in your balance.`,
+      `/balance`,
+    );
+  }
 
   return updated;
 }
@@ -576,6 +708,7 @@ export async function getEscrowPaymentById(paymentId: number, userId: number) {
 export async function refundEscrowPayment(clientId: number, paymentId: number) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
+    include: { project: { select: { title: true } } },
   });
   if (!payment) throw new ApiError(404, "Payment not found");
   if (payment.clientId !== clientId) {
@@ -585,8 +718,34 @@ export async function refundEscrowPayment(clientId: number, paymentId: number) {
     throw new ApiError(400, "Only funded escrow can be refunded");
   }
 
-  return db.payment.update({
-    where: { id: paymentId },
-    data: { status: "REFUNDED" },
+  // Cancel the project and mark payment refunded atomically
+  const updated = await db.$transaction(async (tx) => {
+    const refunded = await tx.payment.update({
+      where: { id: paymentId },
+      data: { status: "REFUNDED" },
+    });
+    await tx.project.update({
+      where: { id: payment.projectId },
+      data: { status: "CANCELLED" },
+    });
+    return refunded;
   });
+
+  // Notify the engineer so they're not left wondering
+  const engineerProfile = await db.engineerProfile.findUnique({
+    where: { id: payment.engineerId },
+    select: { userId: true },
+  });
+  const { createNotification } = await import("../../utils/notifications");
+  if (engineerProfile) {
+    await createNotification(
+      engineerProfile.userId,
+      "ESCROW_REFUNDED",
+      "Payment refunded",
+      `The client was refunded for "${payment.project.title}". The project has been cancelled.`,
+      `/balance`,
+    );
+  }
+
+  return updated;
 }

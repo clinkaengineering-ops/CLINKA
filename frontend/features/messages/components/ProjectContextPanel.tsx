@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/UI";
+import { useI18n } from "@/i18n";
 import type { ConversationListItem } from "../types";
 import useAuthStore from "@/store/authStore";
 import {
@@ -64,6 +65,7 @@ export function ProjectContextPanel({
   onProjectUpdated,
 }: ProjectContextPanelProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
 
   const [payment, setPayment] = useState<ProjectPayment | null>(null);
@@ -156,11 +158,14 @@ export function ProjectContextPanel({
     projectStatus === "IN_PROGRESS" &&
     (paymentStatus === null || paymentStatus === "PENDING");
 
-  // Show a funded badge when money is held in escrow
   const showEscrowFundedBadge =
     projectStatus === "IN_PROGRESS" && paymentStatus === "FUNDED";
 
-  // Engineer: show "Mark as finished" when funded and still in progress
+  const showWaitingForPayment =
+    isEngineer &&
+    projectStatus === "IN_PROGRESS" &&
+    (paymentStatus === null || paymentStatus === "PENDING");
+
   const showMarkFinished =
     isEngineer &&
     projectStatus === "IN_PROGRESS" &&
@@ -208,49 +213,59 @@ export function ProjectContextPanel({
           <div className="h-9 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
         )}
 
-        {/* Escrow funded badge */}
+        {!loadingPayment && showWaitingForPayment && (
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              {t("bal.status.awaiting_payment")}
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">{t("pay.waitingClient")}</p>
+          </div>
+        )}
+
         {!loadingPayment && showEscrowFundedBadge && payment && (
           <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-3">
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Escrow funded
+              {isClient ? t("pay.escrowFunded") : t("bal.status.in_progress")}
             </p>
             <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mt-1">
-              {formatAmount(payment.amount)}
+              {formatAmount(
+                isEngineer ? payment.amount - payment.commission : payment.amount,
+              )}
             </p>
             <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
-              Held securely until you confirm receipt
+              {isClient
+                ? t("pay.escrowFundedHint")
+                : t("bal.securedHint")}
             </p>
           </div>
         )}
 
-        {/* Awaiting approval badge (client sees this instead of funded) */}
         {!loadingPayment && showConfirmReceived && payment && (
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3">
             <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-              Engineer marked work as done
+              {isClient ? t("pay.workDone") : t("bal.status.awaiting_release")}
             </p>
             <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mt-1">
-              {formatAmount(payment.amount)}
+              {formatAmount(
+                isEngineer ? payment.amount - payment.commission : payment.amount,
+              )}
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
-              Review the deliverables, then confirm below
+              {isClient ? t("pay.workDoneHint") : t("bal.awaitingReleaseHint")}
             </p>
           </div>
         )}
 
-        {/* Released badge */}
         {!loadingPayment && paymentStatus === "RELEASED" && payment && (
           <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
             <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-              Payment released
+              {t("pay.released")}
             </p>
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-1">
               {formatAmount(payment.amount - payment.commission)}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Net after 10% platform fee
-            </p>
+            <p className="text-xs text-slate-500 mt-0.5">{t("pay.releasedHint")}</p>
           </div>
         )}
 
@@ -274,7 +289,7 @@ export function ProjectContextPanel({
               <rect x="2" y="5" width="20" height="14" rx="2" />
               <path d="M2 10h20" />
             </svg>
-            Pay engineer
+            {t("pay.fundEscrow")}
           </button>
         )}
 
@@ -306,11 +321,11 @@ export function ProjectContextPanel({
                 />
               </svg>
             )}
-            Mark as finished
+            {t("pay.markFinished")}
           </button>
         )}
 
-        {/* ── CLIENT: Confirm received ── */}
+        {/* ── CLIENT: Send payment ── */}
         {!loadingPayment && showConfirmReceived && (
           <button
             type="button"
@@ -338,7 +353,7 @@ export function ProjectContextPanel({
                 />
               </svg>
             )}
-            Confirm received
+            {t("pay.sendToEngineer")}
           </button>
         )}
 

@@ -8,6 +8,7 @@ import {
   handleFawaterkWebhook,
   initiateProjectCheckout,
   prepareProjectCheckoutSession,
+  getEngineerBalance,
   listClientEscrow,
   listEngineerEscrow,
   listPaymentMethods,
@@ -117,6 +118,21 @@ export async function listEngineerEscrowController(
       .json(
         ApiResponse(200, "Engineer escrow items fetched successfully", items),
       );
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getEngineerBalanceController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const balance = await getEngineerBalance(req.user!.userId);
+    res
+      .status(200)
+      .json(ApiResponse(200, "Engineer balance fetched successfully", balance));
   } catch (error) {
     next(error);
   }

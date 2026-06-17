@@ -12,15 +12,15 @@ import {
   type FieldErrors,
 } from "@/lib/validation";
 import { cn } from "@/utils/cn";
+import { Button, Card, Divider, Field, Input, Textarea } from "@/components/UI";
 import {
-  Button,
-  Card,
-  Divider,
-  Field,
-  Input,
-  Textarea,
-} from "@/components/UI";
-import { IconArrow, IconBriefcase, IconCheck, IconLock, IconMail, IconUser } from "@/components/Icons";
+  IconArrow,
+  IconBriefcase,
+  IconCheck,
+  IconLock,
+  IconMail,
+  IconUser,
+} from "@/components/Icons";
 
 type Role = "CLIENT" | "ENGINEER";
 type Specialty = "CIVIL" | "ARCHITECTURAL";
@@ -36,17 +36,25 @@ export function RegisterForm() {
     password: "",
     specialty: "" as Specialty,
     bio: "",
+    nationality: "",
     documentType: "" as DocumentType,
     file: null as File | null,
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const stepLabels = ["Account type", "Your details", "Profile", "Verification"];
+  const stepLabels = [
+    "Account type",
+    "Your details",
+    "Profile",
+    "Verification",
+  ];
 
   function validateCurrentStep(): boolean {
     if (step === 1) {
       if (!role) {
-        setFieldErrors({ _form: "Select whether you are a client or engineer" });
+        setFieldErrors({
+          _form: "Select whether you are a client or engineer",
+        });
         return false;
       }
       setFieldErrors({});
@@ -65,6 +73,7 @@ export function RegisterForm() {
       const result = validateForm(engineerRegisterStep3Schema, {
         specialty: form.specialty || undefined,
         bio: form.bio || undefined,
+        nationality: form.nationality || undefined,
       });
       if (!result.success) {
         setFieldErrors(result.errors);
@@ -115,6 +124,7 @@ export function RegisterForm() {
         password: form.password,
         specialty: form.specialty,
         bio: form.bio,
+        nationality: form.nationality,
         documentType: form.documentType,
         file: form.file!,
       });
@@ -131,7 +141,15 @@ export function RegisterForm() {
       {/* Progress bar */}
       <div className="mt-3 flex gap-2">
         {(role === "CLIENT" ? [1, 2] : [1, 2, 3, 4]).map((_, i) => (
-          <div key={i} className={cn("h-1 flex-1 rounded-full transition", i + 1 <= step ? "bg-electric-500" : "bg-slate-200 dark:bg-slate-800")} />
+          <div
+            key={i}
+            className={cn(
+              "h-1 flex-1 rounded-full transition",
+              i + 1 <= step
+                ? "bg-electric-500"
+                : "bg-slate-200 dark:bg-slate-800",
+            )}
+          />
         ))}
       </div>
 
@@ -141,32 +159,53 @@ export function RegisterForm() {
       )}
 
       <div className="mt-6">
-
         {/* Step 1 — Role selection */}
         {step === 1 && (
           <div className="space-y-3">
             {[
-                { role: "ENGINEER" as Role, title: "I'm an Engineer", desc: "Civil or architectural - offer your services", icon: <IconBriefcase width={20} height={20} /> },
-                { role: "CLIENT" as Role, title: "I'm a Client", desc: "Post projects and hire verified engineers", icon: <IconUser width={20} height={20} /> },
-            ].map(o => (
+              {
+                role: "ENGINEER" as Role,
+                title: "I'm an Engineer",
+                desc: "Civil or architectural - offer your services",
+                icon: <IconBriefcase width={20} height={20} />,
+              },
+              {
+                role: "CLIENT" as Role,
+                title: "I'm a Client",
+                desc: "Post projects and hire verified engineers",
+                icon: <IconUser width={20} height={20} />,
+              },
+            ].map((o) => (
               <button
                 key={o.role}
                 onClick={() => setRole(o.role)}
                 className={cn(
-                    "w-full p-4 rounded-xl border text-start transition flex items-center gap-3 group",
+                  "w-full p-4 rounded-xl border text-start transition flex items-center gap-3 group",
                   role === o.role
-                      ? "border-electric-500 bg-electric-500/5"
-                      : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60 hover:bg-electric-500/5"
+                    ? "border-electric-500 bg-electric-500/5"
+                    : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60 hover:bg-electric-500/5",
                 )}
               >
-                  <span className="h-10 w-10 rounded-lg bg-electric-500/10 text-electric-600 flex items-center justify-center group-hover:scale-110 transition">
-                    {o.icon}
-                  </span>
-                  <div className="flex-1">
-                    <p className="font-semibold">{o.title}</p>
-                    <p className="text-xs text-slate-500">{o.desc}</p>
-                  </div>
-                  {role === o.role ? <IconCheck width={18} height={18} className="text-electric-500" /> : <IconArrow width={16} height={16} className="text-slate-400 rtl:rotate-180" />}
+                <span className="h-10 w-10 rounded-lg bg-electric-500/10 text-electric-600 flex items-center justify-center group-hover:scale-110 transition">
+                  {o.icon}
+                </span>
+                <div className="flex-1">
+                  <p className="font-semibold">{o.title}</p>
+                  <p className="text-xs text-slate-500">{o.desc}</p>
+                </div>
+                {role === o.role ? (
+                  <IconCheck
+                    width={18}
+                    height={18}
+                    className="text-electric-500"
+                  />
+                ) : (
+                  <IconArrow
+                    width={16}
+                    height={16}
+                    className="text-slate-400 rtl:rotate-180"
+                  />
+                )}
               </button>
             ))}
           </div>
@@ -181,9 +220,7 @@ export function RegisterForm() {
                   type="button"
                   variant="secondary"
                   className="w-full !h-11"
-                  onClick={() =>
-                    startGoogleSignIn({ role: role ?? "CLIENT" })
-                  }
+                  onClick={() => startGoogleSignIn({ role: role ?? "CLIENT" })}
                 >
                   Continue with Google
                 </Button>
@@ -223,24 +260,30 @@ export function RegisterForm() {
           </div>
         )}
 
-        {/* Step 3 — Specialty + Bio (Engineer only) */}
+        {/* Step 3 — Specialty + Bio + Nationality (Engineer only) */}
         {step === 3 && role === "ENGINEER" && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Specialty</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Specialty
+              </label>
               {fieldErrors.specialty && (
-                <p className="mt-1 text-xs text-rose-500">{fieldErrors.specialty}</p>
+                <p className="mt-1 text-xs text-rose-500">
+                  {fieldErrors.specialty}
+                </p>
               )}
+
               <div className="mt-1.5 grid grid-cols-2 gap-3">
-                {(["CIVIL", "ARCHITECTURAL"] as Specialty[]).map(s => (
+                {(["CIVIL", "ARCHITECTURAL"] as Specialty[]).map((s) => (
                   <button
                     key={s}
+                    type="button"
                     onClick={() => setForm({ ...form, specialty: s })}
                     className={cn(
                       "p-3 rounded-xl border text-sm font-semibold text-center transition",
                       form.specialty === s
                         ? "border-electric-500 bg-electric-500/5 text-electric-600"
-                        : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60"
+                        : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60",
                     )}
                   >
                     {s === "CIVIL" ? "Civil" : "Architectural"}
@@ -248,14 +291,152 @@ export function RegisterForm() {
                 ))}
               </div>
             </div>
+
             <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Bio <span className="text-slate-400 font-normal">(optional)</span></label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Bio{" "}
+                <span className="text-slate-400 font-normal">(optional)</span>
+              </label>
+
               <Textarea
                 rows={3}
                 placeholder="Tell clients about your experience..."
                 value={form.bio}
-                onChange={(e:any) => setForm({ ...form, bio: e.target.value })}
+                onChange={(e: any) => setForm({ ...form, bio: e.target.value })}
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Nationality
+              </label>
+              {fieldErrors.nationality && (
+                <p className="mt-1 text-xs text-rose-500">
+                  {fieldErrors.nationality}
+                </p>
+              )}
+
+              <select
+                value={form.nationality}
+                onChange={(e) =>
+                  setForm({ ...form, nationality: e.target.value })
+                }
+                className="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
+              >
+                <option value="">Select nationality...</option>
+
+                {[
+                  "Afghan",
+                  "Albanian",
+                  "Algerian",
+                  "Argentine",
+                  "Armenian",
+                  "Australian",
+                  "Austrian",
+                  "Azerbaijani",
+                  "Bangladeshi",
+                  "Belarusian",
+                  "Belgian",
+                  "Bolivian",
+                  "Bosnian",
+                  "Brazilian",
+                  "British",
+                  "Bulgarian",
+                  "Cambodian",
+                  "Cameroonian",
+                  "Canadian",
+                  "Chilean",
+                  "Chinese",
+                  "Colombian",
+                  "Congolese",
+                  "Croatian",
+                  "Cuban",
+                  "Czech",
+                  "Danish",
+                  "Dutch",
+                  "Ecuadorian",
+                  "Egyptian",
+                  "Emirati",
+                  "English",
+                  "Estonian",
+                  "Ethiopian",
+                  "Finnish",
+                  "French",
+                  "Georgian",
+                  "German",
+                  "Ghanaian",
+                  "Greek",
+                  "Guatemalan",
+                  "Hungarian",
+                  "Indian",
+                  "Indonesian",
+                  "Iranian",
+                  "Iraqi",
+                  "Irish",
+                  "Israeli",
+                  "Italian",
+                  "Jamaican",
+                  "Japanese",
+                  "Jordanian",
+                  "Kazakh",
+                  "Kenyan",
+                  "Kuwaiti",
+                  "Lebanese",
+                  "Libyan",
+                  "Lithuanian",
+                  "Malaysian",
+                  "Mexican",
+                  "Mongolian",
+                  "Moroccan",
+                  "Nepalese",
+                  "New Zealander",
+                  "Nigerian",
+                  "Norwegian",
+                  "Omani",
+                  "Pakistani",
+                  "Palestinian",
+                  "Peruvian",
+                  "Philippine",
+                  "Polish",
+                  "Portuguese",
+                  "Qatari",
+                  "Romanian",
+                  "Russian",
+                  "Saudi",
+                  "Scottish",
+                  "Serbian",
+                  "Singaporean",
+                  "Slovak",
+                  "Slovenian",
+                  "Somali",
+                  "South African",
+                  "South Korean",
+                  "Spanish",
+                  "Sri Lankan",
+                  "Sudanese",
+                  "Swedish",
+                  "Swiss",
+                  "Syrian",
+                  "Taiwanese",
+                  "Tanzanian",
+                  "Thai",
+                  "Tunisian",
+                  "Turkish",
+                  "Ukrainian",
+                  "Uruguayan",
+                  "American",
+                  "Uzbek",
+                  "Venezuelan",
+                  "Vietnamese",
+                  "Yemeni",
+                  "Zimbabwean",
+                  "Other",
+                ].map((nationality) => (
+                  <option key={nationality} value={nationality}>
+                    {nationality}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}
@@ -263,25 +444,29 @@ export function RegisterForm() {
         {/* Step 4 — Document upload (Engineer only) */}
         {step === 4 && role === "ENGINEER" && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">Upload one document to verify your engineering credentials</p>
+            <p className="text-sm text-slate-500">
+              Upload one document to verify your engineering credentials
+            </p>
             {(fieldErrors.documentType || fieldErrors.file) && (
               <p className="text-xs text-rose-500">
                 {fieldErrors.documentType ?? fieldErrors.file}
               </p>
             )}
             <div className="space-y-3">
-              {([
-                { type: "collegeIdUrl", label: "College ID" },
-                { type: "certificateUrl", label: "Engineering Certificate" },
-                { type: "syndicateCardUrl", label: "Syndicate Card" },
-              ] as { type: DocumentType; label: string }[]).map(d => (
+              {(
+                [
+                  { type: "collegeIdUrl", label: "College ID" },
+                  { type: "certificateUrl", label: "Engineering Certificate" },
+                  { type: "syndicateCardUrl", label: "Syndicate Card" },
+                ] as { type: DocumentType; label: string }[]
+              ).map((d) => (
                 <label
                   key={d.type}
                   className={cn(
                     "flex items-center justify-between p-3 rounded-xl border border-dashed cursor-pointer transition",
                     form.documentType === d.type
                       ? "border-electric-500 bg-electric-500/5"
-                      : "border-slate-300 dark:border-slate-700 hover:border-electric-500"
+                      : "border-slate-300 dark:border-slate-700 hover:border-electric-500",
                   )}
                 >
                   <span className="text-sm font-medium">{d.label}</span>
@@ -291,12 +476,18 @@ export function RegisterForm() {
                     className="hidden"
                     onChange={(e) => {
                       if (e.target.files?.[0]) {
-                        setForm({ ...form, documentType: d.type, file: e.target.files[0] });
+                        setForm({
+                          ...form,
+                          documentType: d.type,
+                          file: e.target.files[0],
+                        });
                       }
                     }}
                   />
                   <span className="text-xs text-electric-600 font-semibold">
-                    {form.documentType === d.type && form.file ? form.file.name : "Upload"}
+                    {form.documentType === d.type && form.file
+                      ? form.file.name
+                      : "Upload"}
                   </span>
                 </label>
               ))}
@@ -316,10 +507,7 @@ export function RegisterForm() {
         </button>
 
         {step < (role === "CLIENT" ? 2 : 4) ? (
-          <Button
-            onClick={goNext}
-            icon={<IconArrow width={14} height={14} />}
-          >
+          <Button onClick={goNext} icon={<IconArrow width={14} height={14} />}>
             Continue
           </Button>
         ) : (
@@ -335,7 +523,12 @@ export function RegisterForm() {
 
       <p className="text-center text-sm text-slate-500 mt-4">
         Already have an account?{" "}
-        <Link href="/login" className="text-electric-600 font-semibold hover:underline">Sign in</Link>
+        <Link
+          href="/login"
+          className="text-electric-600 font-semibold hover:underline"
+        >
+          Sign in
+        </Link>
       </p>
     </Card>
   );

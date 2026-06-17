@@ -172,7 +172,9 @@ export function EscrowContractsList({
                         {new Date(row.updatedAt).toLocaleDateString()}
                       </span>
                       <div className="flex gap-2">
-                        {row.status === "In escrow" && row.paymentId && (
+                        {row.status === "In escrow" &&
+                          row.paymentId &&
+                          row.projectStatus === "AWAITING_APPROVAL" && (
                           <>
                             <Button
                               size="sm"
@@ -187,7 +189,7 @@ export function EscrowContractsList({
                                 }
                               }}
                             >
-                              {t("common.release")}
+                              {t("pay.sendToEngineer")}
                             </Button>
                             {onRefund && (
                               <Button

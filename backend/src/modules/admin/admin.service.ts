@@ -6,6 +6,7 @@ import {
 } from "../messages/ban.service";
 import { BanReason } from "../../generated/prisma/enums";
 import { createNotification } from "../../utils/notifications";
+import generateToken from "../../utils/generateToken";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
@@ -199,6 +200,36 @@ export async function lookupUser(identifier: string) {
   return byEmail;
 }
 
+export async function impersonateUser(targetUserId: number) {
+  const target = await db.user.findUnique({ where: { id: targetUserId } });
+  if (!target) throw new ApiError(404, "User not found");
+  if (target.role === "ADMIN") {
+    throw new ApiError(400, "Cannot impersonate an administrator");
+  }
+
+  const token = generateToken(target.id, target.role);
+  return { user: stripPassword(target), token };
+}
+
+export async function updateEngineerProfileByAdmin(
+  userId: number,
+  data: { specialty?: "CIVIL" | "ARCHITECTURAL"; bio?: string }
+) {
+  const profile = await db.engineerProfile.findUnique({ where: { userId } });
+  if (!profile) throw new ApiError(404, "Engineer profile not found");
+  
+  const updated = await db.engineerProfile.update({
+    where: { userId },
+    data: {
+      ...(data.specialty && { specialty: data.specialty }),
+      ...(data.bio !== undefined && { bio: data.bio }),
+    },
+    include: { user: true }
+  });
+  
+  return stripPassword(updated.user);
+}
+
 export async function getAllConversations(page = 1, limit = 20) {
   const skip = (page - 1) * limit;
 
@@ -283,3 +314,153 @@ export async function getConversationMessages(
     },
   };
 }
+
+export async function getAllProjects(page = 1, limit = 20) {
+  const skip = (page - 1) * limit;
+  const [projects, total] = await Promise.all([
+    db.project.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        client: { select: { name: true, email: true } },
+      },
+    }),
+    db.project.count(),
+  ]);
+  return {
+    projects,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+export async function updateProjectByAdmin(
+  projectId: number,
+  data: { status?: any; isFlagged?: boolean },
+) {
+  return await db.project.update({
+    where: { id: projectId },
+    data,
+  });
+}
+
+export async function getAllReviews(page = 1, limit = 20) {
+  const skip = (page - 1) * limit;
+  const [reviews, total] = await Promise.all([
+    db.review.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        client: { select: { name: true } },
+        engineer: { include: { user: { select: { name: true } } } },
+        project: { select: { title: true } },
+      },
+    }),
+    db.review.count(),
+  ]);
+  return {
+    reviews,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+export async function deleteReviewByAdmin(reviewId: number) {
+  await db.review.delete({ where: { id: reviewId } });
+}
+
+export async function getPlatformSettings() {
+  let settings = await db.platformSettings.findFirst();
+  if (!settings) {
+    settings = await db.platformSettings.create({
+      data: { platformFeePercent: 10.0 },
+    });
+  }
+  return settings;
+}
+
+export async function updatePlatformSettings(data: { platformFeePercent: number }) {
+  let settings = await db.platformSettings.findFirst();
+  if (!settings) {
+    return await db.platformSettings.create({ data });
+  }
+  return await db.platformSettings.update({
+    where: { id: settings.id },
+    data,
+  });
+}
+
+export async function getAllPayments(page = 1, limit = 20) {
+  const skip = (page - 1) * limit;
+  const [payments, total] = await Promise.all([
+    db.payment.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        client: { select: { name: true, email: true } },
+        engineer: { include: { user: { select: { name: true, email: true } } } },
+        project: { select: { title: true } },
+      },
+    }),
+    db.payment.count(),
+  ]);
+  return {
+    payments,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+export async function overridePaymentStatus(paymentId: number, status: "RELEASED" | "REFUNDED") {
+  return await db.payment.update({
+    where: { id: paymentId },
+    data: { status },
+  });
+}
+
+export async function getAnalyticsData() {
+  const users = await db.user.findMany({ select: { createdAt: true } });
+  const payments = await db.payment.findMany({
+    where: { status: { in: ["FUNDED", "RELEASED"] } },
+    select: { amount: true, createdAt: true },
+  });
+
+  const dailySignups: Record<string, number> = {};
+  users.forEach((u) => {
+    const d = u.createdAt.toISOString().split("T")[0];
+    dailySignups[d] = (dailySignups[d] || 0) + 1;
+  });
+
+  const dailyGmv: Record<string, number> = {};
+  payments.forEach((p) => {
+    const d = p.createdAt.toISOString().split("T")[0];
+    dailyGmv[d] = (dailyGmv[d] || 0) + p.amount;
+  });
+
+  return {
+    dailySignups: Object.entries(dailySignups).map(([date, count]) => ({ date, count })),
+    dailyGmv: Object.entries(dailyGmv).map(([date, amount]) => ({ date, amount })),
+  };
+}
+
+export async function getSystemLogs() {
+  // In a real app, read from a log file like Winston or Pino.
+  // For MVP demonstration, return mock recent events.
+  return [
+    { timestamp: new Date().toISOString(), level: "INFO", message: "Admin dashboard accessed." },
+    { timestamp: new Date(Date.now() - 3600000).toISOString(), level: "WARN", message: "Stripe webhook failed - Retrying." },
+    { timestamp: new Date(Date.now() - 7200000).toISOString(), level: "ERROR", message: "Database connection timeout in GET /projects." },
+    { timestamp: new Date(Date.now() - 86400000).toISOString(), level: "INFO", message: "Server restarted successfully." },
+  ];
+}
+
+

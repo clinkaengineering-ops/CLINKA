@@ -11,6 +11,7 @@ import {
   getPaymentMethodsController,
   getProjectPaymentController,
   initiateCheckoutController,
+  getEngineerBalanceController,
   listEngineerEscrowController,
   listEscrowController,
   refundEscrowController,
@@ -31,6 +32,12 @@ router.get(
   authenticate,
   authorize("ENGINEER"),
   listEngineerEscrowController,
+);
+router.get(
+  "/engineer/balance",
+  authenticate,
+  authorize("ENGINEER"),
+  getEngineerBalanceController,
 );
 router.get(
   "/escrow/:paymentId",

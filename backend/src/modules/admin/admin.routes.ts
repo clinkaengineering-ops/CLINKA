@@ -13,6 +13,18 @@ import {
   lookupUserController,
   unbanUserController,
   updateVerificationController,
+  impersonateUserController,
+  updateProfileByAdminController,
+  getAllProjectsController,
+  updateProjectStatusController,
+  getAllReviewsController,
+  deleteReviewController,
+  getSettingsController,
+  updateSettingsController,
+  getAllPaymentsController,
+  overridePaymentController,
+  getAnalyticsController,
+  getSystemLogsController,
 } from "./admin.controller";
 
 const router = Router();
@@ -33,5 +45,23 @@ router.get(
   "/conversations/:conversationId/messages",
   getConversationMessagesController,
 );
+
+router.post("/impersonate/:userId", impersonateUserController);
+router.patch("/profiles/:userId", updateProfileByAdminController);
+
+router.get("/projects", getAllProjectsController);
+router.patch("/projects/:projectId/status", updateProjectStatusController);
+
+router.get("/reviews", getAllReviewsController);
+router.delete("/reviews/:reviewId", deleteReviewController);
+
+router.get("/settings", getSettingsController);
+router.patch("/settings", updateSettingsController);
+
+router.get("/payments", getAllPaymentsController);
+router.patch("/payments/:paymentId/override", overridePaymentController);
+
+router.get("/analytics", getAnalyticsController);
+router.get("/logs", getSystemLogsController);
 
 export default router;

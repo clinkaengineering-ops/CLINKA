@@ -37,6 +37,7 @@ export const engineerRegisterStep3Schema = z.object({
     error: "Select your specialty",
   }),
   bio: optionalBioField,
+  nationality: z.string().min(1, "Select your nationality"),
 });
 
 export const engineerRegisterStep4Schema = z.object({
@@ -86,6 +87,7 @@ export const changePasswordFormSchema = z
 export const updateProfileFormSchema = z.object({
   name: nameField,
   bio: optionalBioField,
+  nationality: z.string().optional(),
 });
 
 export const requestEmailChangeFormSchema = z.object({

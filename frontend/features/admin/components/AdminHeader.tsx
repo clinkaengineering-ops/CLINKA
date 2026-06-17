@@ -20,9 +20,6 @@ export function AdminHeader({ onExport, exportDisabled }: Props) {
         </p>
         <h1 className="text-3xl font-bold tracking-tight">{t("ad.title")}</h1>
       </div>
-      <Button variant="secondary" onClick={onExport} disabled={exportDisabled}>
-        {t("common.exportCsv")}
-      </Button>
     </div>
   );
 }

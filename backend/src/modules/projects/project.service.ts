@@ -44,9 +44,17 @@ export async function markProjectFinished(engineerUserId: number, projectId: num
  
   // Escrow must be funded before engineer can mark done
   if (!project.payment || project.payment.status !== "FUNDED") {
+    // Notify the client so they know to fund escrow
+    await createNotification(
+      project.clientId,
+      "FUND_REMINDER",
+      "Payment required",
+      `The engineer finished "${project.title}" but you have not paid yet. Pay to release their work.`,
+      `/escrow?project=${projectId}`,
+    );
     throw new ApiError(
       400,
-      "Escrow has not been funded yet. Ask the client to pay first.",
+      "Payment has not been made yet. Ask the client to pay before marking work as finished.",
     );
   }
  
@@ -60,8 +68,8 @@ export async function markProjectFinished(engineerUserId: number, projectId: num
   await createNotification(
     project.clientId,
     "WORK_DELIVERED",
-    "Work delivered",
-    `The engineer has marked "${project.title}" as finished. Please review and confirm.`,
+    "Work ready for review",
+    `The engineer marked "${project.title}" as finished. Review the work, then send payment.`,
     `/messages?project=${projectId}`,
   );
  

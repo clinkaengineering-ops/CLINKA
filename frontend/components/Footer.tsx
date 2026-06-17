@@ -9,10 +9,15 @@ const footerLinkMap: Record<string, string> = {
   "side.findProjects": "/projects",
   "nav.escrow": "/escrow",
   "side.verification": "/admin",
-  "foot.about": "/",
+  "foot.about": "/about",
+  "foot.company": "/company",
   "foot.customers": "/engineers",
   "foot.careers": "/register",
-  "foot.press": "/",
+  "foot.press": "/company",
+  "foot.security": "/security",
+  "foot.status": "/status",
+  "foot.terms": "/terms",
+  "foot.privacy": "/privacy",
   "foot.help": "/messages",
   "foot.blog": "/",
   "foot.api": "/",
@@ -21,7 +26,7 @@ const footerLinkMap: Record<string, string> = {
 
 const footerColumns = [
   { title: "foot.platform", items: ["side.findEngineers", "side.findProjects", "nav.escrow", "side.verification"] },
-  { title: "foot.company", items: ["foot.about", "foot.customers", "foot.careers", "foot.press"] },
+  { title: "foot.company", items: ["foot.company", "foot.about", "foot.careers", "foot.security", "foot.status"] },
   { title: "foot.resources", items: ["foot.help", "foot.blog", "foot.api", "foot.community"] },
 ];
 
@@ -69,10 +74,10 @@ export function Footer() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p>{t("foot.copyright")}</p>
           <div className="flex flex-wrap gap-4">
-            <Link href="/settings" className="transition hover:text-electric-500">{t("foot.privacy")}</Link>
-            <Link href="/settings" className="transition hover:text-electric-500">{t("foot.terms")}</Link>
-            <Link href="/settings" className="transition hover:text-electric-500">{t("foot.security")}</Link>
-            <Link href="/" className="transition hover:text-electric-500">{t("foot.status")}</Link>
+            <Link href="/privacy" className="transition hover:text-electric-500">{t("foot.privacy")}</Link>
+            <Link href="/terms" className="transition hover:text-electric-500">{t("foot.terms")}</Link>
+            <Link href="/security" className="transition hover:text-electric-500">{t("foot.security")}</Link>
+            <Link href="/status" className="transition hover:text-electric-500">{t("foot.status")}</Link>
           </div>
         </div>
       </div>

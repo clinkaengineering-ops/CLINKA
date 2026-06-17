@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import ApiResponse from "../../utils/ApiResponse";
 import { AuthRequest } from "../../middlewares/auth.middleware";
-import { banUserSchema, updateVerificationSchema } from "./admin.validation";
 import {
   banUserManually,
   getAdminStats,
@@ -12,7 +11,27 @@ import {
   lookupUser,
   unbanUser,
   updateEngineerVerification,
+  impersonateUser,
+  updateEngineerProfileByAdmin,
+  getAllProjects,
+  updateProjectByAdmin,
+  getAllReviews,
+  deleteReviewByAdmin,
+  getPlatformSettings,
+  updatePlatformSettings,
+  getAllPayments,
+  overridePaymentStatus,
+  getAnalyticsData,
+  getSystemLogs,
 } from "./admin.service";
+import {
+  banUserSchema,
+  updateVerificationSchema,
+  updateProfileSchema,
+  updateProjectSchema,
+  updateSettingsSchema,
+  updatePaymentOverrideSchema,
+} from "./admin.validation";
 
 export async function getAdminStatsController(
   _req: unknown,
@@ -151,3 +170,183 @@ export async function getConversationMessagesController(
     next(error);
   }
 }
+
+export async function impersonateUserController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const targetUserId = Number(req.params.userId);
+    const { user, token } = await impersonateUser(targetUserId);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json(ApiResponse(200, "Impersonation successful", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateProfileByAdminController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = updateProfileSchema.parse(req.body);
+    const targetUserId = Number(req.params.userId);
+    const user = await updateEngineerProfileByAdmin(targetUserId, input);
+    res.status(200).json(ApiResponse(200, "Profile updated successfully", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAllProjectsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const data = await getAllProjects(page, limit);
+    res.status(200).json(ApiResponse(200, "Projects fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateProjectStatusController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = updateProjectSchema.parse(req.body);
+    const projectId = Number(req.params.projectId);
+    const project = await updateProjectByAdmin(projectId, input);
+    res.status(200).json(ApiResponse(200, "Project updated", project));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAllReviewsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const data = await getAllReviews(page, limit);
+    res.status(200).json(ApiResponse(200, "Reviews fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteReviewController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const reviewId = Number(req.params.reviewId);
+    await deleteReviewByAdmin(reviewId);
+    res.status(200).json(ApiResponse(200, "Review deleted"));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getSettingsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const data = await getPlatformSettings();
+    res.status(200).json(ApiResponse(200, "Settings fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateSettingsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = updateSettingsSchema.parse(req.body);
+    const data = await updatePlatformSettings(input);
+    res.status(200).json(ApiResponse(200, "Settings updated", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAllPaymentsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const data = await getAllPayments(page, limit);
+    res.status(200).json(ApiResponse(200, "Payments fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function overridePaymentController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = updatePaymentOverrideSchema.parse(req.body);
+    const paymentId = Number(req.params.paymentId);
+    const data = await overridePaymentStatus(paymentId, input.status);
+    res.status(200).json(ApiResponse(200, "Payment overridden", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAnalyticsController(
+  _req: unknown,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const data = await getAnalyticsData();
+    res.status(200).json(ApiResponse(200, "Analytics data fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getSystemLogsController(
+  _req: unknown,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const logs = await getSystemLogs();
+    res.status(200).json(ApiResponse(200, "System logs fetched", logs));
+  } catch (error) {
+    next(error);
+  }
+}
+

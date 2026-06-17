@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card, Field, Input, Textarea } from "@/components/UI";
 import { IconCheck, IconClose } from "@/components/Icons";
 import {
@@ -22,9 +22,21 @@ interface PostProjectModalProps {
   open: boolean;
   onClose: () => void;
   onCreated?: () => void;
+  initialTitle?: string;
+  initialDescription?: string;
+  initialBudget?: string;
+  initialServiceType?: ServiceType;
 }
 
-export function PostProjectModal({ open, onClose, onCreated }: PostProjectModalProps) {
+export function PostProjectModal({
+  open,
+  onClose,
+  onCreated,
+  initialTitle,
+  initialDescription,
+  initialBudget,
+  initialServiceType,
+}: PostProjectModalProps) {
   const { create, loading, error: apiError } = useCreateProject(() => {
     onCreated?.();
     onClose();
@@ -36,6 +48,22 @@ export function PostProjectModal({ open, onClose, onCreated }: PostProjectModalP
     serviceType: "DESIGN" as ServiceType,
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  useEffect(() => {
+    if (!open) return;
+    setForm((prev) => ({
+      title: initialTitle ?? prev.title,
+      description: initialDescription ?? prev.description,
+      budget: initialBudget ?? prev.budget,
+      serviceType: initialServiceType ?? prev.serviceType,
+    }));
+  }, [
+    open,
+    initialTitle,
+    initialDescription,
+    initialBudget,
+    initialServiceType,
+  ]);
 
   if (!open) return null;
 
