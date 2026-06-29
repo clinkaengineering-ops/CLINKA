@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { fetchConversations } from "@/features/messages/api/messages.api";
 import useAuthStore from "@/store/authStore";
 import { useEngineerById } from "../hooks/useEngineerById";
+import { NationalityLabel } from "@/components/NationalityLabel";
 
 export function EngineerProfilePage({ id }: { id: number }) {
   const { t } = useI18n();
@@ -126,9 +127,14 @@ export function EngineerProfilePage({ id }: { id: number }) {
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{engineer.name}</h1>
-            <p className="mt-1 text-slate-500">
-              {profile?.specialty}
-              {profile?.nationality && ` · ${profile.nationality}`}
+            <p className="mt-1 text-slate-500 flex flex-wrap items-center gap-x-1 gap-y-0.5">
+              <span>{profile?.specialty}</span>
+              {profile?.nationality && (
+                <>
+                  <span aria-hidden>·</span>
+                  <NationalityLabel nationality={profile.nationality} />
+                </>
+              )}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
               <span className="flex items-center gap-1">
@@ -281,7 +287,9 @@ export function EngineerProfilePage({ id }: { id: number }) {
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 {t("em.nationality")}
               </p>
-              <p className="mt-1 font-semibold">{profile.nationality}</p>
+              <p className="mt-1 font-semibold">
+                <NationalityLabel nationality={profile.nationality} />
+              </p>
             </div>
           )}
           <div>

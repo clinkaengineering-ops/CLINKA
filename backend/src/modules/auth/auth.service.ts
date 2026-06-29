@@ -9,24 +9,17 @@ import db from "../../config/db";
 import generateToken from "../../utils/generateToken";
 import { sendVerificationEmail } from "../../utils/sendVerificationEmail";
 import jwt from "jsonwebtoken";
-import transporter from "../../config/mailer";
 import {
   emailChangeOtpHtml,
-  getEmailFrom,
   loginOtpEmailHtml,
   passwordResetEmailHtml,
 } from "../../utils/emailTemplate";
+import { getPublicClientUrl } from "../../config/clientUrl";
+import { sendBrandedEmail } from "../../utils/sendEmail";
 import { cacheDel, cacheGet, cacheSet } from "../../config/redis";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
-}
-
-function issueRegistrationSession<T extends { id: number; role: string; password: string }>(
-  user: T,
-) {
-  const token = generateToken(user.id, user.role);
-  return { user: stripPassword(user), token };
 }
 
 export async function checkRegistrationEmail(email: string) {
@@ -72,12 +65,12 @@ export async function registerClient(data: clientRegisterInput) {
       email,
       password: hashedPassword,
       role: "CLIENT",
-      isVerified: true,
+      isVerified: false,
     },
   });
 
   void sendVerificationEmail(user.id, user.email).catch(() => undefined);
-  return issueRegistrationSession(user);
+  return stripPassword(user);
 }
 
 export async function registerEngineer(
@@ -105,7 +98,7 @@ export async function registerEngineer(
       email,
       password: hashedPassword,
       role: "ENGINEER",
-      isVerified: true,
+      isVerified: false,
       profile: {
         create: {
           specialty,
@@ -125,7 +118,7 @@ export async function registerEngineer(
   });
 
   void sendVerificationEmail(user.id, user.email).catch(() => undefined);
-  return issueRegistrationSession(user);
+  return stripPassword(user);
 }
 
 export async function resumeEngineerRegistration(
@@ -175,13 +168,17 @@ export async function resumeEngineerRegistration(
     })),
   });
 
-  const refreshed = await db.user.update({
+  const refreshed = await db.user.findUnique({
     where: { id: user.id },
-    data: { isVerified: true },
     include: { profile: true },
   });
+  if (!refreshed) throw new ApiError(404, "User not found");
 
-  return issueRegistrationSession(refreshed);
+  if (!refreshed.isVerified) {
+    void sendVerificationEmail(refreshed.id, refreshed.email).catch(() => undefined);
+  }
+
+  return stripPassword(refreshed);
 }
 
 // Step 1 — validate credentials, send OTP
@@ -208,13 +205,21 @@ export async function login(data: loginInput) {
 
   // send to email
   try {
-    const info = await transporter.sendMail({
-      from: getEmailFrom(),
+    await sendBrandedEmail({
       to: email,
-      subject: "Your CLINKA login code",
+      subject: "Your CLINKA sign-in code",
       html: loginOtpEmailHtml(otp),
+      text: [
+        "Your CLINKA sign-in code",
+        "",
+        otp,
+        "",
+        "This code expires in 10 minutes. Never share it with anyone.",
+        "",
+        "— CLINKA",
+      ].join("\n"),
     });
-    console.log("OTP email sent:", info.messageId, info.accepted);
+    console.log("OTP email sent to:", email);
   } catch (error) {
     // Log email error but don't fail the login
     console.warn(
@@ -250,10 +255,18 @@ export async function verifyEmail(token: string) {
     userId: number;
   };
 
-  await db.user.update({
-    where: { id: payload.userId },
-    data: { isVerified: true },
-  });
+  const user = await db.user.findUnique({ where: { id: payload.userId } });
+  if (!user) throw new ApiError(404, "User not found");
+
+  if (!user.isVerified) {
+    await db.user.update({
+      where: { id: payload.userId },
+      data: { isVerified: true },
+    });
+  }
+
+  const sessionToken = generateToken(user.id, user.role);
+  return { token: sessionToken, userId: user.id };
 }
 
 export async function forgotPassword(email: string) {
@@ -266,16 +279,26 @@ export async function forgotPassword(email: string) {
     { expiresIn: "15m" },
   );
 
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+  const resetUrl = `${getPublicClientUrl()}/reset-password?token=${token}`;
 
   try {
-    const info = await transporter.sendMail({
-      from: getEmailFrom(),
+    await sendBrandedEmail({
       to: email,
       subject: "Reset your CLINKA password",
       html: passwordResetEmailHtml(resetUrl),
+      text: [
+        "We received a request to reset your CLINKA password.",
+        "",
+        resetUrl,
+        "",
+        "This link expires in 15 minutes.",
+        "",
+        "If you did not request this, you can ignore this email.",
+        "",
+        "— CLINKA",
+      ].join("\n"),
     });
-    console.log("Reset email sent:", info.messageId, info.accepted);
+    console.log("Reset email sent to:", email);
   } catch (error) {
     // Log email error but don't fail the request
     console.warn(
@@ -328,11 +351,19 @@ export async function requestEmailChange(userId: number, newEmail: string) {
   );
 
   try {
-    await transporter.sendMail({
-      from: getEmailFrom(),
+    await sendBrandedEmail({
       to: newEmail,
       subject: "Confirm your new CLINKA email",
       html: emailChangeOtpHtml(otp),
+      text: [
+        "Confirm your new CLINKA email address with this code:",
+        "",
+        otp,
+        "",
+        "This code expires in 10 minutes.",
+        "",
+        "— CLINKA",
+      ].join("\n"),
     });
   } catch (error) {
     console.warn("Failed to send email-change OTP:", error);

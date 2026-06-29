@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { authApi } from "@/features/auth/api/auth.api";
 import { getMe } from "@/features/engineers/api/engineer.api";
 import useAuthStore from "@/store/authStore";
 import { Card } from "@/components/UI";
@@ -16,6 +17,7 @@ function GoogleCallbackContent() {
   const setUser = useAuthStore((s) => s.setUser);
   const error = searchParams.get("error");
   const success = searchParams.get("success");
+  const sessionToken = searchParams.get("session");
   const signingInMessage = t("auth.callback.signingIn");
   const initialMessage = error
     ? decodeURIComponent(error)
@@ -31,14 +33,20 @@ function GoogleCallbackContent() {
 
     async function finish() {
       try {
-        const me = await getMe();
-        if (cancelled) return;
-        setUser(me);
-
         const next = searchParams.get("next");
         const safeNext =
           next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
+        let me;
+        if (sessionToken) {
+          const res = await authApi.completeOAuthSession(sessionToken);
+          me = res.data.data;
+        } else {
+          me = await getMe();
+        }
+
+        if (cancelled) return;
+        setUser(me);
         router.replace(safeNext);
       } catch {
         if (!cancelled) {
@@ -51,7 +59,7 @@ function GoogleCallbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [error, success, searchParams, router, setUser, t]);
+  }, [error, success, sessionToken, searchParams, router, setUser, t]);
 
   const isError =
     searchParams.get("error") ||

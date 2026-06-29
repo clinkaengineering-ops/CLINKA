@@ -121,7 +121,9 @@ function splitCustomerName(fullName) {
 }
 function getRedirectionUrls(projectId, paymentId) {
     const clientUrl = (process.env.CLIENT_URL ?? "http://localhost:3000").replace(/\/$/, "");
-    const apiUrl = (process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 5000}`).replace(/\/$/, "");
+    const apiUrl = (process.env.PUBLIC_API_URL ??
+        process.env.API_URL ??
+        `http://localhost:${process.env.PORT ?? 5000}`).replace(/\/$/, "");
     return {
         successUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=success`,
         failUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=fail`,
@@ -143,21 +145,27 @@ async function sendWithdrawalRequestEmailToAdmins(input) {
     if (recipients.length === 0)
         return;
     try {
+        const amountStr = formatEgp(input.amount);
+        const dateStr = input.requestDate.toLocaleString("en-EG", {
+            dateStyle: "medium",
+            timeStyle: "short",
+        });
         await mailer_1.default.sendMail({
             from: (0, emailTemplate_1.getEmailFrom)(),
             to: recipients.join(","),
-            subject: `New Withdrawal Request - ${formatEgp(input.amount)}`,
+            subject: `New Withdrawal Request - ${amountStr}`,
             html: (0, emailTemplate_1.withdrawalNotificationEmailHtml)({
                 engineerName: input.engineerName,
                 engineerEmail: input.engineerEmail,
-                amount: formatEgp(input.amount),
+                amount: amountStr,
                 method: input.method,
                 accountNumber: input.accountNumber,
-                requestDate: input.requestDate.toLocaleString("en-EG", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                }),
+                requestDate: dateStr,
             }),
+            text: `New withdrawal request details:\n\nEngineer: ${input.engineerName}\nEmail: ${input.engineerEmail}\nAmount: ${amountStr}\nMethod: ${input.method}\nAccount number: ${input.accountNumber}\nRequest date: ${dateStr}\n\nReview this request in the admin dashboard.`,
+            headers: {
+                "X-Auto-Response-Suppress": "All",
+            },
         });
     }
     catch (error) {

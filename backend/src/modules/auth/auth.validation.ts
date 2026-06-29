@@ -37,6 +37,10 @@ export const verifyOtpSchema = z.object({
   otp: otpField,
 });
 
+export const oauthSessionSchema = z.object({
+  session: z.string().min(1, "Missing session token"),
+});
+
 export const forgotPasswordSchema = z.object({
   email: emailField,
 });

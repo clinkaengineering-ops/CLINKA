@@ -8,6 +8,7 @@
   --brand-copper: #c97a51;
   --brand-copper-strong: #8f4f2a;
   --brand-teal: #196481;
+  --brand-orange: #fa6619;
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -66,6 +67,7 @@
   --color-brand-copper: var(--brand-copper);
   --color-brand-copper-strong: var(--brand-copper-strong);
   --color-brand-teal: var(--brand-teal);
+  --color-brand-orange: var(--brand-orange);
 
   --font-display: var(--font-display);
   --font-brand-latin: var(--font-brand-latin);

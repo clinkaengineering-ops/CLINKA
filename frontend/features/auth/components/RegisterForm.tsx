@@ -312,7 +312,7 @@ export function RegisterForm() {
                     : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60 hover:bg-electric-500/5",
                 )}
               >
-                <span className="h-10 w-10 rounded-lg bg-electric-500/10 text-electric-600 flex items-center justify-center group-hover:scale-110 transition">
+                <span className="h-10 w-10 rounded-lg bg-brand-orange/10 text-brand-orange flex items-center justify-center group-hover:scale-110 transition">
                   {o.icon}
                 </span>
                 <div className="flex-1">

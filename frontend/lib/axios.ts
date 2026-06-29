@@ -9,6 +9,7 @@ const api = axios.create({
 const PUBLIC_PATH_PREFIXES = [
   "/login",
   "/register",
+  "/register/check-email",
   "/verify",
   "/forgot-password",
   "/reset-password",

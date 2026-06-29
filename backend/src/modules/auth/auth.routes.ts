@@ -17,6 +17,7 @@ import {
   googleAuthStartController,
   googleAuthCallbackController,
   googleAuthStatusController,
+  oauthSessionController,
 } from "./auth.controller";
 import upload from "../../middlewares/upload.middleware";
 import { authenticate } from "../../middlewares/auth.middleware";
@@ -48,6 +49,7 @@ router.post("/change-password", authenticate, changePasswordController);
 router.post("/request-email-change", authenticate, requestEmailChangeController);
 router.post("/confirm-email-change", authenticate, confirmEmailChangeController);
 router.post("/verify-otp", verifyOtpController);
+router.post("/oauth-session", oauthSessionController);
 
 router.get("/google/status", googleAuthStatusController);
 router.get("/google", googleAuthStartController);

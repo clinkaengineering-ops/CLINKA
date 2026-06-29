@@ -12,10 +12,9 @@ const errorHandler_middleware_1 = require("./middlewares/errorHandler.middleware
 const index_1 = __importDefault(require("./routes/index"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const allowedOrigins = (0, cors_2.getAllowedOrigins)();
 app.use((0, cors_1.default)({
     origin(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if ((0, cors_2.isAllowedOrigin)(origin)) {
             callback(null, true);
             return;
         }

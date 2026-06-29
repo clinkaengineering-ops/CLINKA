@@ -14,7 +14,8 @@ export function resolveApiBaseUrl(): string {
 
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") {
-    return "http://localhost:5000/api";
+    // Proxied through Next.js rewrites — same origin so auth cookies work.
+    return "/api";
   }
 
   const tunnelApi = devTunnelApiBaseUrl(host);
@@ -25,6 +26,17 @@ export function resolveApiBaseUrl(): string {
 
 /** Socket.io server origin (API base without `/api`). */
 export function resolveSocketBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "http://localhost:5000";
+    }
+    const tunnelApi = devTunnelApiBaseUrl(host);
+    if (tunnelApi) {
+      return tunnelApi.replace(/\/api\/?$/, "");
+    }
+  }
+
   const apiBase = resolveApiBaseUrl().replace(/\/$/, "");
   return apiBase.endsWith("/api") ? apiBase.slice(0, -4) : apiBase;
 }

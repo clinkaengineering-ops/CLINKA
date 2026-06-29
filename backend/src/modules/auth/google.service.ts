@@ -4,18 +4,16 @@ import jwt from "jsonwebtoken";
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 import { getGoogleClientConfig, getGoogleRedirectUri } from "../../config/google";
+import { getClientUrl, resolveOAuthClientOrigin } from "../../config/clientUrl";
 import generateToken from "../../utils/generateToken";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v2/userinfo";
+const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 
-type GoogleState = {
-  nonce: string;
-  next?: string;
-  role?: "CLIENT" | "ENGINEER";
-  redirectUri: string;
-  clientOrigin?: string;
+type GoogleTokenResponse = {
+  access_token?: string;
+  id_token?: string;
 };
 
 type GoogleProfile = {
@@ -26,14 +24,85 @@ type GoogleProfile = {
   picture?: string;
 };
 
+type GoogleState = {
+  nonce: string;
+  next?: string;
+  role?: "CLIENT" | "ENGINEER";
+  redirectUri: string;
+  clientOrigin?: string;
+};
+
+function profileFromIdToken(idToken: string): GoogleProfile {
+  const payload = jwt.decode(idToken) as {
+    sub?: string;
+    email?: string;
+    email_verified?: boolean;
+    name?: string;
+    picture?: string;
+  } | null;
+
+  if (!payload?.sub || !payload.email) {
+    throw new ApiError(400, "Google account is missing required profile data");
+  }
+
+  return {
+    id: payload.sub,
+    email: payload.email,
+    verified_email: payload.email_verified,
+    name: payload.name,
+    picture: payload.picture,
+  };
+}
+
+function normalizeGoogleProfile(raw: Record<string, unknown>): GoogleProfile {
+  const id = String(raw.sub ?? raw.id ?? "");
+  const email = String(raw.email ?? "");
+  if (!id || !email) {
+    throw new ApiError(400, "Google account is missing required profile data");
+  }
+
+  return {
+    id,
+    email,
+    verified_email:
+      typeof raw.email_verified === "boolean"
+        ? raw.email_verified
+        : typeof raw.verified_email === "boolean"
+          ? raw.verified_email
+          : undefined,
+    name: typeof raw.name === "string" ? raw.name : undefined,
+    picture: typeof raw.picture === "string" ? raw.picture : undefined,
+  };
+}
+
+function assertVerifiedEmail(profile: GoogleProfile): GoogleProfile {
+  if (profile.verified_email === false) {
+    throw new ApiError(400, "Please use a Google account with a verified email");
+  }
+  return profile;
+}
+
+async function fetchGoogleProfile(accessToken: string): Promise<GoogleProfile> {
+  const profileRes = await fetch(GOOGLE_USERINFO_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!profileRes.ok) {
+    const errText = await profileRes.text();
+    console.warn("Google profile fetch failed:", errText);
+    throw new ApiError(400, "Could not load your Google profile");
+  }
+
+  const raw = (await profileRes.json()) as Record<string, unknown>;
+  return normalizeGoogleProfile(raw);
+}
+
 function normalizeOrigin(origin: string): string {
   return origin.replace(/\/$/, "");
 }
 
 function clientUrl(path: string, origin?: string): string {
-  const base = normalizeOrigin(
-    origin ?? process.env.CLIENT_URL ?? "http://localhost:3000",
-  );
+  const base = resolveOAuthClientOrigin(origin) ?? getClientUrl();
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
@@ -75,7 +144,7 @@ export function getGoogleAuthRedirectUrl(options?: {
     role: options?.role ?? "CLIENT",
     redirectUri,
     clientOrigin: options?.clientOrigin
-      ? normalizeOrigin(options.clientOrigin)
+      ? resolveOAuthClientOrigin(normalizeOrigin(options.clientOrigin))
       : undefined,
   });
 
@@ -117,29 +186,17 @@ async function exchangeCodeForProfile(
     throw new ApiError(400, "Google sign-in failed. Please try again.");
   }
 
-  const tokens = (await tokenRes.json()) as { access_token?: string };
+  const tokens = (await tokenRes.json()) as GoogleTokenResponse;
+
+  if (tokens.id_token) {
+    return assertVerifiedEmail(profileFromIdToken(tokens.id_token));
+  }
+
   if (!tokens.access_token) {
     throw new ApiError(400, "Google did not return an access token");
   }
 
-  const profileRes = await fetch(GOOGLE_USERINFO_URL, {
-    headers: { Authorization: `Bearer ${tokens.access_token}` },
-  });
-
-  if (!profileRes.ok) {
-    throw new ApiError(400, "Could not load your Google profile");
-  }
-
-  const profile = (await profileRes.json()) as GoogleProfile;
-  if (!profile.id || !profile.email) {
-    throw new ApiError(400, "Google account is missing required profile data");
-  }
-
-  if (profile.verified_email === false) {
-    throw new ApiError(400, "Please use a Google account with a verified email");
-  }
-
-  return profile;
+  return assertVerifiedEmail(await fetchGoogleProfile(tokens.access_token));
 }
 
 async function randomPasswordHash(): Promise<string> {
@@ -232,7 +289,7 @@ export async function handleGoogleCallback(
   code: string | undefined,
   stateParam: string | undefined,
   oauthError: string | undefined,
-): Promise<{ redirectUrl: string; token?: string }> {
+): Promise<{ redirectUrl: string; token?: string; clientOrigin?: string }> {
   if (oauthError) {
     return {
       redirectUrl: clientUrl(
@@ -271,10 +328,10 @@ export async function handleGoogleCallback(
     }
 
     const redirectUrl = clientUrl(
-      `/auth/callback?success=1&next=${encodeURIComponent(nextPath)}`,
+      `/auth/callback?success=1&next=${encodeURIComponent(nextPath)}&session=${encodeURIComponent(token)}`,
       state.clientOrigin,
     );
-    return { redirectUrl, token };
+    return { redirectUrl, token, clientOrigin: state.clientOrigin };
   } catch (error) {
     const message =
       error instanceof ApiError

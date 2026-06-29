@@ -1,6 +1,10 @@
 import type { CookieOptions } from "express";
 import { isDevTunnelFrontendOrigin } from "./cors";
 
+function isLocalhostHost(host: string): boolean {
+  return host === "localhost" || host === "127.0.0.1" || host.startsWith("localhost:");
+}
+
 export function authCookieOptions(requestOrigin?: string): CookieOptions {
   const isProd = process.env.NODE_ENV === "production";
   const clientUrl = process.env.CLIENT_URL ?? "";
@@ -19,7 +23,12 @@ export function authCookieOptions(requestOrigin?: string): CookieOptions {
       useSecure = true;
     } else {
       try {
-        crossHost = new URL(requestOrigin).host !== new URL(apiUrl).host;
+        const clientHost = new URL(requestOrigin).host;
+        const apiHost = new URL(apiUrl).host;
+        crossHost =
+          isLocalhostHost(clientHost) && isLocalhostHost(apiHost)
+            ? clientHost !== apiHost
+            : clientHost !== apiHost;
       } catch {
         crossHost = false;
       }

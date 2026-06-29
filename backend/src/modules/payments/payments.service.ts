@@ -23,11 +23,8 @@ import {
   recordPaymentLedger,
 } from "../../utils/paymentLedger";
 import { isReviewableStatus } from "../projects/project.status";
-import transporter from "../../config/mailer";
-import {
-  getEmailFrom,
-  withdrawalNotificationEmailHtml,
-} from "../../utils/emailTemplate";
+import { withdrawalNotificationEmailHtml } from "../../utils/emailTemplate";
+import { sendBrandedEmail } from "../../utils/sendEmail";
 import {
   ensureWallet,
   settleMaturedWalletTransactions,
@@ -117,7 +114,9 @@ function getRedirectionUrls(projectId: number, paymentId: number) {
     "",
   );
   const apiUrl = (
-    process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 5000}`
+    process.env.PUBLIC_API_URL ??
+    process.env.API_URL ??
+    `http://localhost:${process.env.PORT ?? 5000}`
   ).replace(/\/$/, "");
 
   return {
@@ -151,21 +150,32 @@ async function sendWithdrawalRequestEmailToAdmins(input: {
   if (recipients.length === 0) return;
 
   try {
-    await transporter.sendMail({
-      from: getEmailFrom(),
-      to: recipients.join(","),
-      subject: `New Withdrawal Request - ${formatEgp(input.amount)}`,
+    const amountStr = formatEgp(input.amount);
+    const dateStr = input.requestDate.toLocaleString("en-EG", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    await sendBrandedEmail({
+      to: recipients,
+      subject: `New withdrawal request — ${amountStr}`,
       html: withdrawalNotificationEmailHtml({
         engineerName: input.engineerName,
         engineerEmail: input.engineerEmail,
-        amount: formatEgp(input.amount),
+        amount: amountStr,
         method: input.method,
         accountNumber: input.accountNumber,
-        requestDate: input.requestDate.toLocaleString("en-EG", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }),
+        requestDate: dateStr,
       }),
+      text: [
+        "New withdrawal request",
+        "",
+        `Engineer: ${input.engineerName}`,
+        `Email: ${input.engineerEmail}`,
+        `Amount: ${amountStr}`,
+        `Method: ${input.method}`,
+        `Account number: ${input.accountNumber}`,
+        `Request date: ${dateStr}`,
+      ].join("\n"),
     });
   } catch (error) {
     console.warn(

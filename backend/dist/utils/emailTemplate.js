@@ -27,8 +27,7 @@ function escapeHtml(value) {
         .replace(/'/g, "&#39;");
 }
 function getLogoUrl() {
-    const base = (process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, "");
-    return `${base}/brand/logo/PNG/logo-09.png`;
+    return "https://res.cloudinary.com/dczhvcc0v/image/upload/v1782741323/brand/logo-09.png";
 }
 function getEmailFrom() {
     const address = process.env.EMAIL_USER?.trim();

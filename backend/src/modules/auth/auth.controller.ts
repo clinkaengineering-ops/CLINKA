@@ -24,7 +24,9 @@ import {
   requestEmailChange,
   verifyOtp,
 } from "./auth.service";
-import { verifyOtpSchema } from "./auth.validation";
+import { oauthSessionSchema, verifyOtpSchema } from "./auth.validation";
+import jwt from "jsonwebtoken";
+import { getMe } from "../users/user.service";
 import ApiResponse from "../../utils/ApiResponse";
 import ApiError from "../../utils/ApiError";
 import { authCookieOptions } from "../../config/cookies";
@@ -60,9 +62,10 @@ export async function registerClientController(
 ) {
   try {
     const validatedData = clientRegisterSchema.parse(req.body);
-    const { user, token } = await registerClient(validatedData);
-    res.cookie("token", token, authCookieOptions(req.headers.origin));
-    res.status(201).json(ApiResponse(201, "Registered successfully", user));
+    const user = await registerClient(validatedData);
+    res
+      .status(201)
+      .json(ApiResponse(201, "Check your email to verify your account", user));
   } catch (error) {
     next(error);
   }
@@ -88,14 +91,15 @@ export async function registerEngineerController(
       | "certificateUrl"
       | "syndicateCardUrl";
     const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-    const { user, token } = await registerEngineer(
+    const user = await registerEngineer(
       validatedData,
       fileUrl,
       documentType,
       portfolioUrls,
     );
-    res.cookie("token", token, authCookieOptions(req.headers.origin));
-    res.status(201).json(ApiResponse(201, "Registered successfully", user));
+    res
+      .status(201)
+      .json(ApiResponse(201, "Check your email to verify your account", user));
   } catch (error) {
     next(error);
   }
@@ -110,12 +114,13 @@ export async function resumeEngineerRegistrationController(
     const validatedData = clientRegisterSchema.parse(req.body);
     const files = req.files as { portfolio?: { path: string }[] } | undefined;
     const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-    const { user, token } = await resumeEngineerRegistration(
+    const user = await resumeEngineerRegistration(
       validatedData,
       portfolioUrls,
     );
-    res.cookie("token", token, authCookieOptions(req.headers.origin));
-    res.status(200).json(ApiResponse(200, "Portfolio submitted successfully", user));
+    res
+      .status(200)
+      .json(ApiResponse(200, "Check your email to verify your account", user));
   } catch (error) {
     next(error);
   }
@@ -138,8 +143,10 @@ export async function verifyEmailController(
 ) {
   try {
     const { token } = req.query as { token: string };
-    await verifyEmail(token);
-    res.status(200).json(ApiResponse(200, "Email verified successfully"));
+    const { token: sessionToken, userId } = await verifyEmail(token);
+    const user = await getMe(userId);
+    res.cookie("token", sessionToken, authCookieOptions(req.headers.origin));
+    res.status(200).json(ApiResponse(200, "Email verified successfully", user));
   } catch (error) {
     next(error);
   }
@@ -256,6 +263,32 @@ export async function verifyOtpController(req: Request, res: Response, next: Nex
   }
 }
 
+/** Exchange a short-lived OAuth session JWT for an httpOnly cookie on the frontend origin. */
+export async function oauthSessionController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { session } = oauthSessionSchema.parse(req.body);
+    let payload: { userId: number; role: string };
+    try {
+      payload = jwt.verify(session, process.env.JWT_SECRET as string) as {
+        userId: number;
+        role: string;
+      };
+    } catch {
+      throw new ApiError(401, "Invalid or expired session");
+    }
+
+    res.cookie("token", session, authCookieOptions(req.headers.origin));
+    const user = await getMe(payload.userId);
+    res.status(200).json(ApiResponse(200, "Signed in successfully", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function googleAuthStartController(
   req: Request,
   res: Response,
@@ -296,7 +329,11 @@ export async function googleAuthCallbackController(
     const result = await handleGoogleCallback(code, state, error);
 
     if (result.token) {
-      res.cookie("token", result.token, authCookieOptions(req.headers.origin));
+      res.cookie(
+        "token",
+        result.token,
+        authCookieOptions(result.clientOrigin ?? req.headers.origin),
+      );
     }
 
     res.redirect(result.redirectUrl);

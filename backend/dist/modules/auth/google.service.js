@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.resolveGoogleRedirectUri = resolveGoogleRedirectUri;
 exports.getGoogleAuthRedirectUrl = getGoogleAuthRedirectUrl;
 exports.handleGoogleCallback = handleGoogleCallback;
 const crypto_1 = __importDefault(require("crypto"));
@@ -14,10 +15,71 @@ const google_1 = require("../../config/google");
 const generateToken_1 = __importDefault(require("../../utils/generateToken"));
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
-function clientUrl(path) {
-    const base = (process.env.CLIENT_URL ?? "http://localhost:3000").replace(/\/$/, "");
+const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+function profileFromIdToken(idToken) {
+    const payload = jsonwebtoken_1.default.decode(idToken);
+    if (!payload?.sub || !payload.email) {
+        throw new ApiError_1.default(400, "Google account is missing required profile data");
+    }
+    return {
+        id: payload.sub,
+        email: payload.email,
+        verified_email: payload.email_verified,
+        name: payload.name,
+        picture: payload.picture,
+    };
+}
+function normalizeGoogleProfile(raw) {
+    const id = String(raw.sub ?? raw.id ?? "");
+    const email = String(raw.email ?? "");
+    if (!id || !email) {
+        throw new ApiError_1.default(400, "Google account is missing required profile data");
+    }
+    return {
+        id,
+        email,
+        verified_email: typeof raw.email_verified === "boolean"
+            ? raw.email_verified
+            : typeof raw.verified_email === "boolean"
+                ? raw.verified_email
+                : undefined,
+        name: typeof raw.name === "string" ? raw.name : undefined,
+        picture: typeof raw.picture === "string" ? raw.picture : undefined,
+    };
+}
+function assertVerifiedEmail(profile) {
+    if (profile.verified_email === false) {
+        throw new ApiError_1.default(400, "Please use a Google account with a verified email");
+    }
+    return profile;
+}
+async function fetchGoogleProfile(accessToken) {
+    const profileRes = await fetch(GOOGLE_USERINFO_URL, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!profileRes.ok) {
+        const errText = await profileRes.text();
+        console.warn("Google profile fetch failed:", errText);
+        throw new ApiError_1.default(400, "Could not load your Google profile");
+    }
+    const raw = (await profileRes.json());
+    return normalizeGoogleProfile(raw);
+}
+function normalizeOrigin(origin) {
+    return origin.replace(/\/$/, "");
+}
+function clientUrl(path, origin) {
+    const base = normalizeOrigin(origin ?? process.env.CLIENT_URL ?? "http://localhost:3000");
     return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+function resolveGoogleRedirectUri(apiOrigin) {
+    const explicit = process.env.GOOGLE_REDIRECT_URI?.trim();
+    if (explicit && !apiOrigin)
+        return explicit;
+    if (apiOrigin) {
+        return `${normalizeOrigin(apiOrigin)}/api/auth/google/callback`;
+    }
+    return (0, google_1.getGoogleRedirectUri)();
 }
 function signState(payload) {
     return jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET, { expiresIn: "10m" });
@@ -30,14 +92,19 @@ function getGoogleAuthRedirectUrl(options) {
     if (!config) {
         throw new ApiError_1.default(503, "Google sign-in is not configured");
     }
+    const redirectUri = resolveGoogleRedirectUri(options?.apiOrigin);
     const state = signState({
         nonce: crypto_1.default.randomBytes(16).toString("hex"),
         next: options?.next,
         role: options?.role ?? "CLIENT",
+        redirectUri,
+        clientOrigin: options?.clientOrigin
+            ? normalizeOrigin(options.clientOrigin)
+            : undefined,
     });
     const params = new URLSearchParams({
         client_id: config.clientId,
-        redirect_uri: config.redirectUri,
+        redirect_uri: redirectUri,
         response_type: "code",
         scope: "openid email profile",
         access_type: "online",
@@ -46,7 +113,7 @@ function getGoogleAuthRedirectUrl(options) {
     });
     return `${GOOGLE_AUTH_URL}?${params.toString()}`;
 }
-async function exchangeCodeForProfile(code) {
+async function exchangeCodeForProfile(code, redirectUri) {
     const config = (0, google_1.getGoogleClientConfig)();
     if (!config)
         throw new ApiError_1.default(503, "Google sign-in is not configured");
@@ -57,7 +124,7 @@ async function exchangeCodeForProfile(code) {
             code,
             client_id: config.clientId,
             client_secret: config.clientSecret,
-            redirect_uri: config.redirectUri,
+            redirect_uri: redirectUri,
             grant_type: "authorization_code",
         }),
     });
@@ -67,23 +134,13 @@ async function exchangeCodeForProfile(code) {
         throw new ApiError_1.default(400, "Google sign-in failed. Please try again.");
     }
     const tokens = (await tokenRes.json());
+    if (tokens.id_token) {
+        return assertVerifiedEmail(profileFromIdToken(tokens.id_token));
+    }
     if (!tokens.access_token) {
         throw new ApiError_1.default(400, "Google did not return an access token");
     }
-    const profileRes = await fetch(GOOGLE_USERINFO_URL, {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
-    if (!profileRes.ok) {
-        throw new ApiError_1.default(400, "Could not load your Google profile");
-    }
-    const profile = (await profileRes.json());
-    if (!profile.id || !profile.email) {
-        throw new ApiError_1.default(400, "Google account is missing required profile data");
-    }
-    if (profile.verified_email === false) {
-        throw new ApiError_1.default(400, "Please use a Google account with a verified email");
-    }
-    return profile;
+    return assertVerifiedEmail(await fetchGoogleProfile(tokens.access_token));
 }
 async function randomPasswordHash() {
     return bcryptjs_1.default.hash(crypto_1.default.randomBytes(32).toString("hex"), 10);
@@ -170,7 +227,7 @@ async function handleGoogleCallback(code, stateParam, oauthError) {
     }
     try {
         const state = verifyState(stateParam);
-        const profile = await exchangeCodeForProfile(code);
+        const profile = await exchangeCodeForProfile(code, state.redirectUri);
         const role = state.role === "ENGINEER" ? "ENGINEER" : "CLIENT";
         const user = await findOrCreateGoogleUser(profile, role);
         const token = (0, generateToken_1.default)(user.id, user.role);
@@ -187,8 +244,8 @@ async function handleGoogleCallback(code, stateParam, oauthError) {
                 nextPath = "/settings";
             }
         }
-        const redirectUrl = clientUrl(`/auth/callback?success=1&next=${encodeURIComponent(nextPath)}`);
-        return { redirectUrl, token };
+        const redirectUrl = clientUrl(`/auth/callback?success=1&next=${encodeURIComponent(nextPath)}&session=${encodeURIComponent(token)}`, state.clientOrigin);
+        return { redirectUrl, token, clientOrigin: state.clientOrigin };
     }
     catch (error) {
         const message = error instanceof ApiError_1.default

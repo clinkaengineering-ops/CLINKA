@@ -144,3 +144,8 @@ export const portfolioItemFormSchema = z.object({
       "Image must be JPG, PNG, or WebP",
     ),
 });
+
+export const engineerResumePortfolioSchema = z.object({
+  email: emailField,
+  password: passwordField,
+});

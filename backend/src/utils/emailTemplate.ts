@@ -1,3 +1,5 @@
+import { getPublicClientUrl } from "../config/clientUrl";
+
 const BRAND = {
   teal: "#196481",
   tealDark: "#145268",
@@ -9,6 +11,8 @@ const BRAND = {
   border: "#e2e8f0",
 } as const;
 
+export const EMAIL_LOGO_CID = "clinka-logo@clinka";
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -19,8 +23,7 @@ function escapeHtml(value: string): string {
 }
 
 export function getLogoUrl(): string {
-  const base = (process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, "");
-  return `${base}/brand/logo/PNG/logo-09.png`;
+  return "https://res.cloudinary.com/dczhvcc0v/image/upload/v1782741323/brand/logo-09.png";
 }
 
 export function getEmailFrom(): string {
@@ -69,7 +72,7 @@ export function buildEmailHtml(options: BuildEmailOptions): string {
   const { title, preheader, contentHtml, cta } = options;
   const safeTitle = escapeHtml(title);
   const safePreheader = preheader ? escapeHtml(preheader) : safeTitle;
-  const logoUrl = escapeHtml(getLogoUrl());
+  const siteUrl = escapeHtml(getPublicClientUrl());
   const year = new Date().getFullYear();
   const ctaHtml = cta ? emailButton(cta.label, cta.href) : "";
 
@@ -110,8 +113,8 @@ export function buildEmailHtml(options: BuildEmailOptions): string {
           </tr>
           <tr>
             <td class="email-header" align="center" style="padding:28px 32px 20px;background-color:${BRAND.white};border-bottom:1px solid ${BRAND.border};">
-              <a href="${escapeHtml((process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, ""))}" target="_blank" style="text-decoration:none;">
-                <img src="${logoUrl}" alt="CLINKA — Civil Link Architecture" width="200" style="display:block;margin:0 auto;max-width:200px;height:auto;border:0;" />
+              <a href="${siteUrl}" target="_blank" style="text-decoration:none;">
+                <img src="cid:${EMAIL_LOGO_CID}" alt="CLINKA — Civil Link Architecture" width="200" style="display:block;margin:0 auto;max-width:200px;height:auto;border:0;" />
               </a>
             </td>
           </tr>

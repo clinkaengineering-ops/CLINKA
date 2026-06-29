@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.confirmEmailChangeSchema = exports.requestEmailChangeSchema = exports.changePasswordSchema = exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.verifyOtpSchema = exports.loginSchema = exports.engineerRegisterSchema = exports.clientRegisterSchema = void 0;
+exports.confirmEmailChangeSchema = exports.requestEmailChangeSchema = exports.changePasswordSchema = exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.oauthSessionSchema = exports.verifyOtpSchema = exports.loginSchema = exports.engineerRegisterSchema = exports.clientRegisterSchema = void 0;
 const zod_1 = require("zod");
 const fields_1 = require("../../utils/fields");
 exports.clientRegisterSchema = zod_1.z.object({
@@ -28,6 +28,9 @@ exports.verifyOtpSchema = zod_1.z.object({
         .int("Invalid session")
         .positive("Invalid session"),
     otp: fields_1.otpField,
+});
+exports.oauthSessionSchema = zod_1.z.object({
+    session: zod_1.z.string().min(1, "Missing session token"),
 });
 exports.forgotPasswordSchema = zod_1.z.object({
     email: fields_1.emailField,

@@ -8,8 +8,13 @@ const auth_controller_1 = require("./auth.controller");
 const upload_middleware_1 = __importDefault(require("../../middlewares/upload.middleware"));
 const auth_middleware_1 = require("../../middlewares/auth.middleware");
 const router = (0, express_1.Router)();
+router.get("/register/status", auth_controller_1.checkRegistrationEmailController);
 router.post("/register/client", auth_controller_1.registerClientController);
-router.post("/register/engineer", upload_middleware_1.default.single("document"), auth_controller_1.registerEngineerController);
+router.post("/register/engineer", upload_middleware_1.default.fields([
+    { name: "document", maxCount: 1 },
+    { name: "portfolio", maxCount: 10 },
+]), auth_controller_1.registerEngineerController);
+router.post("/register/engineer/resume", upload_middleware_1.default.array("portfolio", 10), auth_controller_1.resumeEngineerRegistrationController);
 router.post("/login", auth_controller_1.loginController);
 router.post("/logout", auth_middleware_1.authenticate, auth_controller_1.logoutController);
 router.get("/verify-email", auth_controller_1.verifyEmailController);
@@ -20,6 +25,7 @@ router.post("/change-password", auth_middleware_1.authenticate, auth_controller_
 router.post("/request-email-change", auth_middleware_1.authenticate, auth_controller_1.requestEmailChangeController);
 router.post("/confirm-email-change", auth_middleware_1.authenticate, auth_controller_1.confirmEmailChangeController);
 router.post("/verify-otp", auth_controller_1.verifyOtpController);
+router.post("/oauth-session", auth_controller_1.oauthSessionController);
 router.get("/google/status", auth_controller_1.googleAuthStatusController);
 router.get("/google", auth_controller_1.googleAuthStartController);
 router.get("/google/callback", auth_controller_1.googleAuthCallbackController);

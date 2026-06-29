@@ -3,8 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.checkRegistrationEmail = checkRegistrationEmail;
 exports.registerClient = registerClient;
 exports.registerEngineer = registerEngineer;
+exports.resumeEngineerRegistration = resumeEngineerRegistration;
 exports.login = login;
 exports.verifyOtp = verifyOtp;
 exports.verifyEmail = verifyEmail;
@@ -23,6 +25,30 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const mailer_1 = __importDefault(require("../../config/mailer"));
 const emailTemplate_1 = require("../../utils/emailTemplate");
 const redis_1 = require("../../config/redis");
+function stripPassword({ password: _, ...safe }) {
+    return safe;
+}
+async function checkRegistrationEmail(email) {
+    const normalized = email.toLowerCase().trim();
+    const user = await db_1.default.user.findUnique({
+        where: { email: normalized },
+        include: {
+            profile: { include: { portfolio: { select: { id: true } } } },
+        },
+    });
+    if (!user) {
+        return { status: "available" };
+    }
+    if (user.role === "ENGINEER" &&
+        user.profile?.verificationStatus === "PENDING" &&
+        (user.profile.portfolio?.length ?? 0) < 3) {
+        return {
+            status: "resume_engineer",
+            portfolioCount: user.profile.portfolio.length,
+        };
+    }
+    return { status: "exists", role: user.role };
+}
 async function registerClient(data) {
     const { name, email, password } = data;
     const existingUser = await db_1.default.user.findUnique({ where: { email } });
@@ -36,40 +62,92 @@ async function registerClient(data) {
             email,
             password: hashedPassword,
             role: "CLIENT",
+            isVerified: false,
         },
     });
-    const { password: _, ...userWithoutPassword } = user;
-    await (0, sendVerificationEmail_1.sendVerificationEmail)(user.id, user.email);
-    return userWithoutPassword;
+    void (0, sendVerificationEmail_1.sendVerificationEmail)(user.id, user.email).catch(() => undefined);
+    return stripPassword(user);
 }
-async function registerEngineer(data, fileUrl, documentType) {
+async function registerEngineer(data, fileUrl, documentType, portfolioUrls = []) {
     const { name, email, password, specialty, bio, nationality } = data;
+    if (portfolioUrls.length < 3) {
+        throw new ApiError_1.default(400, "Upload at least 3 portfolio work samples");
+    }
     const existingUser = await db_1.default.user.findUnique({ where: { email } });
     if (existingUser) {
         throw new ApiError_1.default(400, "Email already in use");
     }
     const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-    const profileData = {
-        specialty,
-        bio,
-        nationality,
-        [documentType]: fileUrl,
-    };
     const user = await db_1.default.user.create({
         data: {
             name,
             email,
             password: hashedPassword,
             role: "ENGINEER",
+            isVerified: false,
             profile: {
-                create: profileData,
+                create: {
+                    specialty,
+                    bio,
+                    nationality,
+                    [documentType]: fileUrl,
+                    portfolio: {
+                        create: portfolioUrls.map((imageUrl, index) => ({
+                            imageUrl,
+                            description: `Portfolio work ${index + 1}`,
+                        })),
+                    },
+                },
             },
         },
         include: { profile: true },
     });
-    const { password: _, ...userWithoutPassword } = user;
-    await (0, sendVerificationEmail_1.sendVerificationEmail)(user.id, user.email);
-    return userWithoutPassword;
+    void (0, sendVerificationEmail_1.sendVerificationEmail)(user.id, user.email).catch(() => undefined);
+    return stripPassword(user);
+}
+async function resumeEngineerRegistration(data, portfolioUrls) {
+    const { email, password } = data;
+    if (portfolioUrls.length < 3) {
+        throw new ApiError_1.default(400, "Upload at least 3 portfolio work samples");
+    }
+    const user = await db_1.default.user.findUnique({
+        where: { email },
+        include: {
+            profile: { include: { portfolio: { select: { id: true } } } },
+        },
+    });
+    if (!user || user.role !== "ENGINEER" || !user.profile) {
+        throw new ApiError_1.default(404, "No incomplete engineer registration found for this email");
+    }
+    const validPassword = await bcryptjs_1.default.compare(password, user.password);
+    if (!validPassword) {
+        throw new ApiError_1.default(400, "Incorrect password for this account");
+    }
+    const existingCount = user.profile.portfolio.length;
+    if (existingCount >= 3) {
+        throw new ApiError_1.default(400, "This engineer account is already complete. Sign in instead.");
+    }
+    const needed = 3 - existingCount;
+    if (portfolioUrls.length < needed) {
+        throw new ApiError_1.default(400, `Upload at least ${needed} more portfolio work sample${needed === 1 ? "" : "s"}`);
+    }
+    await db_1.default.portfolioItem.createMany({
+        data: portfolioUrls.slice(0, needed).map((imageUrl, index) => ({
+            engineerId: user.profile.id,
+            imageUrl,
+            description: `Portfolio work ${existingCount + index + 1}`,
+        })),
+    });
+    const refreshed = await db_1.default.user.findUnique({
+        where: { id: user.id },
+        include: { profile: true },
+    });
+    if (!refreshed)
+        throw new ApiError_1.default(404, "User not found");
+    if (!refreshed.isVerified) {
+        void (0, sendVerificationEmail_1.sendVerificationEmail)(refreshed.id, refreshed.email).catch(() => undefined);
+    }
+    return stripPassword(refreshed);
 }
 // Step 1 — validate credentials, send OTP
 async function login(data) {
@@ -96,6 +174,10 @@ async function login(data) {
             to: email,
             subject: "Your CLINKA login code",
             html: (0, emailTemplate_1.loginOtpEmailHtml)(otp),
+            text: `Use the verification code below to sign in to your CLINKA account:\n\n${otp}\n\nThis code will expire in 10 minutes.\n\nNever share it with anyone.`,
+            headers: {
+                "X-Auto-Response-Suppress": "All",
+            },
         });
         console.log("OTP email sent:", info.messageId, info.accepted);
     }
@@ -123,10 +205,17 @@ async function verifyOtp(userId, otp) {
 }
 async function verifyEmail(token) {
     const payload = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-    await db_1.default.user.update({
-        where: { id: payload.userId },
-        data: { isVerified: true },
-    });
+    const user = await db_1.default.user.findUnique({ where: { id: payload.userId } });
+    if (!user)
+        throw new ApiError_1.default(404, "User not found");
+    if (!user.isVerified) {
+        await db_1.default.user.update({
+            where: { id: payload.userId },
+            data: { isVerified: true },
+        });
+    }
+    const sessionToken = (0, generateToken_1.default)(user.id, user.role);
+    return { token: sessionToken, userId: user.id };
 }
 async function forgotPassword(email) {
     const user = await db_1.default.user.findUnique({ where: { email } });
@@ -140,6 +229,10 @@ async function forgotPassword(email) {
             to: email,
             subject: "Reset your CLINKA password",
             html: (0, emailTemplate_1.passwordResetEmailHtml)(resetUrl),
+            text: `We received a request to reset the password for your CLINKA account.\n\nReset your password by clicking the link below:\n\n${resetUrl}\n\nThis link will expire in 15 minutes. If you did not request a reset, you can safely ignore this email.`,
+            headers: {
+                "X-Auto-Response-Suppress": "All",
+            },
         });
         console.log("Reset email sent:", info.messageId, info.accepted);
     }
@@ -184,6 +277,10 @@ async function requestEmailChange(userId, newEmail) {
             to: newEmail,
             subject: "Confirm your new CLINKA email",
             html: (0, emailTemplate_1.emailChangeOtpHtml)(otp),
+            text: `Enter the verification code below in your account settings to confirm your new email address:\n\n${otp}\n\nThis code will expire in 10 minutes.`,
+            headers: {
+                "X-Auto-Response-Suppress": "All",
+            },
         });
     }
     catch (error) {

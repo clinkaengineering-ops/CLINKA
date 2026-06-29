@@ -16,6 +16,10 @@ async function sendVerificationEmail(userId, email) {
             to: email,
             subject: "Verify your CLINKA email",
             html: (0, emailTemplate_1.verificationEmailHtml)(verifyUrl),
+            text: `Welcome to CLINKA!\n\nPlease confirm your email address by clicking the link below to activate your account:\n\n${verifyUrl}\n\nThis link will expire in 24 hours.\n\nThank you,\nCLINKA Team`,
+            headers: {
+                "X-Auto-Response-Suppress": "All",
+            },
         });
         console.log("Verification email sent:", info.messageId, info.accepted);
     }

@@ -18,7 +18,13 @@ function broadcastNewMessage(conversationId, message) {
 function initSocket(httpServer) {
     const socketServer = new socket_io_1.Server(httpServer, {
         cors: {
-            origin: (0, cors_1.getAllowedOrigins)(),
+            origin(origin, callback) {
+                if ((0, cors_1.isAllowedOrigin)(origin)) {
+                    callback(null, true);
+                    return;
+                }
+                callback(new Error("CORS origin not allowed"));
+            },
             credentials: true,
         },
     });
