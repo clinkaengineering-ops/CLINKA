@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markProjectFinished = markProjectFinished;
+exports.markProjectFinished = void 0;
 exports.createProject = createProject;
 exports.getProjects = getProjects;
 exports.getMyProjects = getMyProjects;
@@ -13,52 +13,9 @@ exports.deleteProject = deleteProject;
 exports.getAssignedProjects = getAssignedProjects;
 const db_1 = __importDefault(require("../../config/db"));
 const ApiError_1 = __importDefault(require("../../utils/ApiError"));
-const notifications_1 = require("../../utils/notifications");
 const ban_service_1 = require("../messages/ban.service");
-async function markProjectFinished(engineerUserId, projectId) {
-    await (0, ban_service_1.assertUserNotBanned)(engineerUserId, "update project status");
-    // Resolve engineer profile from user id
-    const profile = await db_1.default.engineerProfile.findUnique({
-        where: { userId: engineerUserId },
-    });
-    if (!profile)
-        throw new ApiError_1.default(404, "Engineer profile not found");
-    // Load project with payment + accepted bid
-    const project = await db_1.default.project.findUnique({
-        where: { id: projectId },
-        include: {
-            payment: true,
-            bids: {
-                where: { status: "ACCEPTED", engineerId: profile.id },
-                take: 1,
-            },
-        },
-    });
-    if (!project)
-        throw new ApiError_1.default(404, "Project not found");
-    // Must be the assigned engineer
-    if (project.bids.length === 0) {
-        throw new ApiError_1.default(403, "You are not the assigned engineer for this project");
-    }
-    // Project must be active
-    if (project.status !== "IN_PROGRESS") {
-        throw new ApiError_1.default(400, `Project is already ${project.status.toLowerCase().replace("_", " ")}`);
-    }
-    // Escrow must be funded before engineer can mark done
-    if (!project.payment || project.payment.status !== "FUNDED") {
-        // Notify the client so they know to fund escrow
-        await (0, notifications_1.createNotification)(project.clientId, "FUND_REMINDER", "Payment required", `The engineer finished "${project.title}" but you have not paid yet. Pay to release their work.`, `/escrow?project=${projectId}`);
-        throw new ApiError_1.default(400, "Payment has not been made yet. Ask the client to pay before marking work as finished.");
-    }
-    // Update project status
-    const updated = await db_1.default.project.update({
-        where: { id: projectId },
-        data: { status: "AWAITING_APPROVAL" },
-    });
-    // Notify the client
-    await (0, notifications_1.createNotification)(project.clientId, "WORK_DELIVERED", "Work ready for review", `The engineer marked "${project.title}" as finished. Review the work, then send payment.`, `/messages?project=${projectId}`);
-    return updated;
-}
+var project_workflow_service_1 = require("./project.workflow.service");
+Object.defineProperty(exports, "markProjectFinished", { enumerable: true, get: function () { return project_workflow_service_1.markProjectFinished; } });
 async function createProject(clientId, data) {
     const client = await db_1.default.user.findUnique({ where: { id: clientId } });
     if (!client || client.role !== "CLIENT") {
@@ -143,6 +100,11 @@ async function getProjectById(projectId) {
                 },
             },
             payment: true,
+            submissions: {
+                include: { deliverables: true },
+                orderBy: { createdAt: "desc" },
+                take: 5,
+            },
         },
     });
     if (!project)

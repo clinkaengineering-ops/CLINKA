@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Badge, Card } from "@/components/UI";
 import { IconStar } from "@/components/Icons";
 import { useI18n } from "@/i18n";
@@ -87,12 +86,6 @@ export function ProjectReviewSection({
   return (
     <Card className="p-5 bg-slate-50 dark:bg-slate-900/40">
       <p className="text-sm text-slate-500">{t("rv.notYetEligible")}</p>
-      <Link
-        href="/escrow"
-        className="inline-block mt-2 text-sm font-semibold text-electric-600 hover:underline"
-      >
-        {t("rv.goToEscrow")} →
-      </Link>
     </Card>
   );
 }

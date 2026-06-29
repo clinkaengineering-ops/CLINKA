@@ -109,7 +109,7 @@ async function listPendingReviews(clientId) {
     const projects = await db_1.default.project.findMany({
         where: {
             clientId,
-            status: { in: ["IN_PROGRESS", "COMPLETED"] },
+            status: { in: ["IN_PROGRESS", "SUBMITTED_FOR_REVIEW", "AWAITING_APPROVAL", "REVISION_REQUESTED", "COMPLETED"] },
             review: null,
             payment: { status: "RELEASED" },
         },

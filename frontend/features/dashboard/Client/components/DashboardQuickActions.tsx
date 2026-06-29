@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button, Card } from "@/components/UI";
-import { IconMessage, IconWallet, IconStar } from "@/components/Icons";
+import { IconMessage, IconBriefcase, IconStar } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import type { Message, Notification } from "@/types";
 
@@ -20,9 +20,9 @@ export function DashboardQuickActions({
       <Card className="p-5">
         <h3 className="font-bold text-sm">{t("cd.quickActions")}</h3>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/escrow">
-            <Button size="sm" variant="secondary" icon={<IconWallet width={14} height={14} />}>
-              {t("side.escrow")}
+          <Link href="/projects">
+            <Button size="sm" variant="secondary" icon={<IconBriefcase width={14} height={14} />}>
+              {t("side.findProjects")}
             </Button>
           </Link>
           <Link href="/reviews">

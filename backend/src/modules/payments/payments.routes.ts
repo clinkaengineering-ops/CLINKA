@@ -3,11 +3,12 @@ import {
   authenticate,
   authorize,
 } from "../../middlewares/auth.middleware";
-import { getIframeConfig } from "./fawaterk.hashkey";
 import {
-  fawaterkWebhookController,
+  createEngineerWithdrawalController,
+  paymobWebhookController,
   getCheckoutSessionController,
   getEscrowByIdController,
+  listEngineerWithdrawalsController,
   getPaymentMethodsController,
   getProjectPaymentController,
   initiateCheckoutController,
@@ -16,14 +17,12 @@ import {
   listEscrowController,
   refundEscrowController,
   releaseEscrowController,
+  verifyPaymentController,
 } from "./payments.controller";
 
 const router = Router();
 
-router.post("/webhook_json", fawaterkWebhookController);
-
-// IFrame hashKey — must be generated server-side (vendor key must not leak)
-router.get("/iframe-config", authenticate, getIframeConfig);
+router.post("/webhook/paymob", paymobWebhookController);
 
 router.get("/methods", authenticate, getPaymentMethodsController);
 router.get("/escrow", authenticate, authorize("CLIENT"), listEscrowController);
@@ -38,6 +37,18 @@ router.get(
   authenticate,
   authorize("ENGINEER"),
   getEngineerBalanceController,
+);
+router.get(
+  "/engineer/withdrawals",
+  authenticate,
+  authorize("ENGINEER"),
+  listEngineerWithdrawalsController,
+);
+router.post(
+  "/engineer/withdrawals",
+  authenticate,
+  authorize("ENGINEER"),
+  createEngineerWithdrawalController,
 );
 router.get(
   "/escrow/:paymentId",
@@ -72,6 +83,12 @@ router.post(
   authenticate,
   authorize("CLIENT"),
   refundEscrowController,
+);
+router.post(
+  "/:paymentId/verify",
+  authenticate,
+  authorize("CLIENT"),
+  verifyPaymentController,
 );
 
 export default router;

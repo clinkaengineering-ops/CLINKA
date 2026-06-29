@@ -4,6 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.markProjectFinishedController = markProjectFinishedController;
+exports.submitProjectWorkController = submitProjectWorkController;
+exports.requestProjectRevisionController = requestProjectRevisionController;
+exports.approveProjectWorkController = approveProjectWorkController;
+exports.updateProjectProgressController = updateProjectProgressController;
+exports.getProjectSubmissionsController = getProjectSubmissionsController;
 exports.createProjectController = createProjectController;
 exports.getProjectsController = getProjectsController;
 exports.getProjectByIdController = getProjectByIdController;
@@ -13,16 +18,86 @@ exports.updateProjectController = updateProjectController;
 exports.deleteProjectController = deleteProjectController;
 const project_validation_1 = require("./project.validation");
 const project_service_1 = require("./project.service");
+const project_workflow_service_1 = require("./project.workflow.service");
 const ApiResponse_1 = __importDefault(require("../../utils/ApiResponse"));
 const ban_service_1 = require("../messages/ban.service");
-const project_service_2 = require("./project.service"); // add to existing import
 async function markProjectFinishedController(req, res, next) {
     try {
         const projectId = Number(req.params.id);
-        const project = await (0, project_service_2.markProjectFinished)(req.user.userId, projectId);
+        const project = await (0, project_service_1.markProjectFinished)(req.user.userId, projectId);
         res
             .status(200)
             .json((0, ApiResponse_1.default)(200, "Project marked as finished", project));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function submitProjectWorkController(req, res, next) {
+    try {
+        const projectId = Number(req.params.id);
+        let links;
+        if (typeof req.body.links === "string" && req.body.links.trim()) {
+            links = JSON.parse(req.body.links);
+        }
+        else if (Array.isArray(req.body.links)) {
+            links = req.body.links;
+        }
+        const validated = project_validation_1.submitWorkSchema.parse({
+            notes: req.body.notes,
+            links,
+        });
+        const files = req.files ?? [];
+        const result = await (0, project_workflow_service_1.submitProjectWork)(req.user.userId, projectId, validated, files);
+        res
+            .status(200)
+            .json((0, ApiResponse_1.default)(200, "Work submitted for review", result));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function requestProjectRevisionController(req, res, next) {
+    try {
+        const validated = project_validation_1.requestRevisionSchema.parse(req.body);
+        const project = await (0, project_workflow_service_1.requestProjectRevision)(req.user.userId, Number(req.params.id), validated);
+        res
+            .status(200)
+            .json((0, ApiResponse_1.default)(200, "Revision requested", project));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function approveProjectWorkController(req, res, next) {
+    try {
+        const payment = await (0, project_workflow_service_1.approveProjectWork)(req.user.userId, Number(req.params.id));
+        res
+            .status(200)
+            .json((0, ApiResponse_1.default)(200, "Work approved and payment released", payment));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function updateProjectProgressController(req, res, next) {
+    try {
+        const validated = project_validation_1.updateProgressSchema.parse(req.body);
+        const project = await (0, project_workflow_service_1.updateProjectProgress)(req.user.userId, Number(req.params.id), validated);
+        res
+            .status(200)
+            .json((0, ApiResponse_1.default)(200, "Progress updated", project));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function getProjectSubmissionsController(req, res, next) {
+    try {
+        const submissions = await (0, project_workflow_service_1.getProjectSubmissions)(Number(req.params.id), req.user.userId);
+        res
+            .status(200)
+            .json((0, ApiResponse_1.default)(200, "Submissions fetched", submissions));
     }
     catch (error) {
         next(error);

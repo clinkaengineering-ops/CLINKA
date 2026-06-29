@@ -7,8 +7,11 @@ import { IconShield, IconWallet, IconCheck } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
 import type { Project } from "../api/project.api";
-import { markProjectFinished } from "../api/project.api";
+import { SubmitWorkModal } from "./SubmitWorkModal";
+import { isReviewableStatus } from "../utils/projectStatus";
+import { approveProjectWork } from "../api/project.api";
 import { formatMoney } from "@/features/escrow/utils/formatMoney";
+import { checkoutPath } from "@/features/escrow/utils/goToCheckout";
 
 interface ProjectPaymentCardProps {
   project: Project;
@@ -19,34 +22,34 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
   const [loading, setLoading] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const isClient = user?.role === "CLIENT";
   const isEngineer = user?.role === "ENGINEER";
 
-  // We only show this card if the project is no longer OPEN
   if (project.status === "OPEN" || project.status === "CANCELLED") return null;
 
-  // Determine accepted bid to show amounts correctly
   const acceptedBid = project.bids?.find((b) => b.status === "ACCEPTED");
   const amount = project.payment?.amount ?? acceptedBid?.price ?? project.budget;
 
-  const handleMarkFinished = async () => {
-    if (!confirm(t("es.confirmRelease") || "Mark project as finished?")) return;
+  const handleApprove = async () => {
+    if (!confirm(t("es.confirmRelease"))) return;
     setLoading(true);
     try {
-      await markProjectFinished(project.id);
+      await approveProjectWork(project.id);
       onUpdated?.();
     } catch (err) {
       console.error(err);
-      alert("Failed to mark finished");
+      alert(t("pay.approveFailed"));
     } finally {
       setLoading(false);
     }
   };
 
-  // State: IN_PROGRESS (No Payment yet / Pending)
+  let card: React.ReactNode = null;
+
   if (project.status === "IN_PROGRESS" && project.payment?.status !== "FUNDED") {
-    return (
+    card = (
       <Card className="p-5 border-l-4 border-l-slate-400 bg-slate-50 dark:bg-slate-900/50">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -55,24 +58,19 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
               <h4 className="font-bold">{t("pay.status.needsPayment")}</h4>
             </div>
             <p className="text-sm text-slate-500 mt-1">
-              {isClient
-                ? "Fund the escrow to start the project."
-                : t("pay.waitingClient")}
+              {isClient ? "Fund the escrow to start the project." : t("pay.waitingClient")}
             </p>
           </div>
           {isClient && (
-            <Link href={`/escrow/checkout?projectId=${project.id}`}>
+            <Link href={checkoutPath(project.id)}>
               <Button size="sm">{t("pay.action.payToStart")}</Button>
             </Link>
           )}
         </div>
       </Card>
     );
-  }
-
-  // State: IN_PROGRESS (Funded in Escrow)
-  if (project.status === "IN_PROGRESS" && project.payment?.status === "FUNDED") {
-    return (
+  } else if (project.status === "IN_PROGRESS" && project.payment?.status === "FUNDED") {
+    card = (
       <Card className="p-5 border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/10">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -83,28 +81,23 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
             <p className="text-sm text-blue-700/80 dark:text-blue-300 mt-1">
               {isClient
                 ? t("pay.escrowFundedHint")
-                : "Payment is secured in escrow. Mark as finished when you complete the work."}
+                : "Payment is secured in escrow. Submit work when you are done."}
             </p>
             <p className="text-xs font-bold mt-2 text-blue-800 dark:text-blue-200">
               {formatMoney(amount)}
             </p>
           </div>
           {isEngineer && (
-            <Button size="sm" onClick={handleMarkFinished} disabled={loading}>
-              {loading ? t("common.loading") : t("pay.action.markFinished")}
+            <Button size="sm" onClick={() => setShowSubmitModal(true)} disabled={loading}>
+              {t("pay.submitWork.submit")}
             </Button>
           )}
-          {isClient && (
-            <Badge color="blue">{t("pay.action.waitingEngineer")}</Badge>
-          )}
+          {isClient && <Badge color="blue">{t("pay.action.waitingEngineer")}</Badge>}
         </div>
       </Card>
     );
-  }
-
-  // State: AWAITING_APPROVAL (Engineer marked finished)
-  if (project.status === "AWAITING_APPROVAL") {
-    return (
+  } else if (isReviewableStatus(project.status)) {
+    card = (
       <Card className="p-5 border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/10">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -113,35 +106,53 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
               <h4 className="font-bold text-amber-900 dark:text-amber-100">{t("pay.workDone")}</h4>
             </div>
             <p className="text-sm text-amber-700/80 dark:text-amber-300 mt-1">
-              {isClient
-                ? t("pay.workDoneHint")
-                : "Waiting for the client to review your work and release the payment."}
+              {isClient ? t("pay.workDoneHint") : t("pay.action.waitingClient")}
             </p>
           </div>
           {isClient && (
-            <Link href={`/escrow?project=${project.id}`}>
-              <Button size="sm" className="!bg-amber-500 hover:!bg-amber-600 !text-white">
-                {t("pay.action.releasePayment")}
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              className="!bg-amber-500 hover:!bg-amber-600 !text-white"
+              onClick={handleApprove}
+              disabled={loading}
+            >
+              {t("pay.approveWork")}
+            </Button>
           )}
+          {isEngineer && <Badge color="amber">{t("pay.action.waitingClient")}</Badge>}
+        </div>
+      </Card>
+    );
+  } else if (project.status === "REVISION_REQUESTED") {
+    card = (
+      <Card className="p-5 border-l-4 border-l-violet-500 bg-violet-50 dark:bg-violet-900/10">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h4 className="font-bold text-violet-900 dark:text-violet-100">
+              {t("pay.revisionRequested")}
+            </h4>
+            <p className="text-sm text-violet-700/80 dark:text-violet-300 mt-1">
+              {isEngineer ? t("pay.submitWork.resubmitHint") : t("pay.revisionWaiting")}
+            </p>
+          </div>
           {isEngineer && (
-            <Badge color="amber">{t("pay.action.waitingClient")}</Badge>
+            <Button size="sm" onClick={() => setShowSubmitModal(true)}>
+              {t("pay.submitWork.resubmit")}
+            </Button>
           )}
         </div>
       </Card>
     );
-  }
-
-  // State: COMPLETED (Payment Released)
-  if (project.status === "COMPLETED" && project.payment?.status === "RELEASED") {
-    return (
+  } else if (project.status === "COMPLETED" && project.payment?.status === "RELEASED") {
+    card = (
       <Card className="p-5 border-l-4 border-l-green-500 bg-green-50 dark:bg-green-900/10">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <IconCheck width={18} height={18} className="text-green-600 dark:text-green-400" />
-              <h4 className="font-bold text-green-900 dark:text-green-100">{t("pay.action.paymentSent")}</h4>
+              <h4 className="font-bold text-green-900 dark:text-green-100">
+                {t("pay.action.paymentSent")}
+              </h4>
             </div>
             <p className="text-sm text-green-700/80 dark:text-green-300 mt-1">
               {formatMoney(amount)} • {isClient ? "Released to engineer" : t("pay.releasedHint")}
@@ -153,5 +164,20 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
     );
   }
 
-  return null;
+  if (!card) return null;
+
+  return (
+    <>
+      {card}
+      {showSubmitModal && (
+        <SubmitWorkModal
+          projectId={project.id}
+          projectTitle={project.title}
+          isRevision={project.status === "REVISION_REQUESTED"}
+          onClose={() => setShowSubmitModal(false)}
+          onSubmitted={() => onUpdated?.()}
+        />
+      )}
+    </>
+  );
 }

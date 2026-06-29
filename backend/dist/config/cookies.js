@@ -19,6 +19,6 @@ function authCookieOptions() {
         httpOnly: true,
         secure: useSecure,
         sameSite: crossHost && useSecure ? "none" : isProd ? "strict" : "lax",
-        maxAge: 60 * 60 * 1000,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
     };
 }

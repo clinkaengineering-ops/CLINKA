@@ -6,77 +6,7 @@ import ApiError from "../../utils/ApiError";
 import { createNotification } from "../../utils/notifications";
 import { assertUserNotBanned } from "../messages/ban.service";
 
-export async function markProjectFinished(engineerUserId: number, projectId: number) {
-  await assertUserNotBanned(engineerUserId, "update project status");
-
-  // Resolve engineer profile from user id
-  const profile = await db.engineerProfile.findUnique({
-    where: { userId: engineerUserId },
-  });
-  if (!profile) throw new ApiError(404, "Engineer profile not found");
- 
-  // Load project with payment + accepted bid
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    include: {
-      payment: true,
-      bids: {
-        where: { status: "ACCEPTED", engineerId: profile.id },
-        take: 1,
-      },
-    },
-  });
- 
-  if (!project) throw new ApiError(404, "Project not found");
- 
-  // Must be the assigned engineer
-  if (project.bids.length === 0) {
-    throw new ApiError(403, "You are not the assigned engineer for this project");
-  }
- 
-  // Project must be active
-  if (project.status !== "IN_PROGRESS") {
-    throw new ApiError(
-      400,
-      `Project is already ${project.status.toLowerCase().replace("_", " ")}`,
-    );
-  }
- 
-  // Escrow must be funded before engineer can mark done
-  if (!project.payment || project.payment.status !== "FUNDED") {
-    // Notify the client so they know to fund escrow
-    await createNotification(
-      project.clientId,
-      "FUND_REMINDER",
-      "Payment required",
-      `The engineer finished "${project.title}" but you have not paid yet. Pay to release their work.`,
-      `/escrow?project=${projectId}`,
-    );
-    throw new ApiError(
-      400,
-      "Payment has not been made yet. Ask the client to pay before marking work as finished.",
-    );
-  }
- 
-  // Update project status
-  const updated = await db.project.update({
-    where: { id: projectId },
-    data: { status: "AWAITING_APPROVAL" },
-  });
- 
-  // Notify the client
-  await createNotification(
-    project.clientId,
-    "WORK_DELIVERED",
-    "Work ready for review",
-    `The engineer marked "${project.title}" as finished. Review the work, then send payment.`,
-    `/messages?project=${projectId}`,
-  );
- 
-  return updated;
-}
-
-
+export { markProjectFinished } from "./project.workflow.service";
 
 export async function createProject(
   clientId: number,
@@ -170,6 +100,11 @@ export async function getProjectById(projectId: number) {
         },
       },
       payment: true,
+      submissions: {
+        include: { deliverables: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
     },
   });
 

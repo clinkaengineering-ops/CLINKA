@@ -2,17 +2,16 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import { getAllowedOrigins } from "./config/cors";
+import { isAllowedOrigin } from "./config/cors";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 import registerRoutes from "./routes/index";
 dotenv.config();
 const app = express();
 
-const allowedOrigins = getAllowedOrigins();
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }

@@ -25,6 +25,10 @@ import {
   overridePaymentController,
   getAnalyticsController,
   getSystemLogsController,
+  getSupportTicketsController,
+  updateSupportTicketController,
+  getWithdrawalRequestsController,
+  updateWithdrawalRequestStatusController,
 } from "./admin.controller";
 
 const router = Router();
@@ -63,5 +67,11 @@ router.patch("/payments/:paymentId/override", overridePaymentController);
 
 router.get("/analytics", getAnalyticsController);
 router.get("/logs", getSystemLogsController);
+
+router.get("/support-tickets", getSupportTicketsController);
+router.patch("/support-tickets/:ticketId", updateSupportTicketController);
+
+router.get("/withdrawals", getWithdrawalRequestsController);
+router.patch("/withdrawals/:withdrawalId", updateWithdrawalRequestStatusController);
 
 export default router;

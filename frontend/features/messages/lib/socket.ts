@@ -1,11 +1,11 @@
 import { io, type Socket } from "socket.io-client";
+import { resolveSocketBaseUrl } from "@/lib/apiBaseUrl";
 import type { ChatMessage } from "../types";
 
 let socket: Socket | null = null;
 
 export function getSocketBaseUrl(): string {
-  const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
-  return api.replace(/\/api\/?$/, "");
+  return resolveSocketBaseUrl();
 }
 
 export function getMessageSocket(): Socket {

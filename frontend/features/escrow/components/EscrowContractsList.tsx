@@ -174,7 +174,8 @@ export function EscrowContractsList({
                       <div className="flex gap-2">
                         {row.status === "In escrow" &&
                           row.paymentId &&
-                          row.projectStatus === "AWAITING_APPROVAL" && (
+                          (row.projectStatus === "SUBMITTED_FOR_REVIEW" ||
+                            row.projectStatus === "AWAITING_APPROVAL") && (
                           <>
                             <Button
                               size="sm"

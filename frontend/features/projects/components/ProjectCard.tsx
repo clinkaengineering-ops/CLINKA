@@ -16,6 +16,7 @@ import { useI18n } from "../../../i18n";
 import { cn } from "../../../utils/cn";
 import { useProjects } from "../hooks/useProjects";
 import type { Project, ServiceType } from "../api/project.api";
+import { isReviewableStatus } from "../utils/projectStatus";
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   DESIGN: "Design",
@@ -84,8 +85,11 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
         {project.status === "IN_PROGRESS" && project.payment?.status === "FUNDED" && (
           <Badge color="blue">{t("pay.status.inProgress")}</Badge>
         )}
-        {project.status === "AWAITING_APPROVAL" && (
+        {isReviewableStatus(project.status) && (
           <Badge color="amber">{t("pay.status.reviewWork")}</Badge>
+        )}
+        {project.status === "REVISION_REQUESTED" && (
+          <Badge color="violet">{t("proj.status.revision")}</Badge>
         )}
         {project.status === "COMPLETED" && (
           <Badge color="green">{t("pay.status.completed")}</Badge>

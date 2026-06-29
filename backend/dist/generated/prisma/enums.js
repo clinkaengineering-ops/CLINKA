@@ -9,7 +9,7 @@
 * 🟢 You can import this file directly.
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BanReason = exports.VerificationStatus = exports.PaymentStatus = exports.BidStatus = exports.ProjectStatus = exports.ServiceType = exports.EngineerSpecialty = exports.Role = void 0;
+exports.WithdrawalRequestStatus = exports.WalletTransactionStatus = exports.WalletTransactionType = exports.SupportTicketStatus = exports.BanReason = exports.VerificationStatus = exports.PaymentStatus = exports.BidStatus = exports.PaymentLedgerType = exports.DeliverableType = exports.ProjectStatus = exports.ServiceType = exports.EngineerSpecialty = exports.Role = void 0;
 exports.Role = {
     CLIENT: 'CLIENT',
     ENGINEER: 'ENGINEER',
@@ -28,8 +28,21 @@ exports.ProjectStatus = {
     OPEN: 'OPEN',
     IN_PROGRESS: 'IN_PROGRESS',
     AWAITING_APPROVAL: 'AWAITING_APPROVAL',
+    SUBMITTED_FOR_REVIEW: 'SUBMITTED_FOR_REVIEW',
+    REVISION_REQUESTED: 'REVISION_REQUESTED',
     COMPLETED: 'COMPLETED',
     CANCELLED: 'CANCELLED'
+};
+exports.DeliverableType = {
+    FILE: 'FILE',
+    LINK: 'LINK'
+};
+exports.PaymentLedgerType = {
+    FUNDED: 'FUNDED',
+    ENGINEER_ESCROW: 'ENGINEER_ESCROW',
+    PLATFORM_COMMISSION: 'PLATFORM_COMMISSION',
+    RELEASED: 'RELEASED',
+    REFUNDED: 'REFUNDED'
 };
 exports.BidStatus = {
     PENDING: 'PENDING',
@@ -50,4 +63,26 @@ exports.VerificationStatus = {
 exports.BanReason = {
     CONTACT_INFO_SHARING: 'CONTACT_INFO_SHARING',
     MANUAL_BAN: 'MANUAL_BAN'
+};
+exports.SupportTicketStatus = {
+    OPEN: 'OPEN',
+    SOLVED: 'SOLVED',
+    UNRESOLVED: 'UNRESOLVED'
+};
+exports.WalletTransactionType = {
+    PROJECT_PAYMENT: 'PROJECT_PAYMENT',
+    RELEASED: 'RELEASED',
+    WITHDRAWAL: 'WITHDRAWAL'
+};
+exports.WalletTransactionStatus = {
+    PENDING: 'PENDING',
+    AVAILABLE: 'AVAILABLE',
+    COMPLETED: 'COMPLETED',
+    REJECTED: 'REJECTED'
+};
+exports.WithdrawalRequestStatus = {
+    PENDING: 'PENDING',
+    PROCESSING: 'PROCESSING',
+    COMPLETED: 'COMPLETED',
+    REJECTED: 'REJECTED'
 };

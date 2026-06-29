@@ -65,9 +65,6 @@ export function ProjectBidsList({
                 Open chat
               </Button>
             </Link>
-            <Link href={`/checkout?projectId=${project.id}`}>
-              <Button size="sm">{t("pay.fundEscrow")}</Button>
-            </Link>
           </div>
         </div>
       )}

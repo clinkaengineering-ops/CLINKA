@@ -3,17 +3,19 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
-import { getGoogleClientConfig } from "../../config/google";
+import { getGoogleClientConfig, getGoogleRedirectUri } from "../../config/google";
 import generateToken from "../../utils/generateToken";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
+const GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v2/userinfo";
 
 type GoogleState = {
   nonce: string;
   next?: string;
   role?: "CLIENT" | "ENGINEER";
+  redirectUri: string;
+  clientOrigin?: string;
 };
 
 type GoogleProfile = {
@@ -24,9 +26,26 @@ type GoogleProfile = {
   picture?: string;
 };
 
-function clientUrl(path: string): string {
-  const base = (process.env.CLIENT_URL ?? "http://localhost:3000").replace(/\/$/, "");
+function normalizeOrigin(origin: string): string {
+  return origin.replace(/\/$/, "");
+}
+
+function clientUrl(path: string, origin?: string): string {
+  const base = normalizeOrigin(
+    origin ?? process.env.CLIENT_URL ?? "http://localhost:3000",
+  );
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function resolveGoogleRedirectUri(apiOrigin?: string): string {
+  const explicit = process.env.GOOGLE_REDIRECT_URI?.trim();
+  if (explicit && !apiOrigin) return explicit;
+
+  if (apiOrigin) {
+    return `${normalizeOrigin(apiOrigin)}/api/auth/google/callback`;
+  }
+
+  return getGoogleRedirectUri();
 }
 
 function signState(payload: GoogleState): string {
@@ -40,21 +59,29 @@ function verifyState(state: string): GoogleState {
 export function getGoogleAuthRedirectUrl(options?: {
   next?: string;
   role?: "CLIENT" | "ENGINEER";
+  apiOrigin?: string;
+  clientOrigin?: string;
 }): string {
   const config = getGoogleClientConfig();
   if (!config) {
     throw new ApiError(503, "Google sign-in is not configured");
   }
 
+  const redirectUri = resolveGoogleRedirectUri(options?.apiOrigin);
+
   const state = signState({
     nonce: crypto.randomBytes(16).toString("hex"),
     next: options?.next,
     role: options?.role ?? "CLIENT",
+    redirectUri,
+    clientOrigin: options?.clientOrigin
+      ? normalizeOrigin(options.clientOrigin)
+      : undefined,
   });
 
   const params = new URLSearchParams({
     client_id: config.clientId,
-    redirect_uri: config.redirectUri,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
     access_type: "online",
@@ -65,7 +92,10 @@ export function getGoogleAuthRedirectUrl(options?: {
   return `${GOOGLE_AUTH_URL}?${params.toString()}`;
 }
 
-async function exchangeCodeForProfile(code: string): Promise<GoogleProfile> {
+async function exchangeCodeForProfile(
+  code: string,
+  redirectUri: string,
+): Promise<GoogleProfile> {
   const config = getGoogleClientConfig();
   if (!config) throw new ApiError(503, "Google sign-in is not configured");
 
@@ -76,7 +106,7 @@ async function exchangeCodeForProfile(code: string): Promise<GoogleProfile> {
       code,
       client_id: config.clientId,
       client_secret: config.clientSecret,
-      redirect_uri: config.redirectUri,
+      redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
   });
@@ -221,7 +251,7 @@ export async function handleGoogleCallback(
 
   try {
     const state = verifyState(stateParam);
-    const profile = await exchangeCodeForProfile(code);
+    const profile = await exchangeCodeForProfile(code, state.redirectUri);
     const role = state.role === "ENGINEER" ? "ENGINEER" : "CLIENT";
     const user = await findOrCreateGoogleUser(profile, role);
     const token = generateToken(user.id, user.role);
@@ -242,6 +272,7 @@ export async function handleGoogleCallback(
 
     const redirectUrl = clientUrl(
       `/auth/callback?success=1&next=${encodeURIComponent(nextPath)}`,
+      state.clientOrigin,
     );
     return { redirectUrl, token };
   } catch (error) {

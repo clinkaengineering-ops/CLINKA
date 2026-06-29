@@ -1,7 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
 const public_controller_1 = require("./public.controller");
 const router = (0, express_1.Router)();
 router.get("/landing", public_controller_1.getLandingSnapshotController);
+router.get("/support-contact", public_controller_1.getSupportContactController);
+router.post("/support-tickets", auth_middleware_1.optionalAuthenticate, public_controller_1.createSupportTicketController);
 exports.default = router;

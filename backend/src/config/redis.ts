@@ -28,7 +28,13 @@ function memoryDel(key: string) {
 }
 
 function getRedisClient(): Redis | null {
-  if (redisUnavailable || !process.env.REDIS_URL?.trim()) return null;
+  if (
+    redisUnavailable ||
+    !process.env.REDIS_URL?.trim() ||
+    process.env.DISABLE_REDIS === "true"
+  ) {
+    return null;
+  }
   if (!redisClient) {
     redisClient = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: 1,

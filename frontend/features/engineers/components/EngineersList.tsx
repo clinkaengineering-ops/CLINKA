@@ -28,7 +28,7 @@ export function EngineersList() {
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t("em.title")}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("em.title")}</h1>
         <p className="mt-1 text-slate-500 dark:text-slate-400">{t("em.subtitle")}</p>
       </div>
 
@@ -48,16 +48,15 @@ export function EngineersList() {
           />
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-4">
-          {/* Specialty Dropdown */}
-          <div className="flex flex-col min-w-[160px]">
+        <div className="mt-5 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-4">
+          <div className="flex flex-col w-full sm:w-auto sm:min-w-[160px] sm:flex-1 lg:flex-none">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Specialty
             </label>
             <select
               value={active}
               onChange={(e) => setActive(e.target.value)}
-              className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-electric-500/30 cursor-pointer"
+              className="h-10 w-full px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-electric-500/30 cursor-pointer"
             >
               <option value="All">All Specialties</option>
               <option value="CIVIL">Civil</option>
@@ -65,15 +64,14 @@ export function EngineersList() {
             </select>
           </div>
 
-          {/* Nationality Dropdown */}
-          <div className="flex flex-col min-w-[200px]">
+          <div className="flex flex-col w-full sm:w-auto sm:min-w-[200px] sm:flex-1 lg:flex-none">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Nationality
             </label>
             <select
               value={activeNationality}
               onChange={(e) => setActiveNationality(e.target.value)}
-              className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-electric-500/30 cursor-pointer"
+              className="h-10 w-full px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-electric-500/30 cursor-pointer"
             >
               <option value="All">All Nationalities</option>
               {[

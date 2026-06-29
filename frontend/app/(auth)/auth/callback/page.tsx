@@ -6,18 +6,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getMe } from "@/features/engineers/api/engineer.api";
 import useAuthStore from "@/store/authStore";
 import { Card } from "@/components/UI";
+import { useI18n } from "@/i18n";
+import { LoadingFallback } from "@/components/LoadingFallback";
 
 function GoogleCallbackContent() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const setUser = useAuthStore((s) => s.setUser);
   const error = searchParams.get("error");
   const success = searchParams.get("success");
+  const signingInMessage = t("auth.callback.signingIn");
   const initialMessage = error
     ? decodeURIComponent(error)
     : success !== "1"
-      ? "Google sign-in was cancelled."
-      : "Signing you in…";
+      ? t("auth.callback.cancelled")
+      : signingInMessage;
   const [message, setMessage] = useState(initialMessage);
 
   useEffect(() => {
@@ -38,7 +42,7 @@ function GoogleCallbackContent() {
         router.replace(safeNext);
       } catch {
         if (!cancelled) {
-          setMessage("Signed in with Google but session could not be loaded. Try logging in again.");
+          setMessage(t("auth.callback.sessionFailed"));
         }
       }
     }
@@ -47,17 +51,17 @@ function GoogleCallbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [error, success, searchParams, router, setUser]);
+  }, [error, success, searchParams, router, setUser, t]);
 
   const isError =
     searchParams.get("error") ||
     searchParams.get("success") !== "1" ||
-    message !== "Signing you in…";
+    message !== signingInMessage;
 
   return (
     <Card className="p-6 sm:p-8 text-center space-y-4">
       <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-        {isError ? "Sign-in issue" : "Almost there"}
+        {isError ? t("auth.callback.issueTitle") : t("auth.callback.almostTitle")}
       </h1>
       <p className="text-sm text-slate-600 dark:text-slate-400">{message}</p>
       {isError && (
@@ -65,7 +69,7 @@ function GoogleCallbackContent() {
           href="/login"
           className="inline-block text-sm font-semibold text-electric-600 hover:underline"
         >
-          Back to login
+          {t("auth.forgot.backLogin")}
         </Link>
       )}
     </Card>
@@ -76,7 +80,9 @@ export default function GoogleCallbackPage() {
   return (
     <Suspense
       fallback={
-        <Card className="p-6 sm:p-8 text-center text-sm text-slate-500">Loading…</Card>
+        <Card className="p-6 sm:p-8 text-center">
+          <LoadingFallback />
+        </Card>
       }
     >
       <GoogleCallbackContent />

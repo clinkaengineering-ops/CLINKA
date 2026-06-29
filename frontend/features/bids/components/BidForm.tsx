@@ -43,11 +43,11 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
     return (
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-center text-sm">
         <p className="text-slate-600 dark:text-slate-400">
-          Sign in as an engineer to place a bid.
+          {t("bid.signInEngineer")}
         </p>
         <Link href={`/login?next=/projects`}>
           <Button className="mt-3 w-full" size="sm">
-            Sign in
+            {t("auth.signin")}
           </Button>
         </Link>
       </div>
@@ -57,7 +57,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   if (user.role === "ADMIN") {
     return (
       <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-        Admin accounts can browse projects but cannot place bids.
+        {t("bid.adminNoBid")}
       </p>
     );
   }
@@ -65,7 +65,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   if (user.role !== "ENGINEER") {
     return (
       <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-        Only engineers can submit bids on open projects.
+        {t("bid.clientNoBid")}
       </p>
     );
   }
@@ -73,7 +73,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   if (project.status !== "OPEN") {
     return (
       <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-        Bidding is closed for this project.
+        {t("bid.closed")}
       </p>
     );
   }
@@ -81,14 +81,13 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   if (verification !== "APPROVED") {
     return (
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-800 dark:text-amber-200">
-        <p className="font-semibold">Verification required</p>
+        <p className="font-semibold">{t("bid.verificationRequired")}</p>
         <p className="mt-1">
-          Your account must be approved by CLINKA before you can bid. Status:{" "}
-          {verification}
+          {t("bid.verificationPending")} {verification}
         </p>
         <Link href="/settings" className="inline-block mt-3">
           <Button size="sm" variant="secondary">
-            Settings
+            {t("st.title")}
           </Button>
         </Link>
       </div>
@@ -131,9 +130,9 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
     return (
       <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
         <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-          ✓ Bid submitted successfully!
+          ✓ {t("bid.success")}
         </p>
-        <p className="mt-1 text-xs text-slate-500">The client will be notified.</p>
+        <p className="mt-1 text-xs text-slate-500">{t("bid.clientNotified")}</p>
       </div>
     );
   }
@@ -212,7 +211,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
         onClick={handleSubmit}
         disabled={submitting}
       >
-        {submitting ? "Submitting…" : t("pm.submitBid")}
+        {submitting ? t("bid.submitting") : t("pm.submitBid")}
       </Button>
     </div>
   );

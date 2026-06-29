@@ -8,8 +8,10 @@ import {
 } from "@/lib/validation";
 import { Button, Card } from "@/components/UI";
 import { IconArrow } from "@/components/Icons";
+import { useI18n } from "@/i18n";
 
 export function VerifyOtpForm() {
+  const { t } = useI18n();
   const { verifyOtp, loading, error } = useVerifyOtp();
   const [otp, setOtp] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -26,8 +28,8 @@ export function VerifyOtpForm() {
 
   return (
     <Card className="p-6 sm:p-8">
-      <h1 className="text-2xl font-bold">Check your email</h1>
-      <p className="text-sm text-slate-500 mt-1">Enter the 6-digit code we sent you</p>
+      <h1 className="text-2xl font-bold">{t("auth.otp.title")}</h1>
+      <p className="text-sm text-slate-500 mt-1">{t("auth.otp.subtitle")}</p>
 
       <div className="mt-6 space-y-4">
         {error && <p className="text-sm text-rose-500">{error}</p>}
@@ -68,7 +70,7 @@ export function VerifyOtpForm() {
           icon={<IconArrow width={14} height={14} />}
           disabled={loading}
         >
-          {loading ? "Verifying…" : "Verify & sign in"}
+          {loading ? t("auth.otp.verifying") : t("auth.otp.submit")}
         </Button>
       </div>
     </Card>

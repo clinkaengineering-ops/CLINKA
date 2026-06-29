@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NavbarActions } from "@/components/NavbarActions";
@@ -9,9 +9,10 @@ import { AuthProvider } from "@/features/auth/components/AuthProvider";
 import { cn } from "@/utils/cn";
 import {
   IconHome, IconUsers, IconBriefcase, IconChart, IconWallet, IconMessage, IconStar,
-  IconShield, IconSettings, IconLogo, IconMenu, IconClose,
+  IconShield, IconSettings, IconMenu, IconClose,
   IconLogout,
 } from "@/components/Icons";
+import { BrandLink } from "@/components/BrandLogo";
 import { Avatar, Button } from "@/components/UI";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
@@ -28,7 +29,6 @@ const navItems = [
   // Workspace
   { href: "/dashboard", label: "side.clientDash", icon: IconChart, section: "side.workspace" },
   { href: "/messages", label: "side.messages", icon: IconMessage, section: "side.workspace" },
-  { href: "/escrow", label: "side.escrow", icon: IconWallet, section: "side.workspace", roles: ["CLIENT"] as const },
   { href: "/balance", label: "side.balance", icon: IconWallet, section: "side.workspace", roles: ["ENGINEER"] as const },
   { href: "/reviews", label: "side.reviews", icon: IconStar, section: "side.workspace" },
 
@@ -53,7 +53,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { t } = useI18n();
   const { user, sessionReady, logout } = useAuthStore();
-  const displayName = sessionReady ? (user?.name ?? "Guest") : "…";
+  const displayName = sessionReady ? (user?.name ?? t("common.guest")) : "…";
   const displayRole = sessionReady ? (user?.role ?? "") : "";
 
   const visibleNavItems = useMemo(() => {
@@ -70,7 +70,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
     return navItems.filter((item) => {
       if (item.href === "/admin") return false;
       if (item.href === "/reviews" && user?.role !== "CLIENT") return false;
-      if (item.href === "/escrow" && user?.role !== "CLIENT") return false;
       if (item.href === "/balance" && user?.role !== "ENGINEER") return false;
       const roleScope = (item as { roles?: readonly string[] }).roles;
       if (roleScope && user?.role && !roleScope.includes(user.role)) {
@@ -80,6 +79,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
       return true;
     });
   }, [user]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   async function handleLogout() {
     await logout();
@@ -103,10 +109,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div className="min-h-screen overflow-x-hidden bg-brand-ice dark:bg-slate-950 text-slate-900 dark:text-slate-100">
         {/* Mobile top bar */}
         <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between gap-2 px-4 h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
-          <button type="button" onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button type="button" aria-label="Open menu" onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0">
             <IconMenu />
           </button>
           <Brand />
@@ -193,7 +199,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {/* Main content */}
           <main className="flex-1 min-w-0">
             {/* Top bar */}
-            <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-2 h-16 px-6 lg:px-8 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900">
+            <div className="hidden lg:flex sticky top-0 z-30 items-center justify-between gap-2 h-16 px-6 lg:px-8 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900">
+              <BrandLink logoClassName="h-8 w-auto max-w-[160px]" priority />
               <div className="flex items-center gap-2">
                 {user?.role === "CLIENT" && (
                   <Button variant="ghost" size="sm" onClick={handleNewProject}>
@@ -214,17 +221,5 @@ function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function Brand() {
-  const { t } = useI18n();
-  return (
-    <Link href="/" className="flex items-center gap-2.5 group">
-      <div className="relative h-9 w-9 rounded-xl bg-gradient-to-br from-electric-400 to-navy-700 flex items-center justify-center text-white shadow-lg shadow-electric-500/30 group-hover:scale-105 transition">
-        <IconLogo width={20} height={20} />
-        <span className="absolute inset-0 rounded-xl ring-1 ring-white/20" />
-      </div>
-      <div className="text-start leading-tight">
-        <p className="text-base font-bold tracking-tight">CLINKA</p>
-        <p className="text-[10px] font-medium text-slate-500 tracking-wider uppercase">{t("brand.tagline")}</p>
-      </div>
-    </Link>
-  );
+  return <BrandLink logoClassName="h-8 w-auto max-w-[140px] sm:h-9 sm:max-w-[200px]" priority />;
 }

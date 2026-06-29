@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getMe } from "@/features/engineers/api/engineer.api";
 import useAuthStore from "@/store/authStore";
+import { useI18n } from "@/i18n";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -29,6 +30,7 @@ const ADMIN_BLOCKED_PREFIXES = [
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -95,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   if ((bootstrapping || !sessionReady) && needsAuth) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500">
-        Loading…
+        {t("common.loading")}
       </div>
     );
   }

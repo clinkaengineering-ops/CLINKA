@@ -7,7 +7,6 @@ export type EscrowDisplayStatus =
 export type EngineerPaymentStatus =
   | "awaiting_payment"
   | "in_progress"
-  | "awaiting_release"
   | "paid"
   | "refunded";
 
@@ -23,12 +22,24 @@ export interface EngineerBalanceTransaction {
   updatedAt: string;
 }
 
+export interface WithdrawalRequest {
+  id: number;
+  amount: number;
+  method: string;
+  accountNumber: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
+  adminNotes: string | null;
+  processedAt: string | null;
+  createdAt: string;
+}
+
 export interface EngineerBalanceSummary {
   availableBalance: number;
+  pendingBalance: number;
   securedBalance: number;
   awaitingClientPayment: number;
-  awaitingRelease: number;
   transactions: EngineerBalanceTransaction[];
+  withdrawalRequests: WithdrawalRequest[];
 }
 
 export interface EscrowPaymentItem {
@@ -55,7 +66,7 @@ export interface EscrowContractRow {
   updatedAt: string;
 }
 
-export interface FawaterkPaymentMethod {
+export interface PaymentMethodOption {
   paymentId: number;
   name_en: string;
   name_ar: string;
@@ -63,11 +74,12 @@ export interface FawaterkPaymentMethod {
   logo?: string;
 }
 
+/** @deprecated Use PaymentMethodOption */
+export type FawaterkPaymentMethod = PaymentMethodOption;
+
 export interface CheckoutPaymentData {
+  checkoutUrl?: string;
   redirectTo?: string;
-  fawryCode?: string;
-  expireDate?: string;
-  meezaReference?: number;
 }
 
 export interface CheckoutResult {
@@ -80,13 +92,20 @@ export interface CheckoutResult {
     gatewayInvoiceId: string | null;
     gatewayInvoiceKey: string | null;
   };
-  invoiceId: number;
-  invoiceKey: string;
-  paymentData: CheckoutPaymentData;
+  intentionId: string;
+  orderId: number;
+  checkoutUrl: string;
+  clientSecret: string;
 }
 
 export interface InitiateCheckoutPayload {
-  paymentMethodId: number;
+  paymentMethodId?: number;
   phone?: string;
   address?: string;
+}
+
+export interface CreateWithdrawalPayload {
+  amount: number;
+  method: string;
+  accountNumber: string;
 }

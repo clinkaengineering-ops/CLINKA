@@ -10,22 +10,24 @@ import { PostProjectModal } from "./PostProjectModal";
 import { Badge } from "@/components/UI";
 import type { ServiceType } from "../api/project.api";
 
-const SERVICE_LABELS: Record<string, string> = {
-  DESIGN: "Design",
-  SUPERVISION: "Supervision",
-  REVIEW: "Review",
-};
-
-const categories = ["All", "DESIGN", "SUPERVISION", "REVIEW"];
-const categoryLabels: Record<string, string> = {
-  All: "All",
-  DESIGN: "Design",
-  SUPERVISION: "Supervision",
-  REVIEW: "Review",
-};
+const categories = ["All", "DESIGN", "SUPERVISION", "REVIEW"] as const;
 
 export function ProjectsPage() {
   const { t } = useI18n();
+
+  const serviceLabel = (service: string) => {
+    const map: Record<string, string> = {
+      DESIGN: t("service.design"),
+      SUPERVISION: t("service.supervision"),
+      REVIEW: t("service.review"),
+    };
+    return map[service] ?? service;
+  };
+
+  const categoryLabel = (cat: (typeof categories)[number]) => {
+    if (cat === "All") return t("service.all");
+    return serviceLabel(cat);
+  };
   const { data: allProjects, loading, error, refetch } = useProjects();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
@@ -77,7 +79,7 @@ export function ProjectsPage() {
           <p className="mt-1 text-slate-500">{t("pm.subtitle")}</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setIsModalOpen(true)}>Post a project</Button>
+          <Button onClick={() => setIsModalOpen(true)}>{t("common.postProject")}</Button>
           <Button variant="secondary" icon={<IconFilter width={16} height={16} />}>
             {t("common.filters")}
           </Button>
@@ -110,7 +112,7 @@ export function ProjectsPage() {
                   : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 hover:border-electric-500/40"
               )}
             >
-              {categoryLabels[c]}
+              {categoryLabel(c)}
             </button>
           ))}
         </div>
@@ -128,7 +130,7 @@ export function ProjectsPage() {
       ) : error ? (
         <div className="text-center py-20 text-rose-500">{error}</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-slate-500">No projects found</div>
+        <div className="text-center py-20 text-slate-500">{t("pm.noProjectsFound")}</div>
       ) : (
         <div className="space-y-4">
           {filtered.map((p) => (
@@ -140,19 +142,19 @@ export function ProjectsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold">{p.title}</h3>
-                    <Badge color="blue">{SERVICE_LABELS[p.serviceType] ?? p.serviceType}</Badge>
+                    <Badge color="blue">{serviceLabel(p.serviceType)}</Badge>
                   </div>
                   <p className="mt-1 text-sm text-slate-500 line-clamp-2">{p.description}</p>
                   <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
                     <span>${p.budget.toLocaleString()}</span>
                     <span>·</span>
-                    <span>{p._count?.bids ?? 0} bids</span>
+                    <span>{p._count?.bids ?? 0} {t("common.bids")}</span>
                     <span>·</span>
-                    <span>Posted {new Date(p.createdAt).toLocaleDateString()}</span>
+                    <span>{t("common.posted")} {new Date(p.createdAt).toLocaleDateString()}</span>
                     {p.client && (
                       <>
                         <span>·</span>
-                        <span>by {p.client.name}</span>
+                        <span>{t("pm.postedBy")} {p.client.name}</span>
                       </>
                     )}
                   </div>

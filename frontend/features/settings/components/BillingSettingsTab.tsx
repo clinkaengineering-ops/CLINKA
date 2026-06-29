@@ -34,11 +34,11 @@ export function BillingSettingsTab() {
     <div className="space-y-4">
       <Card className="p-6 bg-gradient-to-br from-navy-900 to-electric-700 text-white">
         <Badge className="!bg-white/10 !text-white !border-white/20">{t("st.gPay")}</Badge>
-        <h2 className="mt-3 text-xl font-bold">{t("side.escrow")}</h2>
+        <h2 className="mt-3 text-xl font-bold">{t("side.findProjects")}</h2>
         <p className="text-white/70 text-sm mt-2">{t("es.subtitle")}</p>
-        <Link href="/escrow" className="inline-block mt-4">
+        <Link href="/projects" className="inline-block mt-4">
           <Button variant="secondary" className="!bg-white !text-navy-900">
-            {t("side.escrow")}
+            {t("side.findProjects")}
           </Button>
         </Link>
       </Card>

@@ -34,8 +34,23 @@ enum ProjectStatus {
   OPEN
   IN_PROGRESS
   AWAITING_APPROVAL
+  SUBMITTED_FOR_REVIEW
+  REVISION_REQUESTED
   COMPLETED
   CANCELLED
+}
+
+enum DeliverableType {
+  FILE
+  LINK
+}
+
+enum PaymentLedgerType {
+  FUNDED
+  ENGINEER_ESCROW
+  PLATFORM_COMMISSION
+  RELEASED
+  REFUNDED
 }
 
 enum BidStatus{
@@ -62,6 +77,32 @@ enum BanReason {
   MANUAL_BAN
 }
 
+enum SupportTicketStatus {
+  OPEN
+  SOLVED
+  UNRESOLVED
+}
+
+enum WalletTransactionType {
+  PROJECT_PAYMENT
+  RELEASED
+  WITHDRAWAL
+}
+
+enum WalletTransactionStatus {
+  PENDING
+  AVAILABLE
+  COMPLETED
+  REJECTED
+}
+
+enum WithdrawalRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
 model User {
 id Int @id @default(autoincrement())
 name String
@@ -86,6 +127,10 @@ ban         Ban?
 bannedBans  Ban[]  @relation("BannedByAdmin")
 
 clientPayments   Payment[] @relation("ClientPayments")
+supportTickets   SupportTicket[] @relation("UserSupportTickets")
+resolvedTickets  SupportTicket[] @relation("ResolvedSupportTickets")
+wallet           Wallet?
+withdrawalRequests WithdrawalRequest[]
 
 }
 
@@ -146,6 +191,8 @@ model Project {
   budget      Float
   serviceType ServiceType
   status      ProjectStatus @default(OPEN)
+  progressNote String?
+  progressUpdatedAt DateTime?
   isFlagged   Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -155,6 +202,7 @@ model Project {
   payment      Payment?
   conversation Conversation?
   review       Review?
+  submissions  ProjectSubmission[]
 }
 
 model Bid {
@@ -187,7 +235,42 @@ model Payment {
   project    Project         @relation(fields: [projectId], references: [id])
   client     User            @relation("ClientPayments",   fields: [clientId],   references: [id])
   engineer   EngineerProfile @relation("EngineerPayments", fields: [engineerId], references: [id])
+  ledgerEntries PaymentLedgerEntry[]
+}
 
+model PaymentLedgerEntry {
+  id        Int               @id @default(autoincrement())
+  paymentId Int
+  type      PaymentLedgerType
+  amount    Float
+  note      String?
+  createdAt DateTime          @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model ProjectSubmission {
+  id           Int      @id @default(autoincrement())
+  projectId    Int
+  engineerId   Int
+  notes        String?
+  revisionNote String?
+  createdAt    DateTime @default(now())
+
+  project      Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliverables ProjectDeliverable[]
+}
+
+model ProjectDeliverable {
+  id           Int             @id @default(autoincrement())
+  submissionId Int
+  type         DeliverableType
+  url          String
+  name         String?
+  mimeType     String?
+  createdAt    DateTime        @default(now())
+
+  submission ProjectSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
@@ -250,4 +333,64 @@ model PlatformSettings {
   id                 Int      @id @default(autoincrement())
   platformFeePercent Float    @default(10.0)
   updatedAt          DateTime @updatedAt
+}
+
+model SupportTicket {
+  id          Int                 @id @default(autoincrement())
+  name        String
+  email       String
+  subject     String
+  message     String
+  status      SupportTicketStatus @default(OPEN)
+  solution    String?
+  userId      Int?
+  resolvedById Int?
+  resolvedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  user       User? @relation("UserSupportTickets", fields: [userId], references: [id])
+  resolvedBy User? @relation("ResolvedSupportTickets", fields: [resolvedById], references: [id])
+}
+
+model Wallet {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  availableBalance Float   @default(0)
+  pendingBalance   Float   @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id                  Int                     @id @default(autoincrement())
+  walletId            Int
+  amount              Float
+  type                WalletTransactionType
+  status              WalletTransactionStatus @default(PENDING)
+  description         String?
+  availableAt         DateTime?
+  relatedPaymentId    Int?
+  relatedWithdrawalId Int?
+  createdAt           DateTime                @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+model WithdrawalRequest {
+  id            Int                     @id @default(autoincrement())
+  userId        Int
+  amount        Float
+  method        String
+  accountNumber String
+  status        WithdrawalRequestStatus @default(PENDING)
+  adminNotes    String?
+  processedAt   DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

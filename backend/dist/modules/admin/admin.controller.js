@@ -24,6 +24,10 @@ exports.getAllPaymentsController = getAllPaymentsController;
 exports.overridePaymentController = overridePaymentController;
 exports.getAnalyticsController = getAnalyticsController;
 exports.getSystemLogsController = getSystemLogsController;
+exports.getSupportTicketsController = getSupportTicketsController;
+exports.updateSupportTicketController = updateSupportTicketController;
+exports.getWithdrawalRequestsController = getWithdrawalRequestsController;
+exports.updateWithdrawalRequestStatusController = updateWithdrawalRequestStatusController;
 const ApiResponse_1 = __importDefault(require("../../utils/ApiResponse"));
 const admin_service_1 = require("./admin.service");
 const admin_validation_1 = require("./admin.validation");
@@ -246,6 +250,50 @@ async function getSystemLogsController(_req, res, next) {
     try {
         const logs = await (0, admin_service_1.getSystemLogs)();
         res.status(200).json((0, ApiResponse_1.default)(200, "System logs fetched", logs));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function getSupportTicketsController(req, res, next) {
+    try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await (0, admin_service_1.getSupportTickets)(page, limit);
+        res.status(200).json((0, ApiResponse_1.default)(200, "Support tickets fetched", data));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function updateSupportTicketController(req, res, next) {
+    try {
+        const input = admin_validation_1.updateSupportTicketSchema.parse(req.body);
+        const ticketId = Number(req.params.ticketId);
+        const data = await (0, admin_service_1.updateSupportTicket)(ticketId, req.user.userId, input);
+        res.status(200).json((0, ApiResponse_1.default)(200, "Support ticket updated", data));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function getWithdrawalRequestsController(req, res, next) {
+    try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await (0, admin_service_1.getWithdrawalRequests)(page, limit);
+        res.status(200).json((0, ApiResponse_1.default)(200, "Withdrawal requests fetched", data));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function updateWithdrawalRequestStatusController(req, res, next) {
+    try {
+        const input = admin_validation_1.updateWithdrawalRequestSchema.parse(req.body);
+        const withdrawalId = Number(req.params.withdrawalId);
+        const data = await (0, admin_service_1.updateWithdrawalRequestStatus)(withdrawalId, req.user.userId, input);
+        res.status(200).json((0, ApiResponse_1.default)(200, "Withdrawal request updated", data));
     }
     catch (error) {
         next(error);

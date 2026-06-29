@@ -30,8 +30,11 @@ function memoryDel(key) {
     memoryStore.delete(key);
 }
 function getRedisClient() {
-    if (redisUnavailable || !process.env.REDIS_URL?.trim())
+    if (redisUnavailable ||
+        !process.env.REDIS_URL?.trim() ||
+        process.env.DISABLE_REDIS === "true") {
         return null;
+    }
     if (!redisClient) {
         redisClient = new ioredis_1.default(process.env.REDIS_URL, {
             maxRetriesPerRequest: 1,

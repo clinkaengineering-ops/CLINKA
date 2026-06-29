@@ -1,11 +1,28 @@
 import type { Metadata } from "next";
+import { Barlow, Montserrat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { I18nProvider } from "@/i18n";
 
+const brandLatin = Barlow({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-brand-latin",
+});
+
+const brandArabic = Montserrat({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-brand-arabic",
+});
+
 export const metadata: Metadata = {
   title: "CLINKA",
-  description: "CLINKA frontend",
+  description: "CLINKA — Civil Link Architecture",
+  icons: {
+    icon: "/brand/logo/SVG/logo-01.svg",
+    apple: "/brand/logo/PNG/logo-01.png",
+  },
 };
 
 export default function RootLayout({
@@ -14,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${brandLatin.variable} ${brandArabic.variable}`}>
       <head>
         <script
           dangerouslySetInnerHTML={{

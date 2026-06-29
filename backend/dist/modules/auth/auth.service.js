@@ -21,6 +21,7 @@ const generateToken_1 = __importDefault(require("../../utils/generateToken"));
 const sendVerificationEmail_1 = require("../../utils/sendVerificationEmail");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const mailer_1 = __importDefault(require("../../config/mailer"));
+const emailTemplate_1 = require("../../utils/emailTemplate");
 const redis_1 = require("../../config/redis");
 async function registerClient(data) {
     const { name, email, password } = data;
@@ -91,10 +92,10 @@ async function login(data) {
     // send to email
     try {
         const info = await mailer_1.default.sendMail({
-            from: process.env.EMAIL_USER,
+            from: (0, emailTemplate_1.getEmailFrom)(),
             to: email,
-            subject: "Your login verification code",
-            html: `<p>Your verification code is: <strong>${otp}</strong>. Expires in 10 minutes.</p>`,
+            subject: "Your CLINKA login code",
+            html: (0, emailTemplate_1.loginOtpEmailHtml)(otp),
         });
         console.log("OTP email sent:", info.messageId, info.accepted);
     }
@@ -135,10 +136,10 @@ async function forgotPassword(email) {
     const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
     try {
         const info = await mailer_1.default.sendMail({
-            from: process.env.EMAIL_USER,
+            from: (0, emailTemplate_1.getEmailFrom)(),
             to: email,
-            subject: "Reset your password",
-            html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
+            subject: "Reset your CLINKA password",
+            html: (0, emailTemplate_1.passwordResetEmailHtml)(resetUrl),
         });
         console.log("Reset email sent:", info.messageId, info.accepted);
     }
@@ -179,10 +180,10 @@ async function requestEmailChange(userId, newEmail) {
     await (0, redis_1.cacheSet)(`email-change:${userId}`, JSON.stringify({ newEmail, otp }), 600);
     try {
         await mailer_1.default.sendMail({
-            from: process.env.EMAIL_USER,
+            from: (0, emailTemplate_1.getEmailFrom)(),
             to: newEmail,
             subject: "Confirm your new CLINKA email",
-            html: `<p>Your verification code is: <strong>${otp}</strong>. Expires in 10 minutes.</p>`,
+            html: (0, emailTemplate_1.emailChangeOtpHtml)(otp),
         });
     }
     catch (error) {

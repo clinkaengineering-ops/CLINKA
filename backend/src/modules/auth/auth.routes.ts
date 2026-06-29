@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   registerClientController,
   registerEngineerController,
+  resumeEngineerRegistrationController,
+  checkRegistrationEmailController,
   loginController,
   logoutController,
   verifyEmailController,
@@ -21,8 +23,21 @@ import { authenticate } from "../../middlewares/auth.middleware";
 
 const router = Router();
 
+router.get("/register/status", checkRegistrationEmailController);
 router.post("/register/client", registerClientController);
-router.post("/register/engineer", upload.single("document"), registerEngineerController);
+router.post(
+  "/register/engineer",
+  upload.fields([
+    { name: "document", maxCount: 1 },
+    { name: "portfolio", maxCount: 10 },
+  ]),
+  registerEngineerController,
+);
+router.post(
+  "/register/engineer/resume",
+  upload.array("portfolio", 10),
+  resumeEngineerRegistrationController,
+);
 router.post("/login", loginController);
 router.post("/logout", authenticate, logoutController);
 router.get("/verify-email", verifyEmailController);

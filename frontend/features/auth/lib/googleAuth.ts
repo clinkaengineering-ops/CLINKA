@@ -1,16 +1,13 @@
-/** API origin including `/api` (matches NEXT_PUBLIC_API_URL). */
+import { resolveApiBaseUrl, resolveSocketBaseUrl } from "@/lib/apiBaseUrl";
+
+/** API origin including `/api`. */
 export function getApiOrigin(): string {
-  const configured =
-    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
+  return resolveApiBaseUrl().replace(/\/$/, "");
+}
 
-  if (typeof window === "undefined") return configured.replace(/\/$/, "");
-
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") {
-    return "http://localhost:5000/api";
-  }
-
-  return configured.replace(/\/$/, "");
+function getClientOrigin(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  return window.location.origin;
 }
 
 export function startGoogleSignIn(options?: {
@@ -21,6 +18,15 @@ export function startGoogleSignIn(options?: {
   const params = new URLSearchParams();
   if (options?.next) params.set("next", options.next);
   if (options?.role) params.set("role", options.role);
+
+  const apiOrigin = base.replace(/\/api\/?$/, "");
+  params.set("api_origin", apiOrigin);
+
+  const clientOrigin = getClientOrigin();
+  if (clientOrigin) params.set("client_origin", clientOrigin);
+
   const qs = params.toString();
   window.location.href = `${base}/auth/google${qs ? `?${qs}` : ""}`;
 }
+
+export { resolveSocketBaseUrl };

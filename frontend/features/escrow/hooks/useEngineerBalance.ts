@@ -14,10 +14,11 @@ function axiosMessage(err: unknown): string {
 
 const emptyBalance: EngineerBalanceSummary = {
   availableBalance: 0,
+  pendingBalance: 0,
   securedBalance: 0,
   awaitingClientPayment: 0,
-  awaitingRelease: 0,
   transactions: [],
+  withdrawalRequests: [],
 };
 
 export function useEngineerBalance() {

@@ -1,9 +1,37 @@
 import db from "../../config/db";
+import { CreateSupportTicketInput } from "./public.validation";
+
+export function getSupportContactEmail() {
+  return (
+    process.env.SUPPORT_EMAIL?.trim() ||
+    process.env.EMAIL_USER?.trim() ||
+    "support@clinka.com"
+  );
+}
+
+export async function createSupportTicket(
+  data: CreateSupportTicketInput,
+  userId?: number,
+) {
+  return db.supportTicket.create({
+    data: {
+      name: data.name,
+      email: data.email,
+      subject: data.subject,
+      message: data.message,
+      userId: userId ?? null,
+    },
+  });
+}
 
 function formatCompactCurrency(amount: number): string {
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
   if (amount >= 1_000) return `$${Math.round(amount / 1_000)}K`;
   return `$${Math.round(amount)}`;
+}
+
+function toNumber(value: number | { toString(): string }) {
+  return typeof value === "number" ? value : Number(value.toString());
 }
 
 export async function getLandingSnapshot() {
@@ -57,7 +85,10 @@ export async function getLandingSnapshot() {
     }),
   ]);
 
-  const escrowReleasedTotal = releasedPayments.reduce((s, p) => s + p.amount, 0);
+  const escrowReleasedTotal = releasedPayments.reduce(
+    (s, p) => s + toNumber(p.amount),
+    0,
+  );
 
   const featuredEngineers = engineers
     .map((e) => {

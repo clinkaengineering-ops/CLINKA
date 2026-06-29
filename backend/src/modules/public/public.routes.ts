@@ -1,8 +1,15 @@
 import { Router } from "express";
-import { getLandingSnapshotController } from "./public.controller";
+import { optionalAuthenticate } from "../../middlewares/auth.middleware";
+import {
+  createSupportTicketController,
+  getLandingSnapshotController,
+  getSupportContactController,
+} from "./public.controller";
 
 const router = Router();
 
 router.get("/landing", getLandingSnapshotController);
+router.get("/support-contact", getSupportContactController);
+router.post("/support-tickets", optionalAuthenticate, createSupportTicketController);
 
 export default router;

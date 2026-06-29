@@ -10,7 +10,51 @@ import generateToken from "../../utils/generateToken";
 import { sendVerificationEmail } from "../../utils/sendVerificationEmail";
 import jwt from "jsonwebtoken";
 import transporter from "../../config/mailer";
+import {
+  emailChangeOtpHtml,
+  getEmailFrom,
+  loginOtpEmailHtml,
+  passwordResetEmailHtml,
+} from "../../utils/emailTemplate";
 import { cacheDel, cacheGet, cacheSet } from "../../config/redis";
+
+function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
+  return safe;
+}
+
+function issueRegistrationSession<T extends { id: number; role: string; password: string }>(
+  user: T,
+) {
+  const token = generateToken(user.id, user.role);
+  return { user: stripPassword(user), token };
+}
+
+export async function checkRegistrationEmail(email: string) {
+  const normalized = email.toLowerCase().trim();
+  const user = await db.user.findUnique({
+    where: { email: normalized },
+    include: {
+      profile: { include: { portfolio: { select: { id: true } } } },
+    },
+  });
+
+  if (!user) {
+    return { status: "available" as const };
+  }
+
+  if (
+    user.role === "ENGINEER" &&
+    user.profile?.verificationStatus === "PENDING" &&
+    (user.profile.portfolio?.length ?? 0) < 3
+  ) {
+    return {
+      status: "resume_engineer" as const,
+      portfolioCount: user.profile.portfolio.length,
+    };
+  }
+
+  return { status: "exists" as const, role: user.role };
+}
 
 export async function registerClient(data: clientRegisterInput) {
   const { name, email, password } = data;
@@ -28,20 +72,25 @@ export async function registerClient(data: clientRegisterInput) {
       email,
       password: hashedPassword,
       role: "CLIENT",
+      isVerified: true,
     },
   });
 
-  const { password: _, ...userWithoutPassword } = user;
-  await sendVerificationEmail(user.id, user.email);
-  return userWithoutPassword;
+  void sendVerificationEmail(user.id, user.email).catch(() => undefined);
+  return issueRegistrationSession(user);
 }
 
 export async function registerEngineer(
   data: engineerRegisterInput,
   fileUrl: string,
   documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl",
+  portfolioUrls: string[] = [],
 ) {
   const { name, email, password, specialty, bio, nationality } = data;
+
+  if (portfolioUrls.length < 3) {
+    throw new ApiError(400, "Upload at least 3 portfolio work samples");
+  }
 
   const existingUser = await db.user.findUnique({ where: { email } });
   if (existingUser) {
@@ -50,29 +99,89 @@ export async function registerEngineer(
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const profileData: any = {
-    specialty,
-    bio,
-    nationality,
-    [documentType]: fileUrl,
-  };
-
   const user = await db.user.create({
     data: {
       name,
       email,
       password: hashedPassword,
       role: "ENGINEER",
+      isVerified: true,
       profile: {
-        create: profileData,
+        create: {
+          specialty,
+          bio,
+          nationality,
+          [documentType]: fileUrl,
+          portfolio: {
+            create: portfolioUrls.map((imageUrl, index) => ({
+              imageUrl,
+              description: `Portfolio work ${index + 1}`,
+            })),
+          },
+        },
       },
     },
     include: { profile: true },
   });
 
-  const { password: _, ...userWithoutPassword } = user;
-  await sendVerificationEmail(user.id, user.email);
-  return userWithoutPassword;
+  void sendVerificationEmail(user.id, user.email).catch(() => undefined);
+  return issueRegistrationSession(user);
+}
+
+export async function resumeEngineerRegistration(
+  data: clientRegisterInput,
+  portfolioUrls: string[],
+) {
+  const { email, password } = data;
+
+  if (portfolioUrls.length < 3) {
+    throw new ApiError(400, "Upload at least 3 portfolio work samples");
+  }
+
+  const user = await db.user.findUnique({
+    where: { email },
+    include: {
+      profile: { include: { portfolio: { select: { id: true } } } },
+    },
+  });
+
+  if (!user || user.role !== "ENGINEER" || !user.profile) {
+    throw new ApiError(404, "No incomplete engineer registration found for this email");
+  }
+
+  const validPassword = await bcrypt.compare(password, user.password);
+  if (!validPassword) {
+    throw new ApiError(400, "Incorrect password for this account");
+  }
+
+  const existingCount = user.profile.portfolio.length;
+  if (existingCount >= 3) {
+    throw new ApiError(400, "This engineer account is already complete. Sign in instead.");
+  }
+
+  const needed = 3 - existingCount;
+  if (portfolioUrls.length < needed) {
+    throw new ApiError(
+      400,
+      `Upload at least ${needed} more portfolio work sample${needed === 1 ? "" : "s"}`,
+    );
+  }
+
+  await db.portfolioItem.createMany({
+    data: portfolioUrls.slice(0, needed).map((imageUrl, index) => ({
+      engineerId: user.profile!.id,
+      imageUrl,
+      description: `Portfolio work ${existingCount + index + 1}`,
+    })),
+  });
+
+  const refreshed = await db.user.update({
+    where: { id: user.id },
+    data: { isVerified: true },
+    include: { profile: true },
+  });
+
+  return issueRegistrationSession(refreshed);
 }
 
 // Step 1 — validate credentials, send OTP
@@ -100,10 +209,10 @@ export async function login(data: loginInput) {
   // send to email
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: getEmailFrom(),
       to: email,
-      subject: "Your login verification code",
-      html: `<p>Your verification code is: <strong>${otp}</strong>. Expires in 10 minutes.</p>`,
+      subject: "Your CLINKA login code",
+      html: loginOtpEmailHtml(otp),
     });
     console.log("OTP email sent:", info.messageId, info.accepted);
   } catch (error) {
@@ -161,10 +270,10 @@ export async function forgotPassword(email: string) {
 
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: getEmailFrom(),
       to: email,
-      subject: "Reset your password",
-      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
+      subject: "Reset your CLINKA password",
+      html: passwordResetEmailHtml(resetUrl),
     });
     console.log("Reset email sent:", info.messageId, info.accepted);
   } catch (error) {
@@ -220,10 +329,10 @@ export async function requestEmailChange(userId: number, newEmail: string) {
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: getEmailFrom(),
       to: newEmail,
       subject: "Confirm your new CLINKA email",
-      html: `<p>Your verification code is: <strong>${otp}</strong>. Expires in 10 minutes.</p>`,
+      html: emailChangeOtpHtml(otp),
     });
   } catch (error) {
     console.warn("Failed to send email-change OTP:", error);

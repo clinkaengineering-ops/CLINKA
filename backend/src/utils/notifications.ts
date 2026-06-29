@@ -3,12 +3,18 @@ import db from "../config/db";
 export type NotificationType =
   | "NEW_BID"
   | "BID_ACCEPTED"
+  | "PAYMENT_RECEIVED"
   | "ESCROW_FUNDED"
   | "ESCROW_REFUNDED"
   | "FUND_REMINDER"
   | "FUNDS_RELEASED"
   | "NEW_MESSAGE"
   | "WORK_DELIVERED"
+  | "WORK_SUBMITTED"
+  | "REVISION_REQUESTED"
+  | "WORK_APPROVED"
+  | "PROJECT_STARTED"
+  | "PROJECT_COMPLETED"
   | "ACCOUNT_BANNED";
 
 const FORCE_DELIVER_TYPES = new Set<NotificationType>(["ACCOUNT_BANNED"]);
@@ -29,12 +35,18 @@ const DEFAULT_PREFS: Record<string, NotificationPrefs> = {
 const PREF_KEY: Record<NotificationType, keyof NotificationPrefs> = {
   NEW_BID: "newBid",
   BID_ACCEPTED: "bidAccepted",
+  PAYMENT_RECEIVED: "fundsReleased",
   ESCROW_FUNDED: "fundsReleased",
   ESCROW_REFUNDED: "fundsReleased",
   FUND_REMINDER: "fundsReleased",
   FUNDS_RELEASED: "fundsReleased",
   NEW_MESSAGE: "newMessage",
   WORK_DELIVERED: "newMessage",
+  WORK_SUBMITTED: "newMessage",
+  REVISION_REQUESTED: "newMessage",
+  WORK_APPROVED: "fundsReleased",
+  PROJECT_STARTED: "bidAccepted",
+  PROJECT_COMPLETED: "newMessage",
   ACCOUNT_BANNED: "newMessage",
 };
 

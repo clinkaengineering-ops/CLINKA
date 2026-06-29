@@ -23,6 +23,10 @@ import {
   overridePaymentStatus,
   getAnalyticsData,
   getSystemLogs,
+  getSupportTickets,
+  updateSupportTicket,
+  getWithdrawalRequests,
+  updateWithdrawalRequestStatus,
 } from "./admin.service";
 import {
   banUserSchema,
@@ -31,6 +35,8 @@ import {
   updateProjectSchema,
   updateSettingsSchema,
   updatePaymentOverrideSchema,
+  updateSupportTicketSchema,
+  updateWithdrawalRequestSchema,
 } from "./admin.validation";
 
 export async function getAdminStatsController(
@@ -350,3 +356,70 @@ export async function getSystemLogsController(
   }
 }
 
+export async function getSupportTicketsController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const data = await getSupportTickets(page, limit);
+    res.status(200).json(ApiResponse(200, "Support tickets fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateSupportTicketController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = updateSupportTicketSchema.parse(req.body);
+    const ticketId = Number(req.params.ticketId);
+    const data = await updateSupportTicket(
+      ticketId,
+      req.user!.userId,
+      input,
+    );
+    res.status(200).json(ApiResponse(200, "Support ticket updated", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getWithdrawalRequestsController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const data = await getWithdrawalRequests(page, limit);
+    res.status(200).json(ApiResponse(200, "Withdrawal requests fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateWithdrawalRequestStatusController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = updateWithdrawalRequestSchema.parse(req.body);
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await updateWithdrawalRequestStatus(
+      withdrawalId,
+      req.user!.userId,
+      input,
+    );
+    res.status(200).json(ApiResponse(200, "Withdrawal request updated", data));
+  } catch (error) {
+    next(error);
+  }
+}

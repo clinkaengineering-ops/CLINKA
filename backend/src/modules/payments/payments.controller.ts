@@ -1,14 +1,19 @@
 import { Response, NextFunction, Request } from "express";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import ApiResponse from "../../utils/ApiResponse";
-import { initiateCheckoutSchema } from "./payments.validation";
 import {
+  createWithdrawalRequestSchema,
+  initiateCheckoutSchema,
+} from "./payments.validation";
+import {
+  createEngineerWithdrawalRequest,
   getEscrowPaymentById,
   getProjectPayment,
-  handleFawaterkWebhook,
+  handlePaymobWebhook,
   initiateProjectCheckout,
   prepareProjectCheckoutSession,
   getEngineerBalance,
+  listEngineerWithdrawalRequests,
   listClientEscrow,
   listEngineerEscrow,
   listPaymentMethods,
@@ -138,6 +143,37 @@ export async function getEngineerBalanceController(
   }
 }
 
+export async function listEngineerWithdrawalsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const items = await listEngineerWithdrawalRequests(req.user!.userId);
+    res
+      .status(200)
+      .json(ApiResponse(200, "Engineer withdrawals fetched successfully", items));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createEngineerWithdrawalController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = createWithdrawalRequestSchema.parse(req.body);
+    const item = await createEngineerWithdrawalRequest(req.user!.userId, input);
+    res
+      .status(201)
+      .json(ApiResponse(201, "Withdrawal request submitted", item));
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function releaseEscrowController(
   req: AuthRequest,
   res: Response,
@@ -186,14 +222,33 @@ export async function refundEscrowController(
   }
 }
 
-export async function fawaterkWebhookController(
+export async function paymobWebhookController(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const result = await handleFawaterkWebhook(req.body);
+    const hmac =
+      typeof req.query.hmac === "string" ? req.query.hmac : undefined;
+    const result = await handlePaymobWebhook(req.body, hmac);
     res.status(200).json(ApiResponse(200, "Webhook processed", result));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyPaymentController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const paymentId = Number(req.params.paymentId);
+    const { verifyOrSimulatePaymentSuccess } = await import("./payments.service");
+    const payment = await verifyOrSimulatePaymentSuccess(req.user!.userId, paymentId);
+    res
+      .status(200)
+      .json(ApiResponse(200, "Payment verified successfully", payment));
   } catch (error) {
     next(error);
   }

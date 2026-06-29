@@ -35,11 +35,11 @@ export function DashboardEscrowOverview() {
     <Card className="overflow-hidden">
       <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
         <h2 className="font-bold">{t("cd.escrowOverview")}</h2>
-        <Link href="/escrow">
-          <Badge color="blue" className="hover:bg-blue-100 transition cursor-pointer">
-            {t("side.escrow")} →
-          </Badge>
-        </Link>
+          <Link href="/projects">
+            <Badge color="blue" className="hover:bg-blue-100 transition cursor-pointer">
+              {t("side.findProjects")} →
+            </Badge>
+          </Link>
       </div>
 
       <div className="p-5 grid grid-cols-3 gap-4 border-b border-slate-100 dark:border-slate-800">

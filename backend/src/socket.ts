@@ -2,6 +2,7 @@ import { Server as HttpServer } from "http";
 import { Server as SocketServer, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { sendMessage } from "./modules/messages/messages.service";
+import { isAllowedOrigin } from "./config/cors";
 
 interface SocketUser {
   userId: number;
@@ -20,7 +21,13 @@ export function broadcastNewMessage(conversationId: number, message: unknown) {
 export function initSocket(httpServer: HttpServer) {
   const socketServer = new SocketServer(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL,
+      origin(origin, callback) {
+        if (isAllowedOrigin(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error("CORS origin not allowed"));
+      },
       credentials: true,
     },
   });

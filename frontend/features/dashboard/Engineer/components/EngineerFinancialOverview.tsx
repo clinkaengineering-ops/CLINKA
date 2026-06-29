@@ -44,14 +44,14 @@ export function EngineerFinancialOverview({
       {/* Financial Grid */}
       <div className="grid sm:grid-cols-3 gap-4">
         <StatCard
+          label="Pending Balance"
+          value={formatMoney(balance.pendingBalance)}
+          icon={<IconClock width={20} height={20} className="text-purple-500" />}
+        />
+        <StatCard
           label={t("bal.secured")}
           value={formatMoney(balance.securedBalance)}
           icon={<IconShield width={20} height={20} className="text-blue-500" />}
-        />
-        <StatCard
-          label={t("bal.awaitingRelease")}
-          value={formatMoney(balance.awaitingRelease)}
-          icon={<IconClock width={20} height={20} className="text-amber-500" />}
         />
         <StatCard
           label={t("bal.awaitingClient")}
@@ -100,8 +100,6 @@ function TransactionBadge({ status }: { status: EngineerBalanceTransaction["stat
       return <Badge color="green">{t("bal.status.paid")}</Badge>;
     case "in_progress":
       return <Badge color="blue">{t("bal.status.in_progress")}</Badge>;
-    case "awaiting_release":
-      return <Badge color="amber">{t("bal.status.awaiting_release")}</Badge>;
     case "awaiting_payment":
       return <Badge color="slate">{t("bal.status.awaiting_payment")}</Badge>;
     case "refunded":

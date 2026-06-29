@@ -3,14 +3,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getSupportContactEmail = getSupportContactEmail;
+exports.createSupportTicket = createSupportTicket;
 exports.getLandingSnapshot = getLandingSnapshot;
 const db_1 = __importDefault(require("../../config/db"));
+function getSupportContactEmail() {
+    return (process.env.SUPPORT_EMAIL?.trim() ||
+        process.env.EMAIL_USER?.trim() ||
+        "support@clinka.com");
+}
+async function createSupportTicket(data, userId) {
+    return db_1.default.supportTicket.create({
+        data: {
+            name: data.name,
+            email: data.email,
+            subject: data.subject,
+            message: data.message,
+            userId: userId ?? null,
+        },
+    });
+}
 function formatCompactCurrency(amount) {
     if (amount >= 1000000)
         return `$${(amount / 1000000).toFixed(1)}M`;
     if (amount >= 1000)
         return `$${Math.round(amount / 1000)}K`;
     return `$${Math.round(amount)}`;
+}
+function toNumber(value) {
+    return typeof value === "number" ? value : Number(value.toString());
 }
 async function getLandingSnapshot() {
     const [totalProjects, openProjects, completedProjects, totalBids, verifiedEngineers, releasedPayments, engineers, recentReviews,] = await Promise.all([
@@ -53,7 +74,7 @@ async function getLandingSnapshot() {
             },
         }),
     ]);
-    const escrowReleasedTotal = releasedPayments.reduce((s, p) => s + p.amount, 0);
+    const escrowReleasedTotal = releasedPayments.reduce((s, p) => s + toNumber(p.amount), 0);
     const featuredEngineers = engineers
         .map((e) => {
         const ratings = e.profile?.reviews ?? [];

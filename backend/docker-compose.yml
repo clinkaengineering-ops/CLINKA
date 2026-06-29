@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: clinka-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: mohamedtalal
+      POSTGRES_DB: clinka
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - clinka_pg_data:/var/lib/postgresql/data
+
+volumes:
+  clinka_pg_data:

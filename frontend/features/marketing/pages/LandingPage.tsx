@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Badge, Button, Card, SectionHeader } from "@/components/UI";
+import { BrandLogo } from "@/components/BrandLogo";
 import {
   IconArrow,
   IconBolt,
@@ -15,6 +16,7 @@ import {
   IconCompass,
 } from "@/components/Icons";
 import { useI18n } from "@/i18n";
+import { cn } from "@/utils/cn";
 import { marketingFeatures, howItWorksSteps } from "../api/landing.api";
 
 const iconMap: Record<string, React.ComponentType<{ width?: number; height?: number; className?: string }>> = {
@@ -27,7 +29,8 @@ const iconMap: Record<string, React.ComponentType<{ width?: number; height?: num
 };
 
 export function LandingPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
+  const isRtl = dir === "rtl";
 
   const features = marketingFeatures.map((f) => ({
     ...f,
@@ -43,33 +46,57 @@ export function LandingPage() {
   }));
 
   return (
-    <div>
+    <div className="overflow-x-hidden">
       {/* HERO */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-x-hidden">
         <div className="absolute inset-0 grid-bg" />
-        <div className="absolute inset-x-0 -top-40 h-[600px] bg-gradient-to-b from-electric-500/15 via-electric-500/5 to-transparent blur-3xl" />
-        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-24 lg:pt-28 lg:pb-32">
+        <div className="absolute inset-x-0 -top-40 h-[600px] bg-gradient-to-b from-brand-teal/15 via-brand-copper/5 to-transparent blur-3xl" />
+        <div
+          className={cn(
+            "relative max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24 lg:pb-32",
+            isRtl ? "pt-12 sm:pt-16 lg:pt-24" : "pt-16 sm:pt-20 lg:pt-28",
+          )}
+        >
           <div className="max-w-3xl mx-auto text-center animate-fade-up">
+            <BrandLogo
+              variant="horizontal"
+              className="mx-auto h-14 sm:h-16 md:h-20 w-auto max-w-[min(100%,420px)] mb-6"
+              priority
+            />
             <Badge color="electric">
               <span className="h-1.5 w-1.5 rounded-full bg-electric-500 animate-pulse" />
-              {t("hero.badge2") || "The marketplace for the built environment"}
+              {t("hero.badge2")}
             </Badge>
-            <h1 className="mt-6 text-5xl lg:text-7xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.05]">
+            <h1
+              className={cn(
+                "font-bold tracking-tight text-slate-900 dark:text-white overflow-visible",
+                isRtl
+                  ? "mt-4 text-3xl sm:text-4xl lg:text-6xl leading-[1.35]"
+                  : "mt-4 sm:mt-6 text-3xl sm:text-4xl md:text-5xl lg:text-7xl leading-[1.1] sm:leading-[1.05]",
+              )}
+            >
               {t("hero.title1")}
-              <span className="block bg-gradient-to-r from-electric-400 via-electric-500 to-navy-600 bg-clip-text text-transparent">
-                {t("hero.title2")}
-              </span>
+              {t("hero.title2") ? (
+                <span
+                  className={cn(
+                    "block bg-gradient-to-r from-brand-teal via-brand-teal to-brand-copper bg-clip-text text-transparent",
+                    isRtl && "pb-1 leading-[1.4]",
+                  )}
+                >
+                  {t("hero.title2")}
+                </span>
+              ) : null}
             </h1>
-            <p className="mt-6 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
               {t("hero.subtitle")}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link href="/register" className="inline-block">
+              <Link href="/projects?create=1" className="inline-block">
                 <Button size="lg" icon={<IconBriefcase width={18} height={18} />}>
                   {t("hero.hire")}
                 </Button>
               </Link>
-              <Link href="/login" className="inline-block">
+              <Link href="/register?role=engineer" className="inline-block">
                 <Button size="lg" variant="secondary" icon={<IconBolt width={18} height={18} />}>
                   {t("hero.findWork")}
                 </Button>
@@ -87,82 +114,85 @@ export function LandingPage() {
       </section>
 
       {/* POST YOUR DRAWINGS (CONCIERGE) */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="py-12 sm:py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-12 gap-6 items-stretch">
             <Card className="lg:col-span-8 p-7 md:p-9 overflow-hidden relative">
               <div className="absolute -top-24 -end-24 h-64 w-64 rounded-full bg-electric-500/10 blur-3xl" />
               <div className="relative">
-                <Badge color="electric">New</Badge>
-                <h2 className="mt-4 text-3xl md:text-4xl font-bold tracking-tight">
-                  Post your drawings — we'll do the work for you.
+                <Badge color="electric">{t("landing.concierge.badge")}</Badge>
+                <h2 className="mt-4 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                  {t("landing.concierge.title")}
                 </h2>
                 <p className="mt-3 text-slate-600 dark:text-slate-400 max-w-2xl">
-                  Upload plans, get matched to verified engineers, and pay securely through milestone escrow.
-                  When you confirm delivery, funds are sent to the engineer.
+                  {t("landing.concierge.body")}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     href={
                       "/projects?create=1&service=REVIEW" +
                       "&title=" +
-                      encodeURIComponent("Drawing review & corrections") +
+                      encodeURIComponent(t("landing.concierge.projectTitle")) +
                       "&description=" +
-                      encodeURIComponent(
-                        "I want an engineer to review my drawings, mark corrections, and deliver an updated PDF set. Attach files in chat after accepting a bid.",
-                      ) +
+                      encodeURIComponent(t("landing.concierge.projectDesc")) +
                       "&budget=" +
                       encodeURIComponent("2500")
                     }
                     className="inline-block"
                   >
                     <Button size="lg" icon={<IconArrow width={18} height={18} />}>
-                      Get started
+                      {t("landing.concierge.cta")}
                     </Button>
                   </Link>
                   <Link href="/projects" className="inline-block">
                     <Button size="lg" variant="secondary">
-                      Browse projects
+                      {t("landing.concierge.browse")}
                     </Button>
                   </Link>
                 </div>
                 <div className="mt-6 grid sm:grid-cols-3 gap-3 text-sm">
                   <Card className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Step 1</p>
-                    <p className="mt-1 font-semibold">Post drawings</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {t("landing.concierge.stepLabel")} 1
+                    </p>
+                    <p className="mt-1 font-semibold">{t("landing.concierge.step1")}</p>
                   </Card>
                   <Card className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Step 2</p>
-                    <p className="mt-1 font-semibold">Pay to start</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {t("landing.concierge.stepLabel")} 2
+                    </p>
+                    <p className="mt-1 font-semibold">{t("landing.concierge.step2")}</p>
                   </Card>
                   <Card className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Step 3</p>
-                    <p className="mt-1 font-semibold">Confirm delivery</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {t("landing.concierge.stepLabel")} 3
+                    </p>
+                    <p className="mt-1 font-semibold">{t("landing.concierge.step3")}</p>
                   </Card>
                 </div>
               </div>
             </Card>
 
-            <Card className="lg:col-span-4 p-7 md:p-9 bg-gradient-to-br from-navy-950 to-slate-950 text-white border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/70">
-                <IconShield width={16} height={16} className="text-electric-300" />
-                Escrow protection
+            <Card className="lg:col-span-4 p-7 md:p-9 border-slate-200 bg-gradient-to-br from-white via-brand-ice to-brand-teal/10 text-slate-900 shadow-md dark:border-slate-800 dark:from-navy-950 dark:via-navy-950 dark:to-slate-950 dark:text-white dark:shadow-none">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-teal/80 dark:text-white/70">
+                <IconShield width={16} height={16} className="text-brand-teal dark:text-electric-300" />
+                {t("landing.escrow.badge")}
               </div>
-              <p className="mt-3 text-2xl font-bold">Pay only when the work is delivered.</p>
-              <p className="mt-3 text-sm text-white/70">
-                Funds are secured once you pay. Engineers start immediately, and you release payment after reviewing the deliverables.
+              <p className="mt-3 text-2xl font-bold">{t("landing.escrow.title")}</p>
+              <p className="mt-3 text-sm text-slate-600 dark:text-white/70">
+                {t("landing.escrow.body")}
               </p>
-              <div className="mt-6 flex items-center gap-2 text-sm text-white/80">
-                <IconCheck width={16} height={16} className="text-emerald-300" />
-                10% platform fee, transparent
+              <div className="mt-6 flex items-center gap-2 text-sm text-slate-700 dark:text-white/80">
+                <IconCheck width={16} height={16} className="text-emerald-600 dark:text-emerald-300" />
+                {t("landing.escrow.f1")}
               </div>
-              <div className="mt-2 flex items-center gap-2 text-sm text-white/80">
-                <IconCheck width={16} height={16} className="text-emerald-300" />
-                Chat + file sharing included
+              <div className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-white/80">
+                <IconCheck width={16} height={16} className="text-emerald-600 dark:text-emerald-300" />
+                {t("landing.escrow.f2")}
               </div>
-              <div className="mt-2 flex items-center gap-2 text-sm text-white/80">
-                <IconCheck width={16} height={16} className="text-emerald-300" />
-                Arabic + English support
+              <div className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-white/80">
+                <IconCheck width={16} height={16} className="text-emerald-600 dark:text-emerald-300" />
+                {t("landing.escrow.f3")}
               </div>
             </Card>
           </div>
@@ -170,8 +200,8 @@ export function LandingPage() {
       </section>
 
       {/* FEATURES */}
-      <section className="relative py-24 bg-slate-50 dark:bg-slate-900/30 border-y border-slate-200 dark:border-slate-900">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-16 sm:py-24 bg-slate-50 dark:bg-slate-900/30 border-y border-slate-200 dark:border-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <SectionHeader
             eyebrow={t("feat.eyebrow")}
             title={t("feat.title")}
@@ -196,23 +226,28 @@ export function LandingPage() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="relative py-24 bg-navy-950 text-white overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-50" />
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-96 w-[800px] bg-electric-500/20 blur-[120px] rounded-full" />
-        <div className="relative max-w-7xl mx-auto px-6">
+      <section className="relative py-16 sm:py-24 overflow-hidden bg-brand-ice text-slate-900 dark:bg-navy-950 dark:text-white">
+        <div className="absolute inset-0 grid-bg opacity-30 dark:opacity-50" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-96 w-full max-w-[800px] bg-brand-teal/10 dark:bg-electric-500/20 blur-[120px] rounded-full" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto">
-            <span className="inline-flex items-center gap-2 rounded-full border border-electric-500/30 bg-electric-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-electric-300">
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-teal/30 bg-brand-teal/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-teal dark:border-electric-500/30 dark:bg-electric-500/10 dark:text-electric-300">
               {t("how.eyebrow")}
             </span>
-            <h2 className="mt-4 text-4xl font-bold">{t("how.title")}</h2>
-            <p className="mt-4 text-slate-400">{t("how.subtitle")}</p>
+            <h2 className="mt-4 text-2xl sm:text-3xl md:text-4xl font-bold">{t("how.title")}</h2>
+            <p className="mt-4 text-slate-600 dark:text-slate-400">{t("how.subtitle")}</p>
           </div>
-          <div className="mt-16 grid md:grid-cols-4 gap-6">
+          <div className="mt-10 sm:mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {steps.map((s, i) => (
-              <div key={i} className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:bg-white/10 transition">
-                <div className="text-electric-400 text-4xl font-bold tracking-tighter">0{i + 1}</div>
+              <div
+                key={i}
+                className="relative p-6 rounded-2xl border border-slate-200/80 bg-white shadow-sm backdrop-blur transition hover:border-brand-teal/30 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:shadow-none dark:hover:bg-white/10"
+              >
+                <div className="text-brand-teal dark:text-electric-400 text-4xl font-bold tracking-tighter">
+                  0{i + 1}
+                </div>
                 <h3 className="mt-3 font-bold text-lg">{s.title}</h3>
-                <p className="mt-2 text-sm text-slate-400">{s.description}</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{s.description}</p>
               </div>
             ))}
           </div>
@@ -220,15 +255,15 @@ export function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-900 via-navy-800 to-electric-700 p-10 lg:p-16 text-white">
+      <section className="py-16 sm:py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-navy-900 via-navy-800 to-electric-700 p-6 sm:p-10 lg:p-16 text-white">
             <div className="absolute inset-0 grid-bg opacity-30" />
             <div className="absolute -end-20 -top-20 h-80 w-80 bg-electric-400/40 blur-[100px] rounded-full" />
             <div className="relative grid md:grid-cols-2 gap-10 items-center">
               <div>
-                <h2 className="text-4xl lg:text-5xl font-bold leading-tight">{t("cta.title")}</h2>
-                <p className="mt-4 text-white/70 text-lg">{t("cta.subtitle")}</p>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight">{t("cta.title")}</h2>
+                <p className="mt-4 text-white/70 text-base sm:text-lg">{t("cta.subtitle")}</p>
               </div>
               <div className="flex flex-col sm:flex-row md:justify-end gap-3">
                 <Link href="/register">

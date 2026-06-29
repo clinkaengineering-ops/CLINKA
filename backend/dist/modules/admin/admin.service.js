@@ -21,34 +21,43 @@ exports.deleteReviewByAdmin = deleteReviewByAdmin;
 exports.getPlatformSettings = getPlatformSettings;
 exports.updatePlatformSettings = updatePlatformSettings;
 exports.getAllPayments = getAllPayments;
+exports.getWithdrawalRequests = getWithdrawalRequests;
+exports.updateWithdrawalRequestStatus = updateWithdrawalRequestStatus;
 exports.overridePaymentStatus = overridePaymentStatus;
 exports.getAnalyticsData = getAnalyticsData;
 exports.getSystemLogs = getSystemLogs;
+exports.getSupportTickets = getSupportTickets;
+exports.updateSupportTicket = updateSupportTicket;
 const db_1 = __importDefault(require("../../config/db"));
 const ApiError_1 = __importDefault(require("../../utils/ApiError"));
 const ban_service_1 = require("../messages/ban.service");
 const enums_1 = require("../../generated/prisma/enums");
 const notifications_1 = require("../../utils/notifications");
 const generateToken_1 = __importDefault(require("../../utils/generateToken"));
+const wallet_1 = require("../../utils/wallet");
 function stripPassword({ password: _, ...safe }) {
     return safe;
 }
+function toNumber(value) {
+    return typeof value === "number" ? value : Number(value.toString());
+}
 async function getAdminStats() {
-    const [totalUsers, totalEngineers, totalClients, totalProjects, pendingVerifications, payments,] = await Promise.all([
+    const [totalUsers, totalEngineers, totalClients, totalProjects, pendingVerifications, openSupportTickets, payments,] = await Promise.all([
         db_1.default.user.count(),
         db_1.default.user.count({ where: { role: "ENGINEER" } }),
         db_1.default.user.count({ where: { role: "CLIENT" } }),
         db_1.default.project.count(),
         db_1.default.engineerProfile.count({ where: { verificationStatus: "PENDING" } }),
+        db_1.default.supportTicket.count({ where: { status: "OPEN" } }),
         db_1.default.payment.findMany({
             where: { status: { in: ["FUNDED", "RELEASED"] } },
             select: { amount: true, status: true },
         }),
     ]);
-    const gmv = payments.reduce((sum, p) => sum + p.amount, 0);
+    const gmv = payments.reduce((sum, p) => sum + toNumber(p.amount), 0);
     const inEscrow = payments
         .filter((p) => p.status === "FUNDED")
-        .reduce((sum, p) => sum + p.amount, 0);
+        .reduce((sum, p) => sum + toNumber(p.amount), 0);
     return {
         totalUsers,
         totalEngineers,
@@ -57,7 +66,7 @@ async function getAdminStats() {
         pendingVerifications,
         gmv,
         inEscrow,
-        openDisputes: 0,
+        openSupportTickets,
     };
 }
 async function getPendingVerifications() {
@@ -376,6 +385,88 @@ async function getAllPayments(page = 1, limit = 20) {
         totalPages: Math.ceil(total / limit),
     };
 }
+async function getWithdrawalRequests(page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await Promise.all([
+        db_1.default.withdrawalRequest.findMany({
+            skip,
+            take: limit,
+            orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+            },
+        }),
+        db_1.default.withdrawalRequest.count(),
+    ]);
+    return {
+        items,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+    };
+}
+async function updateWithdrawalRequestStatus(withdrawalId, adminId, input) {
+    const item = await db_1.default.withdrawalRequest.findUnique({
+        where: { id: withdrawalId },
+        include: {
+            user: { select: { id: true, name: true, email: true } },
+        },
+    });
+    if (!item)
+        throw new ApiError_1.default(404, "Withdrawal request not found");
+    if (item.status === "COMPLETED" || item.status === "REJECTED") {
+        throw new ApiError_1.default(400, "This withdrawal request is already finalized");
+    }
+    const shouldFinalize = input.status === "COMPLETED";
+    const shouldReject = input.status === "REJECTED";
+    const updated = await db_1.default.$transaction(async (tx) => {
+        await (0, wallet_1.settleMaturedWalletTransactions)(tx, item.userId);
+        const wallet = await (0, wallet_1.ensureWallet)(tx, item.userId);
+        if (shouldFinalize) {
+            if (wallet.availableBalance < item.amount) {
+                throw new ApiError_1.default(400, "Insufficient available balance to complete this withdrawal");
+            }
+            await tx.wallet.update({
+                where: { id: wallet.id },
+                data: {
+                    availableBalance: { decrement: item.amount },
+                },
+            });
+        }
+        await tx.walletTransaction.updateMany({
+            where: {
+                walletId: wallet.id,
+                relatedWithdrawalId: item.id,
+                type: "WITHDRAWAL",
+            },
+            data: {
+                status: shouldFinalize ? "COMPLETED" : shouldReject ? "REJECTED" : "PENDING",
+            },
+        });
+        return tx.withdrawalRequest.update({
+            where: { id: item.id },
+            data: {
+                status: input.status,
+                adminNotes: input.adminNotes,
+                processedAt: shouldFinalize || shouldReject ? new Date() : null,
+            },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+            },
+        });
+    });
+    if (updated.status === "COMPLETED") {
+        await (0, notifications_1.createNotification)(updated.user.id, "FUNDS_RELEASED", "Withdrawal completed", `Your withdrawal request for ${updated.amount} EGP has been marked completed by the admin.`, "/balance");
+    }
+    else if (updated.status === "REJECTED") {
+        await (0, notifications_1.createNotification)(updated.user.id, "FUNDS_RELEASED", "Withdrawal rejected", `Your withdrawal request for ${updated.amount} EGP was rejected.${updated.adminNotes ? ` Note: ${updated.adminNotes}` : ""}`, "/balance");
+    }
+    else if (updated.status === "PROCESSING") {
+        await (0, notifications_1.createNotification)(updated.user.id, "FUNDS_RELEASED", "Withdrawal is processing", `Your withdrawal request for ${updated.amount} EGP is being processed by the admin.`, "/balance");
+    }
+    return updated;
+}
 async function overridePaymentStatus(paymentId, status) {
     return await db_1.default.payment.update({
         where: { id: paymentId },
@@ -396,7 +487,7 @@ async function getAnalyticsData() {
     const dailyGmv = {};
     payments.forEach((p) => {
         const d = p.createdAt.toISOString().split("T")[0];
-        dailyGmv[d] = (dailyGmv[d] || 0) + p.amount;
+        dailyGmv[d] = (dailyGmv[d] || 0) + toNumber(p.amount);
     });
     return {
         dailySignups: Object.entries(dailySignups).map(([date, count]) => ({ date, count })),
@@ -412,4 +503,45 @@ async function getSystemLogs() {
         { timestamp: new Date(Date.now() - 7200000).toISOString(), level: "ERROR", message: "Database connection timeout in GET /projects." },
         { timestamp: new Date(Date.now() - 86400000).toISOString(), level: "INFO", message: "Server restarted successfully." },
     ];
+}
+async function getSupportTickets(page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [tickets, total] = await Promise.all([
+        db_1.default.supportTicket.findMany({
+            skip,
+            take: limit,
+            orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+            include: {
+                resolvedBy: { select: { id: true, name: true } },
+            },
+        }),
+        db_1.default.supportTicket.count(),
+    ]);
+    return {
+        tickets,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+    };
+}
+async function updateSupportTicket(ticketId, adminId, data) {
+    const ticket = await db_1.default.supportTicket.findUnique({ where: { id: ticketId } });
+    if (!ticket)
+        throw new ApiError_1.default(404, "Support ticket not found");
+    if (ticket.status !== "OPEN") {
+        throw new ApiError_1.default(400, "This ticket has already been resolved");
+    }
+    return db_1.default.supportTicket.update({
+        where: { id: ticketId },
+        data: {
+            status: data.status,
+            solution: data.solution,
+            resolvedById: adminId,
+            resolvedAt: new Date(),
+        },
+        include: {
+            resolvedBy: { select: { id: true, name: true } },
+        },
+    });
 }

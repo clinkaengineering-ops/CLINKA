@@ -11,8 +11,11 @@ import {
   validateForm,
   type FieldErrors,
 } from "@/lib/validation";
+import { useI18n } from "@/i18n";
+import { LoadingFallback } from "@/components/LoadingFallback";
 
 function ResetPasswordForm() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token") ?? "";
@@ -26,7 +29,7 @@ function ResetPasswordForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token) {
-      setFormError("Invalid or missing reset link. Request a new reset email.");
+      setFormError(t("auth.reset.invalidLink"));
       return;
     }
     const result = validateForm(resetPasswordFormSchema, { password, confirm });
@@ -53,29 +56,27 @@ function ResetPasswordForm() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
       <Card className="w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold">Reset password</h1>
+        <h1 className="text-2xl font-bold">{t("auth.reset")}</h1>
         {done ? (
-          <p className="mt-4 text-sm text-emerald-600">
-            Password updated. Redirecting to login…
-          </p>
+          <p className="mt-4 text-sm text-emerald-600">{t("auth.reset.success")}</p>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             {formError && <p className="text-sm text-rose-500">{formError}</p>}
 
-            <Field label="New password" error={fieldErrors.password}>
+            <Field label={t("auth.reset.newPassword")} error={fieldErrors.password}>
               <Input
                 type="password"
-                placeholder="Min. 8 characters"
+                placeholder={t("auth.passMin")}
                 autoComplete="new-password"
                 value={password}
                 error={!!fieldErrors.password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </Field>
-            <Field label="Confirm password" error={fieldErrors.confirm}>
+            <Field label={t("auth.reset.confirmPassword")} error={fieldErrors.confirm}>
               <Input
                 type="password"
-                placeholder="Repeat password"
+                placeholder={t("auth.reset.confirmPh")}
                 autoComplete="new-password"
                 value={confirm}
                 error={!!fieldErrors.confirm}
@@ -83,12 +84,12 @@ function ResetPasswordForm() {
               />
             </Field>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Saving…" : "Update password"}
+              {loading ? t("auth.reset.updating") : t("auth.reset.submit")}
             </Button>
           </form>
         )}
         <Link href="/login" className="inline-block mt-4 text-sm text-electric-600 hover:underline">
-          Back to login
+          {t("auth.forgot.backLogin")}
         </Link>
       </Card>
     </div>
@@ -97,7 +98,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading…</div>}>
+    <Suspense fallback={<LoadingFallback className="p-8 text-center text-slate-500" />}>
       <ResetPasswordForm />
     </Suspense>
   );

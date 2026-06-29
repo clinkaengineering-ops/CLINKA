@@ -40,48 +40,74 @@ exports.listPaymentMethods = listPaymentMethods;
 exports.getProjectPayment = getProjectPayment;
 exports.initiateProjectCheckout = initiateProjectCheckout;
 exports.prepareProjectCheckoutSession = prepareProjectCheckoutSession;
-exports.handleFawaterkWebhook = handleFawaterkWebhook;
+exports.handlePaymobWebhook = handlePaymobWebhook;
 exports.getEngineerBalance = getEngineerBalance;
+exports.listEngineerWithdrawalRequests = listEngineerWithdrawalRequests;
+exports.createEngineerWithdrawalRequest = createEngineerWithdrawalRequest;
 exports.listEngineerEscrow = listEngineerEscrow;
 exports.listClientEscrow = listClientEscrow;
 exports.releaseEscrowPayment = releaseEscrowPayment;
 exports.getEscrowPaymentById = getEscrowPaymentById;
+exports.verifyOrSimulatePaymentSuccess = verifyOrSimulatePaymentSuccess;
 exports.refundEscrowPayment = refundEscrowPayment;
 const db_1 = __importDefault(require("../../config/db"));
-const fawaterk_1 = require("../../config/fawaterk");
-const fawaterk_dev_1 = require("../../config/fawaterk.dev");
+const paymob_1 = require("../../config/paymob");
 const ApiError_1 = __importDefault(require("../../utils/ApiError"));
-const fawaterk_api_1 = require("./fawaterk.api");
-const fawaterk_webhook_1 = require("./fawaterk.webhook");
-const fawaterk_hashkey_1 = require("./fawaterk.hashkey");
+const paymob_api_1 = require("./paymob.api");
+const paymob_webhook_1 = require("./paymob.webhook");
 const payments_validation_1 = require("./payments.validation");
-function parsePayLoad(raw) {
-    if (raw == null)
-        return null;
-    let obj = raw;
-    if (typeof raw === "string") {
-        try {
-            obj = JSON.parse(raw);
-        }
-        catch {
-            return null;
-        }
-    }
-    if (typeof obj !== "object" || obj === null)
-        return null;
-    const o = obj;
-    return {
-        projectId: o.projectId != null ? Number(o.projectId) : undefined,
-        paymentId: o.paymentId != null ? Number(o.paymentId) : undefined,
-    };
+const paymentLedger_1 = require("../../utils/paymentLedger");
+const project_status_1 = require("../projects/project.status");
+const mailer_1 = __importDefault(require("../../config/mailer"));
+const emailTemplate_1 = require("../../utils/emailTemplate");
+const wallet_1 = require("../../utils/wallet");
+function toNumber(value) {
+    return typeof value === "number" ? value : Number(value.toString());
 }
-let fawaterkFallbackLogged = false;
-function logFawaterkFallbackOnce(message) {
-    if (fawaterkFallbackLogged)
-        return;
-    fawaterkFallbackLogged = true;
-    console.warn(`[payments] ${message} — using dev payment methods (Visa, Fawry, Meeza). ` +
-        "Enable payment methods in your Fawaterak dashboard or contact Fawaterak support if the list stays empty.");
+function amountToCents(amount) {
+    return Math.round(amount * 100);
+}
+function paymobSpecialReference(paymentId) {
+    return `clinka-payment-${paymentId}`;
+}
+async function createProjectPaymobIntention(project, payment, totalCharged, phone, address, paymentMethodIds) {
+    const config = (0, paymob_1.getPaymobConfig)();
+    const { first_name, last_name } = splitCustomerName(project.client.name);
+    const redirectionUrls = getRedirectionUrls(project.id, payment.id);
+    const amountCents = amountToCents(totalCharged);
+    const intention = await (0, paymob_api_1.createPaymobIntention)({
+        amountCents,
+        currency: config.currency,
+        paymentMethods: paymentMethodIds?.length
+            ? paymentMethodIds
+            : config.integrationIds,
+        items: [
+            {
+                name: project.title.slice(0, 100),
+                amount: amountCents,
+                quantity: 1,
+                description: `Escrow funding for project #${project.id}`,
+            },
+        ],
+        billingData: {
+            first_name,
+            last_name,
+            email: project.client.email,
+            phone_number: phone,
+            street: address,
+        },
+        specialReference: paymobSpecialReference(payment.id),
+        notificationUrl: redirectionUrls.webhookUrl,
+        redirectionUrl: redirectionUrls.successUrl,
+        extras: {
+            projectId: project.id,
+            paymentId: payment.id,
+        },
+    });
+    return {
+        intention,
+        checkoutUrl: (0, paymob_1.buildPaymobCheckoutUrl)(config, intention.clientSecret),
+    };
 }
 function splitCustomerName(fullName) {
     const parts = fullName.trim().split(/\s+/);
@@ -93,15 +119,50 @@ function splitCustomerName(fullName) {
         last_name: parts.slice(1).join(" "),
     };
 }
-function getRedirectionUrls() {
+function getRedirectionUrls(projectId, paymentId) {
     const clientUrl = (process.env.CLIENT_URL ?? "http://localhost:3000").replace(/\/$/, "");
     const apiUrl = (process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 5000}`).replace(/\/$/, "");
     return {
-        successUrl: `${clientUrl}/escrow?status=success`,
-        failUrl: `${clientUrl}/escrow?status=fail`,
-        pendingUrl: `${clientUrl}/escrow?status=pending`,
-        webhookUrl: `${apiUrl}/api/payments/webhook_json`,
+        successUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=success`,
+        failUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=fail`,
+        pendingUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=pending`,
+        webhookUrl: `${apiUrl}/api/payments/webhook/paymob`,
     };
+}
+function formatEgp(amount) {
+    return `${Math.round(amount * 100) / 100} EGP`;
+}
+async function sendWithdrawalRequestEmailToAdmins(input) {
+    const admins = await db_1.default.user.findMany({
+        where: { role: "ADMIN" },
+        select: { email: true },
+    });
+    const recipients = admins
+        .map((a) => a.email?.trim())
+        .filter((email) => Boolean(email));
+    if (recipients.length === 0)
+        return;
+    try {
+        await mailer_1.default.sendMail({
+            from: (0, emailTemplate_1.getEmailFrom)(),
+            to: recipients.join(","),
+            subject: `New Withdrawal Request - ${formatEgp(input.amount)}`,
+            html: (0, emailTemplate_1.withdrawalNotificationEmailHtml)({
+                engineerName: input.engineerName,
+                engineerEmail: input.engineerEmail,
+                amount: formatEgp(input.amount),
+                method: input.method,
+                accountNumber: input.accountNumber,
+                requestDate: input.requestDate.toLocaleString("en-EG", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                }),
+            }),
+        });
+    }
+    catch (error) {
+        console.warn("Failed to send withdrawal notification email:", error instanceof Error ? error.message : "Unknown error");
+    }
 }
 async function getAcceptedBidForProject(projectId) {
     const bid = await db_1.default.bid.findFirst({
@@ -116,31 +177,10 @@ async function getAcceptedBidForProject(projectId) {
     return bid;
 }
 async function listPaymentMethods() {
-    if (!process.env.FAWATERK_API_TOKEN?.trim()) {
-        if ((0, fawaterk_dev_1.useFawaterkDevFallback)()) {
-            logFawaterkFallbackOnce("FAWATERK_API_TOKEN missing");
-            return fawaterk_dev_1.DEV_PAYMENT_METHODS;
-        }
-        throw new ApiError_1.default(503, "Payment gateway is not configured (FAWATERK_API_TOKEN)");
+    if (!process.env.PAYMOB_SECRET_KEY?.trim()) {
+        throw new ApiError_1.default(503, "Payment gateway is not configured (PAYMOB_SECRET_KEY)");
     }
-    try {
-        const methods = await (0, fawaterk_api_1.getFawaterkPaymentMethods)();
-        if (methods.length > 0)
-            return methods;
-        if ((0, fawaterk_dev_1.useFawaterkDevFallback)()) {
-            logFawaterkFallbackOnce("Fawaterk API returned success but zero payment methods for this vendor");
-            return fawaterk_dev_1.DEV_PAYMENT_METHODS;
-        }
-        return methods;
-    }
-    catch (error) {
-        if ((0, fawaterk_dev_1.useFawaterkDevFallback)()) {
-            const detail = error instanceof ApiError_1.default ? error.message : "Fawaterk unavailable";
-            logFawaterkFallbackOnce(`Fawaterk error: ${detail}`);
-            return fawaterk_dev_1.DEV_PAYMENT_METHODS;
-        }
-        throw error;
-    }
+    return (0, paymob_api_1.listConfiguredPaymobMethods)();
 }
 async function getProjectPayment(projectId, userId) {
     const project = await db_1.default.project.findUnique({
@@ -182,12 +222,11 @@ async function initiateProjectCheckout(clientId, projectId, input) {
     const bid = await getAcceptedBidForProject(projectId);
     // bid.engineerId is the EngineerProfile.id — correct foreign key for Payment.engineerId
     const engineerProfileId = bid.engineerId;
-    const config = (0, fawaterk_1.getFawaterkConfig)();
-    const amount = bid.price;
+    const config = (0, paymob_1.getPaymobConfig)();
+    const amount = toNumber(bid.price);
     const commission = Math.round(amount * config.commissionRate * 100) / 100;
     // Client is charged amount + commission so the platform fee is actually collected
     const totalCharged = Math.round((amount + commission) * 100) / 100;
-    const { first_name, last_name } = splitCustomerName(project.client.name);
     const payment = project.payment ??
         (await db_1.default.payment.create({
             data: {
@@ -199,47 +238,24 @@ async function initiateProjectCheckout(clientId, projectId, input) {
                 status: "PENDING",
             },
         }));
-    const redirectionUrls = getRedirectionUrls();
-    const fawaterkData = await (0, fawaterk_api_1.initiateFawaterkPayment)({
-        payment_method_id: input.paymentMethodId,
-        cartTotal: String(totalCharged),
-        currency: config.currency,
-        customer: {
-            first_name,
-            last_name,
-            email: project.client.email,
-            phone: input.phone ?? "01000000000",
-            address: input.address ?? "N/A",
-        },
-        redirectionUrls,
-        cartItems: [
-            {
-                name: project.title.slice(0, 100),
-                price: String(totalCharged),
-                quantity: "1",
-            },
-        ],
-        payLoad: {
-            projectId,
-            paymentId: payment.id,
-        },
-    });
+    const { intention, checkoutUrl } = await createProjectPaymobIntention(project, payment, totalCharged, input.phone ?? "01000000000", input.address ?? "N/A", input.paymentMethodId ? [input.paymentMethodId] : undefined);
     const updatedPayment = await db_1.default.payment.update({
         where: { id: payment.id },
         data: {
-            gatewayInvoiceId: String(fawaterkData.invoice_id),
-            gatewayInvoiceKey: fawaterkData.invoice_key,
+            gatewayInvoiceId: String(intention.orderId || intention.id),
+            gatewayInvoiceKey: intention.id,
             status: "PENDING",
         },
     });
     return {
         payment: updatedPayment,
-        invoiceId: fawaterkData.invoice_id,
-        invoiceKey: fawaterkData.invoice_key,
-        paymentData: fawaterkData.payment_data,
+        intentionId: intention.id,
+        orderId: intention.orderId,
+        checkoutUrl,
+        clientSecret: intention.clientSecret,
     };
 }
-/** Prepare Fawaterak IFrame checkout — creates pending payment + plugin config */
+/** Prepare Paymob Unified Checkout — creates pending payment + checkout URL */
 async function prepareProjectCheckoutSession(clientId, projectId, phone, address) {
     const project = await db_1.default.project.findUnique({
         where: { id: projectId },
@@ -259,19 +275,15 @@ async function prepareProjectCheckoutSession(clientId, projectId, phone, address
     if (project.payment?.status === "RELEASED") {
         throw new ApiError_1.default(400, "Payment has already been released");
     }
-    const iframe = (0, fawaterk_hashkey_1.buildIframeHashKey)();
-    if (!iframe) {
-        throw new ApiError_1.default(503, "Payment gateway is not configured (FAWATERK_VENDOR_KEY / FAWATERK_PROVIDER_KEY missing)");
-    }
     const bid = await getAcceptedBidForProject(projectId);
     // bid.engineerId is the EngineerProfile.id — correct foreign key for Payment.engineerId
     const engineerProfileId = bid.engineerId;
-    const config = (0, fawaterk_1.getFawaterkConfig)();
-    const amount = bid.price;
-    const commission = Math.round(amount * config.commissionRate * 100) / 100;
+    const currency = process.env.PAYMOB_CURRENCY ?? "EGP";
+    const commissionRate = Number(process.env.PLATFORM_COMMISSION_RATE ?? "0.1");
+    const amount = toNumber(bid.price);
+    const commission = Math.round(amount * commissionRate * 100) / 100;
     // Client is charged amount + commission so the platform fee is actually collected
     const totalCharged = Math.round((amount + commission) * 100) / 100;
-    const { first_name, last_name } = splitCustomerName(project.client.name);
     const payment = project.payment ??
         (await db_1.default.payment.create({
             data: {
@@ -283,10 +295,24 @@ async function prepareProjectCheckoutSession(clientId, projectId, phone, address
                 status: "PENDING",
             },
         }));
-    const redirectionUrls = getRedirectionUrls();
+    if (!process.env.PAYMOB_SECRET_KEY?.trim()) {
+        throw new ApiError_1.default(503, "Payment gateway is not configured (PAYMOB_SECRET_KEY)");
+    }
+    const config = (0, paymob_1.getPaymobConfig)();
+    const { intention, checkoutUrl } = await createProjectPaymobIntention(project, payment, totalCharged, phone ?? "01000000000", address ?? "N/A");
+    await db_1.default.payment.update({
+        where: { id: payment.id },
+        data: {
+            gatewayInvoiceId: String(intention.orderId || intention.id),
+            gatewayInvoiceKey: intention.id,
+            status: "PENDING",
+        },
+    });
     return {
-        hashKey: iframe.hashKey,
-        envType: iframe.envType,
+        checkoutUrl,
+        clientSecret: intention.clientSecret,
+        intentionId: intention.id,
+        orderId: intention.orderId,
         currency: config.currency,
         projectId,
         projectTitle: project.title,
@@ -294,104 +320,93 @@ async function prepareProjectCheckoutSession(clientId, projectId, phone, address
         amount,
         commission,
         totalCharged,
-        pluginRequest: {
-            cartTotal: String(totalCharged),
-            currency: config.currency,
-            customer: {
-                first_name,
-                last_name,
-                email: project.client.email,
-                phone: phone ?? "01000000000",
-                address: address ?? "N/A",
-            },
-            redirectionUrls: {
-                successUrl: redirectionUrls.successUrl,
-                failUrl: redirectionUrls.failUrl,
-                pendingUrl: redirectionUrls.pendingUrl,
-            },
-            cartItems: [
-                {
-                    name: project.title.slice(0, 100),
-                    price: String(totalCharged),
-                    quantity: "1",
-                },
-            ],
-            payLoad: {
-                projectId,
-                paymentId: payment.id,
-            },
-        },
     };
 }
-async function handleFawaterkWebhook(body) {
-    const config = (0, fawaterk_1.getFawaterkConfig)();
-    const paidParse = payments_validation_1.paidWebhookSchema.safeParse(body);
-    if (paidParse.success && paidParse.data.invoice_status === "paid") {
-        const payload = paidParse.data;
-        const valid = (0, fawaterk_webhook_1.verifyPaidWebhookHash)(payload.invoice_id, payload.invoice_key, payload.payment_method, payload.hashKey, config.vendorKey);
+async function handlePaymobWebhook(body, hmac) {
+    const config = (0, paymob_1.getPaymobConfig)();
+    const parsed = payments_validation_1.paymobWebhookSchema.safeParse(body);
+    if (!parsed.success) {
+        return { handled: false };
+    }
+    const payload = parsed.data;
+    const transaction = payload.obj;
+    if (config.hmacSecret) {
+        const valid = (0, paymob_webhook_1.verifyPaymobTransactionHmac)(transaction, hmac ?? "", config.hmacSecret);
         if (!valid) {
             throw new ApiError_1.default(401, "Invalid webhook signature");
         }
-        let payment = await db_1.default.payment.findFirst({
-            where: {
-                OR: [
-                    { gatewayInvoiceKey: payload.invoice_key },
-                    { gatewayInvoiceId: String(payload.invoice_id) },
-                ],
-            },
-        });
-        if (!payment) {
-            const pl = parsePayLoad(payload.pay_load);
-            if (pl?.paymentId) {
-                payment = await db_1.default.payment.findUnique({ where: { id: pl.paymentId } });
-            }
+    }
+    if (!transaction.success) {
+        return { handled: true, type: "failed", transactionId: transaction.id };
+    }
+    let payment = await db_1.default.payment.findFirst({
+        where: {
+            OR: [
+                ...(transaction.order?.id
+                    ? [{ gatewayInvoiceId: String(transaction.order.id) }]
+                    : []),
+            ],
+        },
+    });
+    if (!payment) {
+        const merchantOrderId = payload.merchant_order_id ?? transaction.order?.merchant_order_id;
+        const ref = (0, paymob_webhook_1.parsePaymobSpecialReference)(merchantOrderId);
+        if (ref?.paymentId) {
+            payment = await db_1.default.payment.findUnique({ where: { id: ref.paymentId } });
         }
-        if (!payment) {
-            throw new ApiError_1.default(404, "Payment record not found for this invoice");
-        }
-        const updated = await db_1.default.payment.update({
+    }
+    if (!payment) {
+        throw new ApiError_1.default(404, "Payment record not found for this transaction");
+    }
+    if (payment.status === "FUNDED" || payment.status === "RELEASED") {
+        return { handled: true, type: "paid", paymentId: payment.id, duplicate: true };
+    }
+    const netAmount = (0, paymentLedger_1.netEngineerAmount)(payment.amount, payment.commission);
+    const updated = await db_1.default.$transaction(async (tx) => {
+        const funded = await tx.payment.update({
             where: { id: payment.id },
             data: {
                 status: "FUNDED",
-                gatewayInvoiceId: String(payload.invoice_id),
-                gatewayInvoiceKey: payload.invoice_key,
+                gatewayInvoiceId: transaction.order?.id
+                    ? String(transaction.order.id)
+                    : payment.gatewayInvoiceId,
+                gatewayInvoiceKey: String(transaction.id),
             },
             include: {
-                project: { select: { title: true } },
+                project: { select: { id: true, title: true, clientId: true, status: true } },
                 engineer: { include: { user: { select: { id: true } } } },
             },
         });
-        const { createNotification } = await Promise.resolve().then(() => __importStar(require("../../utils/notifications")));
-        await createNotification(updated.engineer.user.id, "ESCROW_FUNDED", "Payment received", `The client paid for "${updated.project.title}". You can start working.`, `/messages?project=${updated.projectId}`);
-        return { handled: true, type: "paid", paymentId: payment.id };
-    }
-    const expiredParse = payments_validation_1.expiredWebhookSchema.safeParse(body);
-    if (expiredParse.success && expiredParse.data.status === "EXPIRED") {
-        const payload = expiredParse.data;
-        const valid = (0, fawaterk_webhook_1.verifyExpiredWebhookHash)(payload.referenceId, payload.paymentMethod, payload.hashKey, config.vendorKey);
-        if (!valid) {
-            throw new ApiError_1.default(401, "Invalid webhook signature");
-        }
-        if (payload.transactionKey) {
-            const payment = await db_1.default.payment.findFirst({
-                where: { gatewayInvoiceKey: payload.transactionKey },
+        if (funded.project.status !== "IN_PROGRESS") {
+            await tx.project.update({
+                where: { id: funded.projectId },
+                data: { status: "IN_PROGRESS" },
             });
-            if (payment && payment.status === "PENDING") {
-                await db_1.default.payment.update({
-                    where: { id: payment.id },
-                    data: {
-                        gatewayInvoiceId: null,
-                        gatewayInvoiceKey: null,
-                    },
-                });
-            }
         }
-        return { handled: true, type: "expired" };
-    }
-    return { handled: false };
-}
-function netEngineerAmount(amount, commission) {
-    return Math.round((amount - commission) * 100) / 100;
+        await (0, paymentLedger_1.recordPaymentLedger)(tx, funded.id, [
+            {
+                type: "FUNDED",
+                amount: toNumber(funded.amount) + toNumber(funded.commission),
+                note: "Client escrow payment received via Paymob",
+            },
+            {
+                type: "ENGINEER_ESCROW",
+                amount: netAmount,
+                note: "Engineer share held in escrow",
+            },
+            {
+                type: "PLATFORM_COMMISSION",
+                amount: funded.commission,
+                note: "Platform commission on funded payment",
+            },
+        ]);
+        return funded;
+    });
+    const { createNotification } = await Promise.resolve().then(() => __importStar(require("../../utils/notifications")));
+    await createNotification(updated.engineer.user.id, "ESCROW_FUNDED", "Payment received", `The client paid for "${updated.project.title}". You can start working.`, `/messages?project=${updated.projectId}`);
+    await createNotification(updated.engineer.user.id, "PROJECT_STARTED", "Project started", `Escrow is funded for "${updated.project.title}". Begin work when ready.`, `/messages?project=${updated.projectId}`);
+    await createNotification(updated.project.clientId, "PAYMENT_RECEIVED", "Payment successful", `Your payment for "${updated.project.title}" is secured in escrow.`, `/escrow?project=${updated.projectId}`);
+    return { handled: true, type: "paid", paymentId: payment.id };
 }
 function mapEngineerPaymentStatus(paymentStatus, projectStatus) {
     if (paymentStatus === "PENDING")
@@ -400,9 +415,6 @@ function mapEngineerPaymentStatus(paymentStatus, projectStatus) {
         return "refunded";
     if (paymentStatus === "RELEASED")
         return "paid";
-    if (paymentStatus === "FUNDED" && projectStatus === "AWAITING_APPROVAL") {
-        return "awaiting_release";
-    }
     if (paymentStatus === "FUNDED")
         return "in_progress";
     return "awaiting_payment";
@@ -415,12 +427,15 @@ async function getEngineerBalance(engineerUserId) {
     if (!profile) {
         return {
             availableBalance: 0,
+            pendingBalance: 0,
             securedBalance: 0,
             awaitingClientPayment: 0,
-            awaitingRelease: 0,
             transactions: [],
+            walletHistory: [],
+            withdrawalRequests: [],
         };
     }
+    const { wallet } = await db_1.default.$transaction(async (tx) => (0, wallet_1.settleMaturedWalletTransactions)(tx, engineerUserId));
     const payments = await db_1.default.payment.findMany({
         where: { engineerId: profile.id },
         include: {
@@ -431,18 +446,13 @@ async function getEngineerBalance(engineerUserId) {
     let availableBalance = 0;
     let securedBalance = 0;
     let awaitingClientPayment = 0;
-    let awaitingRelease = 0;
     const transactions = payments.map((payment) => {
-        const netAmount = netEngineerAmount(payment.amount, payment.commission);
+        const netAmount = (0, paymentLedger_1.netEngineerAmount)(payment.amount, payment.commission);
         const status = mapEngineerPaymentStatus(payment.status, payment.project.status);
         if (status === "paid")
             availableBalance += netAmount;
         else if (status === "in_progress")
             securedBalance += netAmount;
-        else if (status === "awaiting_release") {
-            securedBalance += netAmount;
-            awaitingRelease += netAmount;
-        }
         else if (status === "awaiting_payment") {
             awaitingClientPayment += netAmount;
         }
@@ -458,13 +468,91 @@ async function getEngineerBalance(engineerUserId) {
             updatedAt: payment.updatedAt,
         };
     });
+    const [walletHistory, withdrawalRequests] = await Promise.all([
+        db_1.default.walletTransaction.findMany({
+            where: { walletId: wallet.id },
+            orderBy: { createdAt: "desc" },
+            take: 100,
+        }),
+        db_1.default.withdrawalRequest.findMany({
+            where: { userId: engineerUserId },
+            orderBy: { createdAt: "desc" },
+            take: 100,
+        }),
+    ]);
     return {
-        availableBalance,
+        availableBalance: wallet.availableBalance,
+        pendingBalance: wallet.pendingBalance,
         securedBalance,
         awaitingClientPayment,
-        awaitingRelease,
         transactions,
+        walletHistory,
+        withdrawalRequests,
     };
+}
+async function listEngineerWithdrawalRequests(engineerUserId) {
+    await db_1.default.$transaction(async (tx) => (0, wallet_1.settleMaturedWalletTransactions)(tx, engineerUserId));
+    return db_1.default.withdrawalRequest.findMany({
+        where: { userId: engineerUserId },
+        orderBy: { createdAt: "desc" },
+    });
+}
+async function createEngineerWithdrawalRequest(engineerUserId, input) {
+    const engineer = await db_1.default.user.findUnique({
+        where: { id: engineerUserId },
+        select: { id: true, name: true, email: true, role: true },
+    });
+    if (!engineer || engineer.role !== "ENGINEER") {
+        throw new ApiError_1.default(403, "Only engineers can request withdrawals");
+    }
+    const amount = Math.round(input.amount * 100) / 100;
+    if (amount <= 0) {
+        throw new ApiError_1.default(400, "Withdrawal amount must be greater than zero");
+    }
+    const request = await db_1.default.$transaction(async (tx) => {
+        const { wallet } = await (0, wallet_1.settleMaturedWalletTransactions)(tx, engineerUserId);
+        const pendingRequests = await tx.withdrawalRequest.aggregate({
+            where: {
+                userId: engineerUserId,
+                status: { in: ["PENDING", "PROCESSING"] },
+            },
+            _sum: { amount: true },
+        });
+        const reserved = pendingRequests._sum.amount ?? 0;
+        const spendable = wallet.availableBalance - reserved;
+        if (amount > spendable) {
+            throw new ApiError_1.default(400, `Withdrawal exceeds available spendable balance (${formatEgp(spendable)})`);
+        }
+        const created = await tx.withdrawalRequest.create({
+            data: {
+                userId: engineerUserId,
+                amount,
+                method: input.method,
+                accountNumber: input.accountNumber,
+                status: "PENDING",
+            },
+        });
+        await tx.walletTransaction.create({
+            data: {
+                walletId: wallet.id,
+                amount,
+                type: "WITHDRAWAL",
+                status: "PENDING",
+                description: `Withdrawal requested via ${input.method}`,
+                relatedWithdrawalId: created.id,
+            },
+        });
+        return created;
+    });
+    await sendWithdrawalRequestEmailToAdmins({
+        engineerName: engineer.name,
+        engineerEmail: engineer.email,
+        amount,
+        method: input.method,
+        accountNumber: input.accountNumber,
+        requestDate: request.createdAt,
+    });
+    return request;
 }
 async function listEngineerEscrow(engineerUserId) {
     const balance = await getEngineerBalance(engineerUserId);
@@ -484,7 +572,6 @@ function mapEngineerEscrowLegacyStatus(status) {
         case "awaiting_payment":
             return "Pending";
         case "in_progress":
-        case "awaiting_release":
             return "In escrow";
         case "paid":
             return "Released";
@@ -541,10 +628,18 @@ async function releaseEscrowPayment(clientId, paymentId) {
     if (payment.status !== "FUNDED") {
         throw new ApiError_1.default(400, "Escrow must be funded before release");
     }
-    if (payment.project.status !== "AWAITING_APPROVAL") {
-        throw new ApiError_1.default(400, "The engineer must mark the project as finished before you can release payment");
+    if (!(0, project_status_1.isReviewableStatus)(payment.project.status)) {
+        throw new ApiError_1.default(400, "The engineer must submit work before you can release payment");
     }
+    const netAmount = (0, paymentLedger_1.netEngineerAmount)(payment.amount, payment.commission);
     const projectTitle = payment.project?.title ?? "Project";
+    const engineerProfile = await db_1.default.engineerProfile.findUnique({
+        where: { id: payment.engineerId },
+        select: { userId: true },
+    });
+    if (!engineerProfile) {
+        throw new ApiError_1.default(404, "Engineer profile not found for this payment");
+    }
     const updated = await db_1.default.$transaction(async (tx) => {
         const released = await tx.payment.update({
             where: { id: paymentId },
@@ -554,17 +649,42 @@ async function releaseEscrowPayment(clientId, paymentId) {
             where: { id: payment.projectId },
             data: { status: "COMPLETED" },
         });
+        await (0, paymentLedger_1.recordPaymentLedger)(tx, paymentId, [
+            {
+                type: "RELEASED",
+                amount: netAmount,
+                note: "Escrow released to engineer after client approval",
+            },
+            {
+                type: "PLATFORM_COMMISSION",
+                amount: payment.commission,
+                note: "Platform commission retained on release",
+            },
+        ]);
+        const wallet = await (0, wallet_1.ensureWallet)(tx, engineerProfile.userId);
+        await tx.wallet.update({
+            where: { id: wallet.id },
+            data: {
+                pendingBalance: { increment: netAmount },
+            },
+        });
+        await tx.walletTransaction.create({
+            data: {
+                walletId: wallet.id,
+                amount: netAmount,
+                type: "RELEASED",
+                status: "PENDING",
+                description: `Payment released for \"${projectTitle}\". Available after 14-day hold.`,
+                availableAt: (0, wallet_1.walletHoldReleaseDate)(),
+                relatedPaymentId: paymentId,
+            },
+        });
         return released;
     });
-    // Resolve engineer User.id from profile id for the notification
-    const engineerProfile = await db_1.default.engineerProfile.findUnique({
-        where: { id: payment.engineerId },
-        select: { userId: true },
-    });
     const { createNotification } = await Promise.resolve().then(() => __importStar(require("../../utils/notifications")));
-    if (engineerProfile) {
-        await createNotification(engineerProfile.userId, "FUNDS_RELEASED", "Payment sent to you", `The client released payment for "${projectTitle}". It is now in your balance.`, `/balance`);
-    }
+    await createNotification(engineerProfile.userId, "WORK_APPROVED", "Work approved", `The client approved your work on "${projectTitle}". Earnings are now pending in your wallet.`, `/balance`);
+    await createNotification(engineerProfile.userId, "FUNDS_RELEASED", "Payment queued to wallet", `The client released payment for "${projectTitle}". Funds will become available after the 14-day holding period.`, `/balance`);
+    await createNotification(payment.clientId, "PROJECT_COMPLETED", "Project completed", `Payment for "${projectTitle}" has been released. You can leave a review.`, `/projects?id=${payment.projectId}`);
     return updated;
 }
 async function getEscrowPaymentById(paymentId, userId) {
@@ -599,6 +719,59 @@ async function getEscrowPaymentById(paymentId, userId) {
         createdAt: payment.createdAt,
         updatedAt: payment.updatedAt,
     };
+}
+async function verifyOrSimulatePaymentSuccess(clientId, paymentId) {
+    const payment = await db_1.default.payment.findUnique({
+        where: { id: paymentId },
+        include: {
+            project: { select: { id: true, title: true, status: true } },
+            engineer: { include: { user: { select: { id: true } } } },
+        },
+    });
+    if (!payment)
+        throw new ApiError_1.default(404, "Payment not found");
+    if (payment.clientId !== clientId) {
+        throw new ApiError_1.default(403, "Only the client can verify this payment");
+    }
+    if (payment.status === "FUNDED" || payment.status === "RELEASED") {
+        return payment;
+    }
+    if (payment.status === "REFUNDED") {
+        throw new ApiError_1.default(400, "Cannot verify a refunded payment");
+    }
+    const netAmount = (0, paymentLedger_1.netEngineerAmount)(payment.amount, payment.commission);
+    const updated = await db_1.default.$transaction(async (tx) => {
+        const funded = await tx.payment.update({
+            where: { id: payment.id },
+            data: { status: "FUNDED" },
+            include: {
+                project: { select: { id: true, title: true, clientId: true, status: true } },
+                engineer: { include: { user: { select: { id: true } } } },
+            },
+        });
+        await (0, paymentLedger_1.recordPaymentLedger)(tx, funded.id, [
+            {
+                type: "FUNDED",
+                amount: toNumber(funded.amount) + toNumber(funded.commission),
+                note: "Client escrow payment manually verified",
+            },
+            {
+                type: "ENGINEER_ESCROW",
+                amount: netAmount,
+                note: "Engineer share held in escrow",
+            },
+            {
+                type: "PLATFORM_COMMISSION",
+                amount: funded.commission,
+                note: "Platform commission on funded payment",
+            },
+        ]);
+        return funded;
+    });
+    const { createNotification } = await Promise.resolve().then(() => __importStar(require("../../utils/notifications")));
+    await createNotification(updated.engineer.user.id, "ESCROW_FUNDED", "Payment received", `The client paid for "${updated.project.title}". You can start working.`, `/messages?project=${updated.projectId}`);
+    await createNotification(updated.project.clientId, "PAYMENT_RECEIVED", "Payment successful", `Your payment for "${updated.project.title}" is secured in escrow.`, `/escrow?project=${updated.projectId}`);
+    return updated;
 }
 async function refundEscrowPayment(clientId, paymentId) {
     const payment = await db_1.default.payment.findUnique({

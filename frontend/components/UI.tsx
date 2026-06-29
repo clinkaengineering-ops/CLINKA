@@ -8,6 +8,8 @@ import {
 } from "react";
 import { cn } from "@/utils/cn";
 import { IconCheck } from "./Icons";
+import { BrandLink } from "./BrandLogo";
+import { AuthShellAside } from "./AuthShellAside";
 import { ThemeToggle } from "./theme";
 import Link from "next/link";
 /* ---------- Button ---------- */
@@ -25,13 +27,13 @@ export const Button = forwardRef<
   ) => {
     const variants = {
       primary:
-        "bg-electric-600 hover:bg-electric-500 text-white shadow-md shadow-electric-600/25 border border-electric-500/50 dark:bg-electric-500 dark:hover:bg-electric-400 dark:text-slate-950 dark:border-electric-400/40 dark:shadow-electric-500/20 disabled:bg-electric-600/50 dark:disabled:bg-electric-500/40",
+        "bg-brand-teal hover:bg-electric-400 text-white shadow-md shadow-brand-teal/25 border border-brand-teal/50 dark:bg-electric-400 dark:hover:bg-electric-300 dark:text-slate-950 dark:border-electric-300/40 dark:shadow-brand-teal/20 disabled:bg-brand-teal/50 dark:disabled:bg-electric-400/40",
       secondary:
         "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50",
       ghost:
         "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50",
       outline:
-        "border-2 border-electric-500/50 text-electric-700 dark:text-electric-300 bg-transparent hover:bg-electric-500/10 dark:hover:bg-electric-500/15 disabled:opacity-50",
+        "border-2 border-brand-teal/50 text-brand-teal dark:text-electric-300 bg-transparent hover:bg-brand-teal/10 dark:hover:bg-electric-500/15 disabled:opacity-50",
       danger:
         "bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20 border border-rose-500/30 disabled:bg-rose-600/50",
     };
@@ -45,7 +47,7 @@ export const Button = forwardRef<
         ref={ref}
         className={cn(
           "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200",
-          "active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-electric-500/50",
+          "active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/50",
           "disabled:pointer-events-none disabled:opacity-50",
           variants[variant],
           sizes[size],
@@ -311,11 +313,11 @@ export const Field = ({
   </div>
 );
 
-export const Divider = () => (
+export const Divider = ({ label = "or" }: { label?: string }) => (
   <div className="flex items-center gap-3 my-1">
     <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
     <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
-      or
+      {label}
     </span>
     <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
   </div>
@@ -323,77 +325,18 @@ export const Divider = () => (
 
 export function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="relative flex items-center justify-center px-6 py-10 sm:px-10 lg:px-14 lg:py-12">
-        <div className="absolute end-6 top-6 lg:end-8 lg:top-8">
+    <div className="min-h-screen overflow-x-hidden grid lg:grid-cols-2 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="relative flex items-center justify-center px-4 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12">
+        <div className="absolute end-4 top-4 sm:end-6 sm:top-6 lg:end-8 lg:top-8">
           <ThemeToggle />
         </div>
-        <div className="w-full max-w-md px-1 sm:px-2">
-          <Link
-            href="/"
-            className="flex items-center gap-2 mb-8 text-slate-900 dark:text-white"
-          >
-            <div className="h-9 w-9 rounded-xl bg-linear-to-br from-electric-400 to-navy-700 flex items-center justify-center text-white shadow-lg shadow-electric-500/20">
-              <span className="font-bold text-sm">C</span>
-            </div>
-            <span className="font-bold tracking-wide">CLINKA</span>
-          </Link>
+        <div className="w-full max-w-md min-w-0">
+          <BrandLink logoClassName="h-8 w-auto max-w-[160px] sm:h-9 sm:max-w-[180px]" priority />
           {children}
         </div>
       </div>
 
-      <div className="hidden lg:flex relative overflow-hidden border-s border-slate-200/80 bg-gradient-to-br from-slate-100 via-electric-50/60 to-slate-200 text-slate-900 dark:border-slate-800 dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 dark:text-white">
-        <div className="absolute inset-0 grid-bg opacity-50 dark:opacity-40" />
-        <div className="absolute -bottom-40 -inset-e-40 h-150 w-150 bg-electric-400/25 dark:bg-electric-500/30 blur-[120px] rounded-full" />
-        <div className="relative flex flex-col justify-between p-12 w-full">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-electric-500/40 bg-electric-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-electric-700 dark:border-electric-500/30 dark:bg-electric-500/10 dark:text-electric-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-electric-500 dark:bg-electric-400 animate-pulse" />
-              Live Platform
-            </span>
-            <h2 className="mt-6 text-4xl font-bold leading-tight text-slate-900 dark:text-white">
-              Connect with top engineering talent
-            </h2>
-            <p className="mt-4 text-slate-600 dark:text-white/70">
-              Design, supervision, and review services - fast, safe, and
-              verified.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {[
-              "Verified engineers only",
-              "Secure escrow payments",
-              "Real-time project tracking",
-              "Design, supervision & review",
-            ].map((feature) => (
-              <div
-                key={feature}
-                className="flex items-center gap-3 p-3 rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-white/5"
-              >
-                <span className="h-7 w-7 rounded-lg bg-electric-500/20 text-electric-700 dark:bg-electric-500/30 dark:text-electric-300 flex items-center justify-center">
-                  ✓
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-100">{feature}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-white/60">
-            <div className="flex -space-x-2">
-              {["MH", "AK", "SR", "FE"].map((initials) => (
-                <div
-                  key={initials}
-                  className="h-7 w-7 rounded-full bg-linear-to-br from-electric-400 to-navy-600 border-2 border-white dark:border-navy-950 text-[10px] flex items-center justify-center font-bold text-white"
-                >
-                  {initials}
-                </div>
-              ))}
-            </div>
-            <span>Join 500+ engineers and clients</span>
-          </div>
-        </div>
-      </div>
+      <AuthShellAside />
     </div>
   );
 }
@@ -411,9 +354,9 @@ export function SectionHeader({
 }) {
   return (
     <div className={center ? "text-center" : ""}>
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-electric-600">{eyebrow}</p>
-      <h2 className="mt-4 text-4xl font-bold tracking-tight text-slate-950 dark:text-white">{title}</h2>
-      {subtitle ? <p className="mt-4 text-lg leading-8 text-slate-600 dark:text-slate-300">{subtitle}</p> : null}
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brand-copper-strong dark:text-brand-copper">{eyebrow}</p>
+      <h2 className="mt-4 text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-950 dark:text-white">{title}</h2>
+      {subtitle ? <p className="mt-3 sm:mt-4 text-base sm:text-lg leading-relaxed sm:leading-8 text-slate-600 dark:text-slate-300">{subtitle}</p> : null}
     </div>
   );
 }

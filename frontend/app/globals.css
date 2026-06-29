@@ -4,17 +4,21 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --brand-ice: #f2f7f9;
+  --brand-copper: #c97a51;
+  --brand-copper-strong: #8f4f2a;
+  --brand-teal: #196481;
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --muted: #64748b;
   --border: #e2e8f0;
-  --primary: #0ea5e9;
-  --primary-hover: #38bdf8;
+  --primary: #196481;
+  --primary-hover: #1f7a99;
   --primary-foreground: #ffffff;
-  --accent: #243f6e;
-  --ring: rgba(14, 165, 233, 0.35);
+  --accent: #c97a51;
+  --ring: rgba(25, 100, 129, 0.35);
   /* Local font fallback to avoid remote Google Fonts requests in dev */
   --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
@@ -26,11 +30,11 @@
   --card-foreground: #f1f5f9;
   --muted: #94a3b8;
   --border: #1e293b;
-  --primary: #38bdf8;
-  --primary-hover: #7dd3fc;
+  --primary: #2a8aab;
+  --primary-hover: #3d9fbe;
   --primary-foreground: #0f172a;
-  --accent: #7dd3fc;
-  --ring: rgba(56, 189, 248, 0.4);
+  --accent: #d4926f;
+  --ring: rgba(42, 138, 171, 0.4);
 }
 
 @theme {
@@ -46,19 +50,26 @@
   --color-navy-900: #14223c;
   --color-navy-950: #0a1322;
 
-  --color-electric-50: #f0f9ff;
-  --color-electric-100: #e0f2fe;
-  --color-electric-200: #bae6fd;
-  --color-electric-300: #7dd3fc;
-  --color-electric-400: #38bdf8;
-  --color-electric-500: #0ea5e9;
-  --color-electric-600: #0284c7;
-  --color-electric-700: #0369a1;
-  --color-electric-800: #075985;
-  --color-electric-900: #0c4a6e;
-  --color-electric-950: #082f49;
+  --color-electric-50: #f0f7fa;
+  --color-electric-100: #dceef4;
+  --color-electric-200: #b8dce8;
+  --color-electric-300: #7abdd0;
+  --color-electric-400: #3d9ab8;
+  --color-electric-500: #196481;
+  --color-electric-600: #145268;
+  --color-electric-700: #104a5e;
+  --color-electric-800: #0c3a4a;
+  --color-electric-900: #082a38;
+  --color-electric-950: #041a22;
+
+  --color-brand-ice: var(--brand-ice);
+  --color-brand-copper: var(--brand-copper);
+  --color-brand-copper-strong: var(--brand-copper-strong);
+  --color-brand-teal: var(--brand-teal);
 
   --font-display: var(--font-display);
+  --font-brand-latin: var(--font-brand-latin);
+  --font-brand-arabic: var(--font-brand-arabic);
 }
 
 @layer base {
@@ -67,6 +78,7 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     color-scheme: light;
+    overflow-x: hidden;
   }
 
   html.dark {
@@ -76,6 +88,8 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    overflow-x: hidden;
+    min-width: 0;
   }
 
   button:not(:disabled),
@@ -94,6 +108,14 @@
 }
 
 @layer utilities {
+  .font-brand-latin {
+    font-family: var(--font-brand-latin), var(--font-display), system-ui, sans-serif;
+  }
+
+  .font-brand-arabic {
+    font-family: var(--font-brand-arabic), var(--font-brand-latin), system-ui, sans-serif;
+  }
+
   .grid-bg {
     background-image:
       linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),

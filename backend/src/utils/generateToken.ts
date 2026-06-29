@@ -11,7 +11,7 @@ function generateToken(userId: number, role: string) {
     { userId, role },
     secret,
     {
-      expiresIn: (process.env.JWT_EXPIRES_IN as any) || "1d",
+      expiresIn: (process.env.JWT_EXPIRES_IN as any) || "30d",
     }
   );
 }

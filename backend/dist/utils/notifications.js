@@ -15,12 +15,18 @@ const DEFAULT_PREFS = {
 const PREF_KEY = {
     NEW_BID: "newBid",
     BID_ACCEPTED: "bidAccepted",
+    PAYMENT_RECEIVED: "fundsReleased",
     ESCROW_FUNDED: "fundsReleased",
     ESCROW_REFUNDED: "fundsReleased",
     FUND_REMINDER: "fundsReleased",
     FUNDS_RELEASED: "fundsReleased",
     NEW_MESSAGE: "newMessage",
     WORK_DELIVERED: "newMessage",
+    WORK_SUBMITTED: "newMessage",
+    REVISION_REQUESTED: "newMessage",
+    WORK_APPROVED: "fundsReleased",
+    PROJECT_STARTED: "bidAccepted",
+    PROJECT_COMPLETED: "newMessage",
     ACCOUNT_BANNED: "newMessage",
 };
 function mergeNotificationPrefs(role, stored) {

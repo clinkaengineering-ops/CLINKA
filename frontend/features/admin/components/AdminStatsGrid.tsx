@@ -37,8 +37,8 @@ export function AdminStatsGrid({ stats }: Props) {
         icon={<IconShield width={20} height={20} />}
       />
       <StatCard
-        label={t("ad.disputesOpen")}
-        value={String(stats.openDisputes)}
+        label={t("ad.supportOpen")}
+        value={String(stats.openSupportTickets)}
         icon={<IconAlert width={20} height={20} />}
       />
     </div>

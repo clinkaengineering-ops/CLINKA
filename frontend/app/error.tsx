@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandLink } from "@/components/BrandLogo";
+
 export default function Error({
   error,
   reset,
@@ -9,6 +11,7 @@ export default function Error({
 }) {
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-6">
+      <BrandLink logoClassName="h-10 w-auto" />
       <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
         Something went wrong
       </h2>
@@ -18,7 +21,7 @@ export default function Error({
       <button
         type="button"
         onClick={() => reset()}
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-electric-500"
+        className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-medium text-white hover:bg-electric-400 dark:bg-electric-400 dark:text-slate-950"
       >
         Try again
       </button>

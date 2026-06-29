@@ -1,15 +1,27 @@
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
-import { UpdateVerificationInput } from "./admin.validation";
+import {
+  UpdateSupportTicketInput,
+  UpdateVerificationInput,
+  UpdateWithdrawalRequestInput,
+} from "./admin.validation";
 import {
   banUserFor30Days,
 } from "../messages/ban.service";
 import { BanReason } from "../../generated/prisma/enums";
 import { createNotification } from "../../utils/notifications";
 import generateToken from "../../utils/generateToken";
+import {
+  ensureWallet,
+  settleMaturedWalletTransactions,
+} from "../../utils/wallet";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
+}
+
+function toNumber(value: number | { toString(): string }) {
+  return typeof value === "number" ? value : Number(value.toString());
 }
 
 export async function getAdminStats() {
@@ -19,6 +31,7 @@ export async function getAdminStats() {
     totalClients,
     totalProjects,
     pendingVerifications,
+    openSupportTickets,
     payments,
   ] = await Promise.all([
     db.user.count(),
@@ -26,16 +39,17 @@ export async function getAdminStats() {
     db.user.count({ where: { role: "CLIENT" } }),
     db.project.count(),
     db.engineerProfile.count({ where: { verificationStatus: "PENDING" } }),
+    db.supportTicket.count({ where: { status: "OPEN" } }),
     db.payment.findMany({
       where: { status: { in: ["FUNDED", "RELEASED"] } },
       select: { amount: true, status: true },
     }),
   ]);
 
-  const gmv = payments.reduce((sum, p) => sum + p.amount, 0);
+  const gmv = payments.reduce((sum, p) => sum + toNumber(p.amount), 0);
   const inEscrow = payments
     .filter((p) => p.status === "FUNDED")
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + toNumber(p.amount), 0);
 
   return {
     totalUsers,
@@ -45,7 +59,7 @@ export async function getAdminStats() {
     pendingVerifications,
     gmv,
     inEscrow,
-    openDisputes: 0,
+    openSupportTickets,
   };
 }
 
@@ -217,7 +231,7 @@ export async function updateEngineerProfileByAdmin(
 ) {
   const profile = await db.engineerProfile.findUnique({ where: { userId } });
   if (!profile) throw new ApiError(404, "Engineer profile not found");
-  
+
   const updated = await db.engineerProfile.update({
     where: { userId },
     data: {
@@ -226,7 +240,7 @@ export async function updateEngineerProfileByAdmin(
     },
     include: { user: true }
   });
-  
+
   return stripPassword(updated.user);
 }
 
@@ -420,6 +434,122 @@ export async function getAllPayments(page = 1, limit = 20) {
   };
 }
 
+export async function getWithdrawalRequests(page = 1, limit = 20) {
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    db.withdrawalRequest.findMany({
+      skip,
+      take: limit,
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    }),
+    db.withdrawalRequest.count(),
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+export async function updateWithdrawalRequestStatus(
+  withdrawalId: number,
+  adminId: number,
+  input: UpdateWithdrawalRequestInput,
+) {
+  const item = await db.withdrawalRequest.findUnique({
+    where: { id: withdrawalId },
+    include: {
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+  if (!item) throw new ApiError(404, "Withdrawal request not found");
+
+  if (item.status === "COMPLETED" || item.status === "REJECTED") {
+    throw new ApiError(400, "This withdrawal request is already finalized");
+  }
+
+  const shouldFinalize = input.status === "COMPLETED";
+  const shouldReject = input.status === "REJECTED";
+
+  const updated = await db.$transaction(async (tx) => {
+    await settleMaturedWalletTransactions(tx, item.userId);
+    const wallet = await ensureWallet(tx, item.userId);
+
+    if (shouldFinalize) {
+      if (wallet.availableBalance < item.amount) {
+        throw new ApiError(
+          400,
+          "Insufficient available balance to complete this withdrawal",
+        );
+      }
+
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          availableBalance: { decrement: item.amount },
+        },
+      });
+    }
+
+    await tx.walletTransaction.updateMany({
+      where: {
+        walletId: wallet.id,
+        relatedWithdrawalId: item.id,
+        type: "WITHDRAWAL",
+      },
+      data: {
+        status: shouldFinalize ? "COMPLETED" : shouldReject ? "REJECTED" : "PENDING",
+      },
+    });
+
+    return tx.withdrawalRequest.update({
+      where: { id: item.id },
+      data: {
+        status: input.status,
+        adminNotes: input.adminNotes,
+        processedAt: shouldFinalize || shouldReject ? new Date() : null,
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+  });
+
+  if (updated.status === "COMPLETED") {
+    await createNotification(
+      updated.user.id,
+      "FUNDS_RELEASED",
+      "Withdrawal completed",
+      `Your withdrawal request for ${updated.amount} EGP has been marked completed by the admin.`,
+      "/balance",
+    );
+  } else if (updated.status === "REJECTED") {
+    await createNotification(
+      updated.user.id,
+      "FUNDS_RELEASED",
+      "Withdrawal rejected",
+      `Your withdrawal request for ${updated.amount} EGP was rejected.${updated.adminNotes ? ` Note: ${updated.adminNotes}` : ""}`,
+      "/balance",
+    );
+  } else if (updated.status === "PROCESSING") {
+    await createNotification(
+      updated.user.id,
+      "FUNDS_RELEASED",
+      "Withdrawal is processing",
+      `Your withdrawal request for ${updated.amount} EGP is being processed by the admin.`,
+      "/balance",
+    );
+  }
+
+  return updated;
+}
+
 export async function overridePaymentStatus(paymentId: number, status: "RELEASED" | "REFUNDED") {
   return await db.payment.update({
     where: { id: paymentId },
@@ -443,7 +573,7 @@ export async function getAnalyticsData() {
   const dailyGmv: Record<string, number> = {};
   payments.forEach((p) => {
     const d = p.createdAt.toISOString().split("T")[0];
-    dailyGmv[d] = (dailyGmv[d] || 0) + p.amount;
+    dailyGmv[d] = (dailyGmv[d] || 0) + toNumber(p.amount);
   });
 
   return {
@@ -461,6 +591,54 @@ export async function getSystemLogs() {
     { timestamp: new Date(Date.now() - 7200000).toISOString(), level: "ERROR", message: "Database connection timeout in GET /projects." },
     { timestamp: new Date(Date.now() - 86400000).toISOString(), level: "INFO", message: "Server restarted successfully." },
   ];
+}
+
+export async function getSupportTickets(page = 1, limit = 20) {
+  const skip = (page - 1) * limit;
+  const [tickets, total] = await Promise.all([
+    db.supportTicket.findMany({
+      skip,
+      take: limit,
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      include: {
+        resolvedBy: { select: { id: true, name: true } },
+      },
+    }),
+    db.supportTicket.count(),
+  ]);
+
+  return {
+    tickets,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+export async function updateSupportTicket(
+  ticketId: number,
+  adminId: number,
+  data: UpdateSupportTicketInput,
+) {
+  const ticket = await db.supportTicket.findUnique({ where: { id: ticketId } });
+  if (!ticket) throw new ApiError(404, "Support ticket not found");
+  if (ticket.status !== "OPEN") {
+    throw new ApiError(400, "This ticket has already been resolved");
+  }
+
+  return db.supportTicket.update({
+    where: { id: ticketId },
+    data: {
+      status: data.status,
+      solution: data.solution,
+      resolvedById: adminId,
+      resolvedAt: new Date(),
+    },
+    include: {
+      resolvedBy: { select: { id: true, name: true } },
+    },
+  });
 }
 
 

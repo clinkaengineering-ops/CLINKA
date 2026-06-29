@@ -7,6 +7,7 @@ import {
   initiateCheckout,
   refundEscrowPayment,
   releaseEscrowPayment,
+  verifyPayment,
 } from "../api/payments.api";
 import { fetchMyProjects } from "@/features/projects/api/project.api";
 import type {
@@ -92,7 +93,7 @@ export function useEscrow() {
         fetchMyProjects(),
       ]);
       const inProgress = projects.filter((p) =>
-        ["IN_PROGRESS", "AWAITING_APPROVAL"].includes(p.status),
+        ["IN_PROGRESS", "SUBMITTED_FOR_REVIEW", "AWAITING_APPROVAL", "REVISION_REQUESTED"].includes(p.status),
       );
       setPayments(escrow);
       setContracts(toContractRows(escrow, inProgress));
@@ -113,9 +114,29 @@ export function useEscrow() {
     if (status === "success") {
       setBanner({
         type: "success",
-        message: "Payment completed. Escrow will update shortly.",
+        message: "Payment completed. Verifying escrow...",
       });
-      load();
+      // Auto-verify any pending payments for local/sync support
+      fetchEscrowPayments().then(async (escrows) => {
+        const pending = escrows.filter(e => e.status === "Pending");
+        if (pending.length > 0) {
+          try {
+            await Promise.all(pending.map(p => verifyPayment(p.id)));
+            setBanner({
+              type: "success",
+              message: "Payment successfully verified and escrow funded.",
+            });
+          } catch (err) {
+            console.error("Verification failed", err);
+          }
+        } else {
+          setBanner({
+            type: "success",
+            message: "Payment completed. Escrow updated.",
+          });
+        }
+        load();
+      }).catch(load);
     } else if (status === "fail") {
       setBanner({ type: "fail", message: "Payment was not completed." });
     } else if (status === "pending") {

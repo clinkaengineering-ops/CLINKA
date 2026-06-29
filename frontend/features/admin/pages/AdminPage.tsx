@@ -19,7 +19,9 @@ import { AdminFinancialsPanel } from "../components/AdminFinancialsPanel";
 import { AdminAnalytics } from "../components/AdminAnalytics";
 import { AdminSystemLogs } from "../components/AdminSystemLogs";
 
-type AdminTab = "overview" | "users" | "projects" | "reviews" | "financials" | "bans" | "chats" | "analytics" | "logs";
+import { AdminSupportTicketsPanel } from "../components/AdminSupportTicketsPanel";
+
+type AdminTab = "overview" | "users" | "projects" | "reviews" | "financials" | "bans" | "chats" | "analytics" | "logs" | "support";
 
 export function AdminPage() {
   const { t } = useI18n();
@@ -93,6 +95,7 @@ export function AdminPage() {
             ["chats", "Chats"],
             ["analytics", "Analytics"],
             ["logs", "System Logs"],
+            ["support", "Support"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -126,6 +129,8 @@ export function AdminPage() {
       {tab === "analytics" && <AdminAnalytics />}
 
       {tab === "logs" && <AdminSystemLogs />}
+
+      {tab === "support" && <AdminSupportTicketsPanel />}
 
       {tab === "overview" &&
         (loading ? (

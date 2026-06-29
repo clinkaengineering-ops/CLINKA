@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button, Card } from "@/components/UI";
 import { IconArrow } from "@/components/Icons";
+import { useI18n } from "@/i18n";
 
 export function MarketingPage({
   title,
@@ -14,11 +15,13 @@ export function MarketingPage({
   subtitle?: string;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
+
   return (
-    <div className="max-w-4xl mx-auto px-6 py-14">
+    <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10 sm:py-14">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">{title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight break-words">{title}</h1>
           {subtitle && (
             <p className="mt-2 text-slate-600 dark:text-slate-400">{subtitle}</p>
           )}
@@ -29,7 +32,7 @@ export function MarketingPage({
             size="sm"
             icon={<IconArrow width={16} height={16} />}
           >
-            Explore projects
+            {t("legal.nav.exploreProjects")}
           </Button>
         </Link>
       </div>
@@ -41,27 +44,27 @@ export function MarketingPage({
       <div className="mt-8 flex flex-wrap gap-3">
         <Link href="/about">
           <Button variant="ghost" size="sm">
-            About
+            {t("foot.about")}
           </Button>
         </Link>
         <Link href="/privacy">
           <Button variant="ghost" size="sm">
-            Privacy
+            {t("foot.privacy")}
           </Button>
         </Link>
         <Link href="/terms">
           <Button variant="ghost" size="sm">
-            Terms
+            {t("foot.terms")}
           </Button>
         </Link>
         <Link href="/security">
           <Button variant="ghost" size="sm">
-            Security
+            {t("foot.security")}
           </Button>
         </Link>
-        <Link href="/status">
+        <Link href="/help">
           <Button variant="ghost" size="sm">
-            Status
+            {t("foot.help")}
           </Button>
         </Link>
       </div>

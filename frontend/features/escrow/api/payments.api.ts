@@ -4,17 +4,17 @@ import type {
   CheckoutResult,
   EngineerBalanceSummary,
   EscrowPaymentItem,
-  FawaterkPaymentMethod,
   InitiateCheckoutPayload,
+  PaymentMethodOption,
 } from "../types";
 
 const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
   promise.then((r) => r.data.data);
 
 /** GET /payments/methods */
-export const fetchPaymentMethods = (): Promise<FawaterkPaymentMethod[]> =>
+export const fetchPaymentMethods = (): Promise<PaymentMethodOption[]> =>
   unwrap(
-    api.get<ApiResponse<FawaterkPaymentMethod[]>>("/payments/methods"),
+    api.get<ApiResponse<PaymentMethodOption[]>>("/payments/methods"),
   ).then((d) => d ?? []);
 
 /** GET /payments/escrow */
@@ -36,34 +36,20 @@ export const fetchEngineerBalance = (): Promise<EngineerBalanceSummary> =>
   );
 
 export interface CheckoutSession {
-  hashKey: string;
-  envType: "test" | "live";
+  checkoutUrl: string | null;
+  clientSecret: string | null;
+  intentionId: string | null;
+  orderId: number | null;
   currency: string;
   projectId: number;
   projectTitle: string;
   paymentId: number;
   amount: number;
-  pluginRequest: {
-    cartTotal: string;
-    currency: string;
-    customer: {
-      first_name: string;
-      last_name: string;
-      email: string;
-      phone: string;
-      address: string;
-    };
-    redirectionUrls: {
-      successUrl: string;
-      failUrl: string;
-      pendingUrl: string;
-    };
-    cartItems: Array<{ name: string; price: string; quantity: string }>;
-    payLoad: { projectId: number; paymentId: number };
-  };
+  commission?: number;
+  totalCharged?: number;
 }
 
-/** GET /payments/projects/:projectId/checkout-session — Fawaterak IFrame config */
+/** GET /payments/projects/:projectId/checkout-session — Paymob Unified Checkout */
 export const fetchCheckoutSession = (
   projectId: number,
   phone?: string,
@@ -104,9 +90,31 @@ export const refundEscrowPayment = (paymentId: number): Promise<unknown> =>
   unwrap(api.post<ApiResponse<unknown>>(`/payments/${paymentId}/refund`));
 
 /** GET /payments/escrow/:paymentId */
-export const fetchEscrowPaymentById = (paymentId: number) =>
-  unwrap(api.get<ApiResponse<unknown>>(`/payments/escrow/${paymentId}`));
+export const fetchEscrowPaymentById = (
+  paymentId: number,
+): Promise<EscrowPaymentItem> =>
+  unwrap(api.get<ApiResponse<EscrowPaymentItem>>(`/payments/escrow/${paymentId}`)).then(
+    (d) => {
+      if (!d) throw new Error("Payment not found");
+      return d;
+    },
+  );
 
 /** GET /payments/projects/:projectId */
 export const fetchProjectPayment = (projectId: number) =>
   unwrap(api.get<ApiResponse<unknown>>(`/payments/projects/${projectId}`));
+
+/** POST /payments/:paymentId/verify */
+export const verifyPayment = (paymentId: number): Promise<unknown> =>
+  unwrap(api.post<ApiResponse<unknown>>(`/payments/${paymentId}/verify`));
+
+/** POST /payments/engineer/withdrawals */
+export const createEngineerWithdrawal = (
+  payload: import("../types").CreateWithdrawalPayload,
+): Promise<import("../types").WithdrawalRequest> =>
+  unwrap(
+    api.post<ApiResponse<import("../types").WithdrawalRequest>>(
+      `/payments/engineer/withdrawals`,
+      payload,
+    ),
+  );

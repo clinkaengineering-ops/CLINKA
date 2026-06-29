@@ -12,7 +12,7 @@ export interface AdminStats {
   pendingVerifications: number;
   gmv: number;
   inEscrow: number;
-  openDisputes: number;
+  openSupportTickets: number;
 }
 
 export interface PendingVerification {
@@ -257,3 +257,89 @@ export interface SystemLog {
 export const fetchSystemLogs = () =>
   unwrap(api.get<ApiResponse<SystemLog[]>>("/admin/logs"));
 
+export interface AdminSupportTicket {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: "OPEN" | "SOLVED" | "UNRESOLVED";
+  solution: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedBy: { id: number; name: string } | null;
+}
+
+export interface AdminSupportTicketsPage {
+  tickets: AdminSupportTicket[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export const fetchSupportTickets = (page = 1, limit = 50): Promise<AdminSupportTicketsPage> =>
+  unwrap(
+    api.get<ApiResponse<AdminSupportTicketsPage>>("/admin/support-tickets", {
+      params: { page, limit },
+    }),
+  ).then((d) => {
+    if (!d) throw new Error("Failed to load support tickets");
+    return d;
+  });
+
+export const updateSupportTicket = (
+  ticketId: number,
+  data: { status: "SOLVED" | "UNRESOLVED"; solution: string },
+) =>
+  unwrap(
+    api.patch<ApiResponse<AdminSupportTicket>>(
+      `/admin/support-tickets/${ticketId}`,
+      data,
+    ),
+  );
+
+export interface AdminWithdrawalRequest {
+  id: number;
+  userId: number;
+  amount: number;
+  method: string;
+  accountNumber: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
+  adminNotes: string | null;
+  processedAt: string | null;
+  createdAt: string;
+  user: { id: number; name: string; email: string };
+}
+
+export interface AdminWithdrawalRequestsPage {
+  items: AdminWithdrawalRequest[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export const fetchAdminWithdrawalRequests = (
+  page = 1,
+  limit = 20,
+): Promise<AdminWithdrawalRequestsPage> =>
+  unwrap(
+    api.get<ApiResponse<AdminWithdrawalRequestsPage>>("/admin/withdrawals", {
+      params: { page, limit },
+    }),
+  ).then((d) => {
+    if (!d) throw new Error("Failed to load withdrawal requests");
+    return d;
+  });
+
+export const updateWithdrawalRequestStatus = (
+  withdrawalId: number,
+  data: { status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED"; adminNotes?: string },
+) =>
+  unwrap(
+    api.patch<ApiResponse<AdminWithdrawalRequest>>(
+      `/admin/withdrawals/${withdrawalId}`,
+      data,
+    ),
+  );

@@ -3,15 +3,14 @@
  */
 import api from "@/lib/axios";
 import type { ApiResponse } from "@/features/engineers/api/engineer.api";
+import type { ProjectStatus } from "../utils/projectStatus";
 
-const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
-  promise.then((r) => r.data.data);
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+export type { ProjectStatus } from "../utils/projectStatus";
 
 export type ServiceType = "DESIGN" | "SUPERVISION" | "REVIEW";
 
-export type ProjectStatus = "OPEN" | "IN_PROGRESS" | "AWAITING_APPROVAL" | "COMPLETED" | "CANCELLED";
+const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
+  promise.then((r) => r.data.data);
 
 export interface ProjectClient {
   id: number;
@@ -50,13 +49,34 @@ export interface Project {
   serviceType: ServiceType;
   status: ProjectStatus;
   clientId: number;
+  progressNote?: string | null;
+  progressUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   client?: ProjectClient;
   bids?: ProjectBid[];
   review?: ProjectReview | null;
   payment?: { id: number; status: string; amount: number; commission: number; } | null;
+  submissions?: ProjectSubmission[];
   _count?: { bids: number };
+}
+
+export interface ProjectDeliverable {
+  id: number;
+  type: "FILE" | "LINK";
+  url: string;
+  name: string | null;
+  mimeType: string | null;
+  createdAt: string;
+}
+
+export interface ProjectSubmission {
+  id: number;
+  projectId: number;
+  notes: string | null;
+  revisionNote: string | null;
+  createdAt: string;
+  deliverables: ProjectDeliverable[];
 }
 
 export interface CreateProjectPayload {
@@ -124,4 +144,45 @@ export const deleteProject = (id: number): Promise<void> =>
 
 export async function markProjectFinished(projectId: number): Promise<void> {
   await api.patch(`/projects/${projectId}/finish`);
+}
+
+export async function submitProjectWork(
+  projectId: number,
+  payload: { notes?: string; links?: { url: string; name?: string }[]; files?: File[] },
+): Promise<void> {
+  const form = new FormData();
+  if (payload.notes) form.append("notes", payload.notes);
+  if (payload.links?.length) form.append("links", JSON.stringify(payload.links));
+  for (const file of payload.files ?? []) {
+    form.append("files", file);
+  }
+  await api.post(`/projects/${projectId}/submit-work`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+export async function requestProjectRevision(
+  projectId: number,
+  note: string,
+): Promise<void> {
+  await api.post(`/projects/${projectId}/request-revision`, { note });
+}
+
+export async function approveProjectWork(projectId: number): Promise<void> {
+  await api.post(`/projects/${projectId}/approve`);
+}
+
+export async function updateProjectProgress(
+  projectId: number,
+  note: string,
+): Promise<void> {
+  await api.patch(`/projects/${projectId}/progress`, { note });
+}
+
+export async function fetchProjectSubmissions(
+  projectId: number,
+): Promise<ProjectSubmission[]> {
+  return unwrap(
+    api.get<ApiResponse<ProjectSubmission[]>>(`/projects/${projectId}/submissions`),
+  ).then((d) => d ?? []);
 }

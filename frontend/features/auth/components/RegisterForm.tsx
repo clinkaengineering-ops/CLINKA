@@ -1,13 +1,15 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useRegister } from "@/features/auth/hooks/useRegister";
 import { startGoogleSignIn } from "@/features/auth/lib/googleAuth";
 import {
   clientRegisterFormSchema,
   engineerRegisterStep2Schema,
-  engineerRegisterStep3Schema,
   engineerRegisterStep4Schema,
+  engineerResumePortfolioSchema,
   validateForm,
   type FieldErrors,
 } from "@/lib/validation";
@@ -21,15 +23,41 @@ import {
   IconMail,
   IconUser,
 } from "@/components/Icons";
+import { useI18n } from "@/i18n";
 
 type Role = "CLIENT" | "ENGINEER";
 type Specialty = "CIVIL" | "ARCHITECTURAL";
 type DocumentType = "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl";
 
+const NATIONALITIES = [
+  "Afghan", "Albanian", "Algerian", "Argentine", "Armenian", "Australian",
+  "Austrian", "Azerbaijani", "Bangladeshi", "Belarusian", "Belgian", "Bolivian",
+  "Bosnian", "Brazilian", "British", "Bulgarian", "Cambodian", "Cameroonian",
+  "Canadian", "Chilean", "Chinese", "Colombian", "Congolese", "Croatian", "Cuban",
+  "Czech", "Danish", "Dutch", "Ecuadorian", "Egyptian", "Emirati", "English",
+  "Estonian", "Ethiopian", "Finnish", "French", "Georgian", "German", "Ghanaian",
+  "Greek", "Guatemalan", "Hungarian", "Indian", "Indonesian", "Iranian", "Iraqi",
+  "Irish", "Israeli", "Italian", "Jamaican", "Japanese", "Jordanian", "Kazakh",
+  "Kenyan", "Kuwaiti", "Lebanese", "Libyan", "Lithuanian", "Malaysian", "Mexican",
+  "Mongolian", "Moroccan", "Nepalese", "New Zealander", "Nigerian", "Norwegian",
+  "Omani", "Pakistani", "Palestinian", "Peruvian", "Philippine", "Polish",
+  "Portuguese", "Qatari", "Romanian", "Russian", "Saudi", "Scottish", "Serbian",
+  "Singaporean", "Slovak", "Slovenian", "Somali", "South African", "South Korean",
+  "Spanish", "Sri Lankan", "Sudanese", "Swedish", "Swiss", "Syrian", "Taiwanese",
+  "Tanzanian", "Thai", "Tunisian", "Turkish", "Ukrainian", "Uruguayan", "American",
+  "Uzbek", "Venezuelan", "Vietnamese", "Yemeni", "Zimbabwean", "Other",
+];
+
 export function RegisterForm() {
-  const { registerClient, registerEngineer, loading, error } = useRegister();
+  const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const { registerClient, registerEngineer, resumeEngineer, checkEmail, loading, error } =
+    useRegister();
+
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<Role | null>(null);
+  const [resumeMode, setResumeMode] = useState(false);
+  const [existingPortfolioCount, setExistingPortfolioCount] = useState(0);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -39,53 +67,126 @@ export function RegisterForm() {
     nationality: "",
     documentType: "" as DocumentType,
     file: null as File | null,
+    portfolioFiles: [] as File[],
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const stepLabels = [
-    "Account type",
-    "Your details",
-    "Profile",
-    "Verification",
+  useEffect(() => {
+    const preset = searchParams.get("role");
+    if (preset === "engineer") {
+      setRole("ENGINEER");
+      setStep(2);
+    }
+  }, [searchParams]);
+
+  const totalSteps = resumeMode ? 2 : role === "CLIENT" ? 2 : 3;
+  const stepLabels = resumeMode
+    ? [t("auth.s1"), t("auth.portfolioResumeTitle")]
+    : role === "CLIENT"
+      ? [t("auth.s1"), t("auth.s2details")]
+      : [t("auth.s1"), t("auth.s2details"), t("auth.portfolioStep")];
+
+  const documentOptions = [
+    { type: "collegeIdUrl" as DocumentType, label: t("auth.doc.collegeId") },
+    { type: "certificateUrl" as DocumentType, label: t("auth.doc.certificate") },
+    { type: "syndicateCardUrl" as DocumentType, label: t("auth.doc.syndicate") },
   ];
+
+  const portfolioRequired = resumeMode
+    ? Math.max(3 - existingPortfolioCount, 0)
+    : 3;
+  const portfolioReady = form.portfolioFiles.length >= portfolioRequired;
+
+  async function inspectEmail(email: string) {
+    if (!email.includes("@")) return;
+    try {
+      const status = await checkEmail(email);
+      if (status.status === "resume_engineer") {
+        setResumeMode(true);
+        setRole("ENGINEER");
+        setExistingPortfolioCount(status.portfolioCount);
+        setStep(2);
+        setFieldErrors({});
+      } else if (status.status === "exists") {
+        setResumeMode(false);
+        setFieldErrors({
+          email: t("auth.emailExists"),
+        });
+      } else {
+        setResumeMode(false);
+        setExistingPortfolioCount(0);
+        if (fieldErrors.email === t("auth.emailExists")) {
+          setFieldErrors((prev) => {
+            const next = { ...prev };
+            delete next.email;
+            return next;
+          });
+        }
+      }
+    } catch {
+      /* ignore probe errors */
+    }
+  }
 
   function validateCurrentStep(): boolean {
     if (step === 1) {
       if (!role) {
+        setFieldErrors({ _form: t("auth.selectRole") });
+        return false;
+      }
+      setFieldErrors({});
+      return true;
+    }
+
+    if (step === 2 && resumeMode) {
+      const base = validateForm(
+        engineerResumePortfolioSchema.pick({ email: true, password: true }),
+        { email: form.email, password: form.password },
+      );
+      if (!base.success) {
+        setFieldErrors(base.errors);
+        return false;
+      }
+      if (form.portfolioFiles.length < portfolioRequired) {
         setFieldErrors({
-          _form: "Select whether you are a client or engineer",
+          portfolioFiles: t("auth.portfolioMin").replace("{count}", String(portfolioRequired)),
         });
         return false;
       }
       setFieldErrors({});
       return true;
     }
+
     if (step === 2) {
-      const result = validateForm(engineerRegisterStep2Schema, form);
-      if (!result.success) {
-        setFieldErrors(result.errors);
-        return false;
+      if (role === "CLIENT") {
+        const result = validateForm(clientRegisterFormSchema, form);
+        if (!result.success) {
+          setFieldErrors(result.errors);
+          return false;
+        }
+      } else {
+        const result = validateForm(engineerRegisterStep2Schema, {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          specialty: form.specialty || undefined,
+          bio: form.bio || undefined,
+          nationality: form.nationality || undefined,
+        });
+        if (!result.success) {
+          setFieldErrors(result.errors);
+          return false;
+        }
       }
       setFieldErrors({});
       return true;
     }
+
     if (step === 3 && role === "ENGINEER") {
-      const result = validateForm(engineerRegisterStep3Schema, {
-        specialty: form.specialty || undefined,
-        bio: form.bio || undefined,
-        nationality: form.nationality || undefined,
-      });
-      if (!result.success) {
-        setFieldErrors(result.errors);
-        return false;
-      }
-      setFieldErrors({});
-      return true;
-    }
-    if (step === 4 && role === "ENGINEER") {
       const result = validateForm(engineerRegisterStep4Schema, {
         documentType: form.documentType || undefined,
         file: form.file ?? undefined,
+        portfolioFiles: form.portfolioFiles,
       });
       if (!result.success) {
         setFieldErrors(result.errors);
@@ -94,60 +195,82 @@ export function RegisterForm() {
       setFieldErrors({});
       return true;
     }
+
     return true;
   }
 
   function goNext() {
     if (!validateCurrentStep()) return;
+    if (step === 2 && role === "CLIENT") {
+      void handleDone();
+      return;
+    }
     setStep(step + 1);
   }
 
   async function handleDone() {
     if (!validateCurrentStep()) return;
-    if (role === "CLIENT") {
-      const result = validateForm(clientRegisterFormSchema, form);
-      if (!result.success) {
-        setFieldErrors(result.errors);
-        return;
-      }
+
+    if (resumeMode) {
+      await resumeEngineer({
+        email: form.email,
+        password: form.password,
+        portfolioFiles: form.portfolioFiles,
+      });
+      return;
     }
+
     if (role === "CLIENT") {
       await registerClient({
         name: form.name,
         email: form.email,
         password: form.password,
       });
-    } else {
-      await registerEngineer({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        specialty: form.specialty,
-        bio: form.bio,
-        nationality: form.nationality,
-        documentType: form.documentType,
-        file: form.file!,
-      });
+      return;
     }
+
+    await registerEngineer({
+      name: form.name,
+      email: form.email,
+      password: form.password,
+      specialty: form.specialty,
+      bio: form.bio,
+      nationality: form.nationality,
+      documentType: form.documentType,
+      file: form.file!,
+      portfolioFiles: form.portfolioFiles,
+    });
+  }
+
+  function addPortfolioFiles(files: FileList | null) {
+    if (!files?.length) return;
+    setForm((prev) => ({
+      ...prev,
+      portfolioFiles: [...prev.portfolioFiles, ...Array.from(files)].slice(0, 10),
+    }));
+  }
+
+  function removePortfolioFile(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      portfolioFiles: prev.portfolioFiles.filter((_, i) => i !== index),
+    }));
   }
 
   return (
     <Card className="p-6 sm:p-8">
       <p className="text-xs uppercase tracking-wider text-electric-600 font-bold">
-        Step {step} of {role === "CLIENT" ? 2 : stepLabels.length}
+        {t("auth.step")} {step} {t("auth.of")} {totalSteps}
       </p>
       <h1 className="mt-1 text-2xl font-bold">{stepLabels[step - 1]}</h1>
 
-      {/* Progress bar */}
       <div className="mt-3 flex gap-2">
-        {(role === "CLIENT" ? [1, 2] : [1, 2, 3, 4]).map((_, i) => (
+        {Array.from({ length: totalSteps }).map((_, i) => (
           <div
             key={i}
             className={cn(
               "h-1 flex-1 rounded-full transition",
-              i + 1 <= step
-                ? "bg-electric-500"
-                : "bg-slate-200 dark:bg-slate-800",
+              i + 1 <= step ? "bg-electric-500" : "bg-slate-200 dark:bg-slate-800",
             )}
           />
         ))}
@@ -159,26 +282,29 @@ export function RegisterForm() {
       )}
 
       <div className="mt-6">
-        {/* Step 1 — Role selection */}
         {step === 1 && (
           <div className="space-y-3">
             {[
               {
                 role: "ENGINEER" as Role,
-                title: "I'm an Engineer",
-                desc: "Civil or architectural - offer your services",
+                title: t("auth.iEngShort"),
+                desc: t("auth.iEngShortDesc"),
                 icon: <IconBriefcase width={20} height={20} />,
               },
               {
                 role: "CLIENT" as Role,
-                title: "I'm a Client",
-                desc: "Post projects and hire verified engineers",
+                title: t("auth.iClientShort"),
+                desc: t("auth.iClientShortDesc"),
                 icon: <IconUser width={20} height={20} />,
               },
             ].map((o) => (
               <button
                 key={o.role}
-                onClick={() => setRole(o.role)}
+                type="button"
+                onClick={() => {
+                  setRole(o.role);
+                  setResumeMode(false);
+                }}
                 className={cn(
                   "w-full p-4 rounded-xl border text-start transition flex items-center gap-3 group",
                   role === o.role
@@ -194,25 +320,16 @@ export function RegisterForm() {
                   <p className="text-xs text-slate-500">{o.desc}</p>
                 </div>
                 {role === o.role ? (
-                  <IconCheck
-                    width={18}
-                    height={18}
-                    className="text-electric-500"
-                  />
+                  <IconCheck width={18} height={18} className="text-electric-500" />
                 ) : (
-                  <IconArrow
-                    width={16}
-                    height={16}
-                    className="text-slate-400 rtl:rotate-180"
-                  />
+                  <IconArrow width={16} height={16} className="text-slate-400 rtl:rotate-180" />
                 )}
               </button>
             ))}
           </div>
         )}
 
-        {/* Step 2 — Basic details */}
-        {step === 2 && (
+        {step === 2 && !resumeMode && (
           <div className="space-y-4">
             {role && (
               <>
@@ -222,244 +339,151 @@ export function RegisterForm() {
                   className="w-full !h-11"
                   onClick={() => startGoogleSignIn({ role: role ?? "CLIENT" })}
                 >
-                  Continue with Google
+                  {t("auth.google")}
                 </Button>
-                <Divider />
+                <Divider label={t("common.or")} />
               </>
             )}
-            <Field label="Full name" error={fieldErrors.name}>
+
+            <Field label={t("auth.fullName")} error={fieldErrors.name}>
               <Input
                 icon={<IconUser width={16} height={16} />}
                 type="text"
-                placeholder="Mohamed Talal"
+                placeholder={t("auth.namePh")}
                 value={form.name}
                 error={!!fieldErrors.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </Field>
-            <Field label="Email" error={fieldErrors.email}>
+
+            <Field label={t("auth.email")} error={fieldErrors.email}>
               <Input
                 icon={<IconMail width={16} height={16} />}
                 type="email"
-                placeholder="you@firm.com"
+                placeholder={t("auth.emailPh")}
                 value={form.email}
                 error={!!fieldErrors.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onBlur={(e) => void inspectEmail(e.target.value)}
               />
             </Field>
-            <Field label="Password" error={fieldErrors.password}>
+
+            <Field label={t("auth.password")} error={fieldErrors.password}>
               <Input
                 icon={<IconLock width={16} height={16} />}
                 type="password"
-                placeholder="Min. 8 characters"
+                placeholder={t("auth.passMin")}
                 value={form.password}
                 error={!!fieldErrors.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
             </Field>
-          </div>
-        )}
 
-        {/* Step 3 — Specialty + Bio + Nationality (Engineer only) */}
-        {step === 3 && role === "ENGINEER" && (
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Specialty
-              </label>
-              {fieldErrors.specialty && (
-                <p className="mt-1 text-xs text-rose-500">
-                  {fieldErrors.specialty}
-                </p>
-              )}
+            {role === "ENGINEER" && (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t("auth.specialty")}
+                  </label>
+                  {fieldErrors.specialty && (
+                    <p className="mt-1 text-xs text-rose-500">{fieldErrors.specialty}</p>
+                  )}
+                  <div className="mt-1.5 grid grid-cols-2 gap-3">
+                    {(["CIVIL", "ARCHITECTURAL"] as Specialty[]).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setForm({ ...form, specialty: s })}
+                        className={cn(
+                          "p-3 rounded-xl border text-sm font-semibold text-center transition",
+                          form.specialty === s
+                            ? "border-electric-500 bg-electric-500/5 text-electric-600"
+                            : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60",
+                        )}
+                      >
+                        {s === "CIVIL" ? t("auth.civil") : t("auth.architectural")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="mt-1.5 grid grid-cols-2 gap-3">
-                {(["CIVIL", "ARCHITECTURAL"] as Specialty[]).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setForm({ ...form, specialty: s })}
-                    className={cn(
-                      "p-3 rounded-xl border text-sm font-semibold text-center transition",
-                      form.specialty === s
-                        ? "border-electric-500 bg-electric-500/5 text-electric-600"
-                        : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60",
-                    )}
+                <Field label={t("em.nationality")} error={fieldErrors.nationality}>
+                  <select
+                    value={form.nationality}
+                    onChange={(e) => setForm({ ...form, nationality: e.target.value })}
+                    className="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
                   >
-                    {s === "CIVIL" ? "Civil" : "Architectural"}
-                  </button>
-                ))}
-              </div>
-            </div>
+                    <option value="">{t("auth.nationalityPh")}</option>
+                    {NATIONALITIES.map((nationality) => (
+                      <option key={nationality} value={nationality}>
+                        {nationality}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Bio{" "}
-                <span className="text-slate-400 font-normal">(optional)</span>
-              </label>
-
-              <Textarea
-                rows={3}
-                placeholder="Tell clients about your experience..."
-                value={form.bio}
-                onChange={(e: any) => setForm({ ...form, bio: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Nationality
-              </label>
-              {fieldErrors.nationality && (
-                <p className="mt-1 text-xs text-rose-500">
-                  {fieldErrors.nationality}
-                </p>
-              )}
-
-              <select
-                value={form.nationality}
-                onChange={(e) =>
-                  setForm({ ...form, nationality: e.target.value })
-                }
-                className="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
-              >
-                <option value="">Select nationality...</option>
-
-                {[
-                  "Afghan",
-                  "Albanian",
-                  "Algerian",
-                  "Argentine",
-                  "Armenian",
-                  "Australian",
-                  "Austrian",
-                  "Azerbaijani",
-                  "Bangladeshi",
-                  "Belarusian",
-                  "Belgian",
-                  "Bolivian",
-                  "Bosnian",
-                  "Brazilian",
-                  "British",
-                  "Bulgarian",
-                  "Cambodian",
-                  "Cameroonian",
-                  "Canadian",
-                  "Chilean",
-                  "Chinese",
-                  "Colombian",
-                  "Congolese",
-                  "Croatian",
-                  "Cuban",
-                  "Czech",
-                  "Danish",
-                  "Dutch",
-                  "Ecuadorian",
-                  "Egyptian",
-                  "Emirati",
-                  "English",
-                  "Estonian",
-                  "Ethiopian",
-                  "Finnish",
-                  "French",
-                  "Georgian",
-                  "German",
-                  "Ghanaian",
-                  "Greek",
-                  "Guatemalan",
-                  "Hungarian",
-                  "Indian",
-                  "Indonesian",
-                  "Iranian",
-                  "Iraqi",
-                  "Irish",
-                  "Israeli",
-                  "Italian",
-                  "Jamaican",
-                  "Japanese",
-                  "Jordanian",
-                  "Kazakh",
-                  "Kenyan",
-                  "Kuwaiti",
-                  "Lebanese",
-                  "Libyan",
-                  "Lithuanian",
-                  "Malaysian",
-                  "Mexican",
-                  "Mongolian",
-                  "Moroccan",
-                  "Nepalese",
-                  "New Zealander",
-                  "Nigerian",
-                  "Norwegian",
-                  "Omani",
-                  "Pakistani",
-                  "Palestinian",
-                  "Peruvian",
-                  "Philippine",
-                  "Polish",
-                  "Portuguese",
-                  "Qatari",
-                  "Romanian",
-                  "Russian",
-                  "Saudi",
-                  "Scottish",
-                  "Serbian",
-                  "Singaporean",
-                  "Slovak",
-                  "Slovenian",
-                  "Somali",
-                  "South African",
-                  "South Korean",
-                  "Spanish",
-                  "Sri Lankan",
-                  "Sudanese",
-                  "Swedish",
-                  "Swiss",
-                  "Syrian",
-                  "Taiwanese",
-                  "Tanzanian",
-                  "Thai",
-                  "Tunisian",
-                  "Turkish",
-                  "Ukrainian",
-                  "Uruguayan",
-                  "American",
-                  "Uzbek",
-                  "Venezuelan",
-                  "Vietnamese",
-                  "Yemeni",
-                  "Zimbabwean",
-                  "Other",
-                ].map((nationality) => (
-                  <option key={nationality} value={nationality}>
-                    {nationality}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t("auth.bio")}{" "}
+                    <span className="text-slate-400 font-normal">({t("auth.optional")})</span>
+                  </label>
+                  <Textarea
+                    rows={3}
+                    placeholder={t("auth.bioPh")}
+                    value={form.bio}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setForm({ ...form, bio: e.target.value })
+                    }
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        {/* Step 4 — Document upload (Engineer only) */}
-        {step === 4 && role === "ENGINEER" && (
+        {step === 2 && resumeMode && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Upload one document to verify your engineering credentials
-            </p>
+            <p className="text-sm text-slate-500">{t("auth.portfolioResumeHint")}</p>
+            <Field label={t("auth.email")} error={fieldErrors.email}>
+              <Input
+                icon={<IconMail width={16} height={16} />}
+                type="email"
+                value={form.email}
+                error={!!fieldErrors.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onBlur={(e) => void inspectEmail(e.target.value)}
+              />
+            </Field>
+            <Field label={t("auth.password")} error={fieldErrors.password}>
+              <Input
+                icon={<IconLock width={16} height={16} />}
+                type="password"
+                value={form.password}
+                error={!!fieldErrors.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+              />
+            </Field>
+            <PortfolioUploadSection
+              t={t}
+              files={form.portfolioFiles}
+              required={portfolioRequired}
+              error={fieldErrors.portfolioFiles}
+              onAdd={addPortfolioFiles}
+              onRemove={removePortfolioFile}
+            />
+          </div>
+        )}
+
+        {step === 3 && role === "ENGINEER" && !resumeMode && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">{t("auth.uploadDocHint")}</p>
             {(fieldErrors.documentType || fieldErrors.file) && (
               <p className="text-xs text-rose-500">
                 {fieldErrors.documentType ?? fieldErrors.file}
               </p>
             )}
             <div className="space-y-3">
-              {(
-                [
-                  { type: "collegeIdUrl", label: "College ID" },
-                  { type: "certificateUrl", label: "Engineering Certificate" },
-                  { type: "syndicateCardUrl", label: "Syndicate Card" },
-                ] as { type: DocumentType; label: string }[]
-              ).map((d) => (
+              {documentOptions.map((d) => (
                 <label
                   key={d.type}
                   className={cn(
@@ -487,49 +511,122 @@ export function RegisterForm() {
                   <span className="text-xs text-electric-600 font-semibold">
                     {form.documentType === d.type && form.file
                       ? form.file.name
-                      : "Upload"}
+                      : t("auth.upload")}
                   </span>
                 </label>
               ))}
             </div>
+
+            <PortfolioUploadSection
+              t={t}
+              files={form.portfolioFiles}
+              required={portfolioRequired}
+              error={fieldErrors.portfolioFiles}
+              onAdd={addPortfolioFiles}
+              onRemove={removePortfolioFile}
+            />
           </div>
         )}
       </div>
 
-      {/* Navigation buttons */}
       <div className="mt-6 flex justify-between gap-3">
         <button
+          type="button"
           onClick={() => setStep(Math.max(1, step - 1))}
           disabled={step === 1}
           className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30"
         >
-          Back
+          {t("auth.back")}
         </button>
 
-        {step < (role === "CLIENT" ? 2 : 4) ? (
+        {step < totalSteps ? (
           <Button onClick={goNext} icon={<IconArrow width={14} height={14} />}>
-            Continue
+            {t("auth.continue")}
           </Button>
         ) : (
           <Button
-            onClick={handleDone}
-            disabled={loading}
+            onClick={() => void handleDone()}
+            disabled={
+              loading ||
+              (resumeMode && !portfolioReady) ||
+              (step === 3 && role === "ENGINEER" && !portfolioReady)
+            }
             icon={<IconCheck width={14} height={14} />}
           >
-            {loading ? "Creating account..." : "Finish"}
+            {loading ? t("auth.creating") : t("auth.finishBtn")}
           </Button>
         )}
       </div>
 
       <p className="text-center text-sm text-slate-500 mt-4">
-        Already have an account?{" "}
-        <Link
-          href="/login"
-          className="text-electric-600 font-semibold hover:underline"
-        >
-          Sign in
+        {t("auth.have")}{" "}
+        <Link href="/login" className="text-electric-600 font-semibold hover:underline">
+          {t("auth.signInLink")}
         </Link>
       </p>
     </Card>
+  );
+}
+
+function PortfolioUploadSection({
+  t,
+  files,
+  required,
+  error,
+  onAdd,
+  onRemove,
+}: {
+  t: (key: string) => string;
+  files: File[];
+  required: number;
+  error?: string;
+  onAdd: (files: FileList | null) => void;
+  onRemove: (index: number) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            {t("auth.portfolioTitle")}
+          </p>
+          <p className="text-xs text-slate-500">{t("auth.portfolioHint")}</p>
+        </div>
+        <span className="text-xs font-semibold text-electric-600">
+          {files.length}/{required}
+        </span>
+      </div>
+      {error && <p className="text-xs text-rose-500">{error}</p>}
+      <label className="flex flex-col items-center justify-center gap-2 p-5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 cursor-pointer hover:border-electric-500 transition">
+        <span className="text-sm font-medium text-electric-600">{t("auth.portfolioAdd")}</span>
+        <span className="text-xs text-slate-500">{t("auth.portfolioFormats")}</span>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/jpg,image/webp"
+          multiple
+          className="hidden"
+          onChange={(e) => onAdd(e.target.files)}
+        />
+      </label>
+      {files.length > 0 && (
+        <ul className="space-y-2">
+          {files.map((file, index) => (
+            <li
+              key={`${file.name}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm"
+            >
+              <span className="truncate">{file.name}</span>
+              <button
+                type="button"
+                className="text-xs font-semibold text-rose-500"
+                onClick={() => onRemove(index)}
+              >
+                {t("common.remove")}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

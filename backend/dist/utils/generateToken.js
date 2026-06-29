@@ -10,7 +10,7 @@ function generateToken(userId, role) {
         throw new Error("JWT_SECRET is not defined");
     }
     return jsonwebtoken_1.default.sign({ userId, role }, secret, {
-        expiresIn: process.env.JWT_EXPIRES_IN || "1d",
+        expiresIn: process.env.JWT_EXPIRES_IN || "30d",
     });
 }
 exports.default = generateToken;

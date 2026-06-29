@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -10,10 +43,13 @@ exports.getProjectPaymentController = getProjectPaymentController;
 exports.listEscrowController = listEscrowController;
 exports.listEngineerEscrowController = listEngineerEscrowController;
 exports.getEngineerBalanceController = getEngineerBalanceController;
+exports.listEngineerWithdrawalsController = listEngineerWithdrawalsController;
+exports.createEngineerWithdrawalController = createEngineerWithdrawalController;
 exports.releaseEscrowController = releaseEscrowController;
 exports.getEscrowByIdController = getEscrowByIdController;
 exports.refundEscrowController = refundEscrowController;
-exports.fawaterkWebhookController = fawaterkWebhookController;
+exports.paymobWebhookController = paymobWebhookController;
+exports.verifyPaymentController = verifyPaymentController;
 const ApiResponse_1 = __importDefault(require("../../utils/ApiResponse"));
 const payments_validation_1 = require("./payments.validation");
 const payments_service_1 = require("./payments.service");
@@ -98,6 +134,29 @@ async function getEngineerBalanceController(req, res, next) {
         next(error);
     }
 }
+async function listEngineerWithdrawalsController(req, res, next) {
+    try {
+        const items = await (0, payments_service_1.listEngineerWithdrawalRequests)(req.user.userId);
+        res
+            .status(200)
+            .json((0, ApiResponse_1.default)(200, "Engineer withdrawals fetched successfully", items));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function createEngineerWithdrawalController(req, res, next) {
+    try {
+        const input = payments_validation_1.createWithdrawalRequestSchema.parse(req.body);
+        const item = await (0, payments_service_1.createEngineerWithdrawalRequest)(req.user.userId, input);
+        res
+            .status(201)
+            .json((0, ApiResponse_1.default)(201, "Withdrawal request submitted", item));
+    }
+    catch (error) {
+        next(error);
+    }
+}
 async function releaseEscrowController(req, res, next) {
     try {
         const paymentId = Number(req.params.paymentId);
@@ -134,10 +193,24 @@ async function refundEscrowController(req, res, next) {
         next(error);
     }
 }
-async function fawaterkWebhookController(req, res, next) {
+async function paymobWebhookController(req, res, next) {
     try {
-        const result = await (0, payments_service_1.handleFawaterkWebhook)(req.body);
+        const hmac = typeof req.query.hmac === "string" ? req.query.hmac : undefined;
+        const result = await (0, payments_service_1.handlePaymobWebhook)(req.body, hmac);
         res.status(200).json((0, ApiResponse_1.default)(200, "Webhook processed", result));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function verifyPaymentController(req, res, next) {
+    try {
+        const paymentId = Number(req.params.paymentId);
+        const { verifyOrSimulatePaymentSuccess } = await Promise.resolve().then(() => __importStar(require("./payments.service")));
+        const payment = await verifyOrSimulatePaymentSuccess(req.user.userId, paymentId);
+        res
+            .status(200)
+            .json((0, ApiResponse_1.default)(200, "Payment verified successfully", payment));
     }
     catch (error) {
         next(error);

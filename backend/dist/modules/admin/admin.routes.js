@@ -26,4 +26,8 @@ router.get("/payments", admin_controller_1.getAllPaymentsController);
 router.patch("/payments/:paymentId/override", admin_controller_1.overridePaymentController);
 router.get("/analytics", admin_controller_1.getAnalyticsController);
 router.get("/logs", admin_controller_1.getSystemLogsController);
+router.get("/support-tickets", admin_controller_1.getSupportTicketsController);
+router.patch("/support-tickets/:ticketId", admin_controller_1.updateSupportTicketController);
+router.get("/withdrawals", admin_controller_1.getWithdrawalRequestsController);
+router.patch("/withdrawals/:withdrawalId", admin_controller_1.updateWithdrawalRequestStatusController);
 exports.default = router;

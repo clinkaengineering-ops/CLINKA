@@ -1,11 +1,29 @@
 import api from "@/lib/axios";
+import type { User } from "@/types";
+
+export type RegistrationStatus =
+  | { status: "available" }
+  | { status: "exists"; role?: string }
+  | { status: "resume_engineer"; portfolioCount: number };
 
 export const authApi = {
+  checkRegistrationEmail: (email: string) =>
+    api
+      .get<{ data: RegistrationStatus }>("/auth/register/status", {
+        params: { email },
+      })
+      .then((r) => r.data.data),
+
   registerClient: (data: FormData | object) =>
-    api.post("/auth/register/client", data),
+    api.post<{ data: User }>("/auth/register/client", data),
 
   registerEngineer: (data: FormData) =>
-    api.post("/auth/register/engineer", data, {
+    api.post<{ data: User }>("/auth/register/engineer", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+
+  resumeEngineerRegistration: (data: FormData) =>
+    api.post<{ data: User }>("/auth/register/engineer/resume", data, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
 

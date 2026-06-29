@@ -1,5 +1,6 @@
 import transporter from "../config/mailer";
 import jwt from "jsonwebtoken";
+import { getEmailFrom, verificationEmailHtml } from "./emailTemplate";
 
 export async function sendVerificationEmail(userId: number, email: string) {
   const token = jwt.sign({ userId }, process.env.JWT_SECRET as string, { expiresIn: "1d" });
@@ -8,10 +9,10 @@ export async function sendVerificationEmail(userId: number, email: string) {
 
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: getEmailFrom(),
       to: email,
-      subject: "Verify your email",
-      html: `<p>Click <a href="${verifyUrl}">here</a> to verify your email. Link expires in 24 hours.</p>`,
+      subject: "Verify your CLINKA email",
+      html: verificationEmailHtml(verifyUrl),
     });
     console.log("Verification email sent:", info.messageId, info.accepted);
   } catch (error) {

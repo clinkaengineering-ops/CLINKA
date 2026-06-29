@@ -8,6 +8,7 @@ exports.initSocket = initSocket;
 const socket_io_1 = require("socket.io");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const messages_service_1 = require("./modules/messages/messages.service");
+const cors_1 = require("./config/cors");
 // userId → Set of socketIds (user can have multiple tabs)
 const onlineUsers = new Map();
 let io = null;
@@ -17,7 +18,7 @@ function broadcastNewMessage(conversationId, message) {
 function initSocket(httpServer) {
     const socketServer = new socket_io_1.Server(httpServer, {
         cors: {
-            origin: process.env.CLIENT_URL,
+            origin: (0, cors_1.getAllowedOrigins)(),
             credentials: true,
         },
     });

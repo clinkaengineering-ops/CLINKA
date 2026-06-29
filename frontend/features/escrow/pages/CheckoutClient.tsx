@@ -1,58 +1,50 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchCheckoutSession } from "../api/payments.api";
+import { BrandLink } from "@/components/BrandLogo";
+import {
+  fetchCheckoutSession,
+  fetchEscrowPaymentById,
+  fetchProjectPayment,
+  verifyPayment,
+} from "../api/payments.api";
 import { formatMoney } from "../utils/formatMoney";
-
-declare global {
-  interface Window {
-    fawaterkCheckout: (config: FawaterkPluginConfig) => void;
-  }
-}
-
-interface FawaterkPluginConfig {
-  envType: "test" | "live";
-  hashKey: string;
-  style?: { listing?: "vertical" | "horizontal" };
-  version?: string | number;
-  requestBody: {
-    cartTotal: string;
-    currency: string;
-    customer: {
-      first_name: string;
-      last_name: string;
-      email: string;
-      phone: string;
-      address: string;
-    };
-    redirectionUrls: {
-      successUrl: string;
-      failUrl: string;
-      pendingUrl: string;
-    };
-    cartItems: Array<{ name: string; price: string; quantity: string }>;
-    payLoad?: Record<string, unknown>;
-  };
-}
+import { parseCheckoutReturn } from "../utils/parseCheckoutReturn";
+import { useI18n } from "@/i18n";
 
 type Status = "form" | "loading" | "ready" | "error";
 
-const PLUGIN_SCRIPT =
-  "https://app.fawaterk.com/fawaterkPlugin/fawaterkPlugin.min.js";
-
-// ─── Wrapper ────────────────────────────────────────────────────────────────
-// Reads the URL param and guards before any hooks run in the inner component.
-
 export default function CheckoutClient() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
+  const parsedReturn = parseCheckoutReturn(searchParams);
+
+  if (parsedReturn.isReturn) {
+    if (!parsedReturn.status && !parsedReturn.projectId && !parsedReturn.paymentId) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-slate-400 text-sm">{t("checkout.invalidProject")}</p>
+        </div>
+      );
+    }
+
+    return (
+      <CheckoutReturnStatus
+        projectId={parsedReturn.projectId}
+        paymentId={parsedReturn.paymentId}
+        status={parsedReturn.status ?? "success"}
+      />
+    );
+  }
+
   const projectId = Number(searchParams.get("projectId"));
 
   if (!projectId || Number.isNaN(projectId)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-slate-400 text-sm">Invalid or missing project ID.</p>
+        <p className="text-slate-400 text-sm">{t("checkout.invalidProject")}</p>
       </div>
     );
   }
@@ -60,10 +52,169 @@ export default function CheckoutClient() {
   return <CheckoutForm projectId={projectId} />;
 }
 
-// ─── Inner form ─────────────────────────────────────────────────────────────
-// All hooks live here. projectId is guaranteed valid and stable.
+function CheckoutReturnStatus({
+  projectId: initialProjectId,
+  paymentId: initialPaymentId,
+  status,
+}: {
+  projectId?: number;
+  paymentId?: number;
+  status: "success" | "fail" | "pending";
+}) {
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [variant, setVariant] = useState<"success" | "error" | "pending">(
+    status === "success" ? "pending" : status === "pending" ? "pending" : "error",
+  );
+  const [resolvedProjectId, setResolvedProjectId] = useState(initialProjectId);
+
+  useEffect(() => {
+    let alive = true;
+
+    const setIfAlive = (next: {
+      title: string;
+      message: string;
+      variant: "success" | "error" | "pending";
+    }) => {
+      if (!alive) return;
+      setTitle(next.title);
+      setMessage(next.message);
+      setVariant(next.variant);
+    };
+
+    if (status === "fail") {
+      setIfAlive({
+        title: "Payment was not completed",
+        message: "No charge was confirmed. You can retry payment from your project page.",
+        variant: "error",
+      });
+      return () => {
+        alive = false;
+      };
+    }
+
+    if (status === "pending") {
+      setIfAlive({
+        title: "Payment is pending",
+        message: "Your payment method is still confirming. Check back shortly in your project.",
+        variant: "pending",
+      });
+      return () => {
+        alive = false;
+      };
+    }
+
+    setIfAlive({
+      title: "Verifying payment",
+      message: "Please wait while we confirm escrow funding.",
+      variant: "pending",
+    });
+
+    void (async () => {
+      try {
+        let resolvedPaymentId = initialPaymentId;
+        let projectId = initialProjectId;
+
+        if (!projectId && resolvedPaymentId) {
+          const payment = await fetchEscrowPaymentById(resolvedPaymentId);
+          projectId = payment.projectId;
+          if (alive) setResolvedProjectId(projectId);
+        }
+
+        if (!projectId) {
+          throw new Error("Could not determine which project this payment belongs to.");
+        }
+
+        if (!resolvedPaymentId) {
+          const payment = (await fetchProjectPayment(projectId)) as {
+            id?: number;
+            status?: string;
+          } | null;
+
+          if (payment?.status === "In escrow" || payment?.status === "Released") {
+            setIfAlive({
+              title: "Payment confirmed",
+              message: "Escrow is already funded for this project.",
+              variant: "success",
+            });
+            return;
+          }
+
+          resolvedPaymentId = payment?.id;
+        }
+
+        if (!resolvedPaymentId) {
+          throw new Error("Could not determine which payment to verify.");
+        }
+
+        await verifyPayment(resolvedPaymentId);
+        setIfAlive({
+          title: "Payment successful",
+          message: "Escrow is now funded and the engineer can start working.",
+          variant: "success",
+        });
+      } catch (err) {
+        const e = err as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        setIfAlive({
+          title: "Payment verification failed",
+          message:
+            e?.response?.data?.message ??
+            e?.message ??
+            "We could not confirm your payment yet. Please contact support if this persists.",
+          variant: "error",
+        });
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [initialPaymentId, initialProjectId, status]);
+
+  const badgeClass =
+    variant === "success"
+      ? "bg-emerald-100 text-emerald-700"
+      : variant === "error"
+        ? "bg-rose-100 text-rose-700"
+        : "bg-amber-100 text-amber-700";
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950">
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/80 dark:border-slate-700">
+        <div className="flex items-center justify-between px-5 py-4 bg-brand-teal text-white">
+          <BrandLink logoClassName="h-8 w-auto max-w-[140px] brightness-0 invert" />
+          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${badgeClass}`}>
+            {variant === "success"
+              ? "Confirmed"
+              : variant === "error"
+                ? "Needs action"
+                : "Pending"}
+          </span>
+        </div>
+        <div className="px-5 py-8 text-center">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+          <p className="text-sm text-slate-500 mt-2">{message}</p>
+          <Link
+            href={
+              resolvedProjectId
+                ? `/projects?id=${resolvedProjectId}`
+                : "/projects"
+            }
+            className="inline-flex mt-5 px-4 py-2 rounded-lg bg-electric-500 text-white text-sm font-semibold hover:bg-electric-600"
+          >
+            Go to project
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CheckoutForm({ projectId }: { projectId: number }) {
+  const { t } = useI18n();
   const router = useRouter();
 
   const [status, setStatus] = useState<Status>("form");
@@ -72,23 +223,7 @@ function CheckoutForm({ projectId }: { projectId: number }) {
   const [amount, setAmount] = useState(0);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-
-  // Holds the plugin config between the async handler and the DOM-commit effect.
-  const pluginConfigRef = useRef<FawaterkPluginConfig | null>(null);
-
-  // Invoke the Fawaterak plugin only after React has committed #fawaterkDivId
-  // to the DOM (status === "ready"). This replaces the requestAnimationFrame
-  // race condition from the original code.
-  useEffect(() => {
-    if (status !== "ready" || !pluginConfigRef.current) return;
-
-    if (typeof window.fawaterkCheckout === "function") {
-      window.fawaterkCheckout(pluginConfigRef.current);
-    } else {
-      setErrorMsg("Fawaterak checkout plugin failed to load");
-      setStatus("error");
-    }
-  }, [status]);
+  const [paymentId, setPaymentId] = useState<number | null>(null);
 
   const handleProceed = useCallback(async () => {
     if (!phone.trim() || !address.trim()) return;
@@ -104,45 +239,33 @@ function CheckoutForm({ projectId }: { projectId: number }) {
 
       setTitle(session.projectTitle);
       setAmount(session.amount);
+      setPaymentId(session.paymentId);
 
-      await loadScript(PLUGIN_SCRIPT);
+      if (!session.checkoutUrl) {
+        throw new Error("Missing checkout URL from server.");
+      }
 
-      // Store config in the ref — the useEffect above will call the plugin
-      // after React renders #fawaterkDivId into the DOM on the next commit.
-      pluginConfigRef.current = {
-        envType: session.envType,
-        hashKey: session.hashKey,
-        style: { listing: "vertical" },
-        version: "0",
-        requestBody: session.pluginRequest,
-      };
-
-      setStatus("ready");
+      window.location.href = session.checkoutUrl;
     } catch (err) {
       const e = err as {
         response?: { data?: { message?: string } };
         message?: string;
       };
       setErrorMsg(
-        e?.response?.data?.message ?? e?.message ?? "Failed to load payment",
+        e?.response?.data?.message ?? e?.message ?? t("checkout.loadFailed"),
       );
       setStatus("error");
     }
-  }, [projectId, phone, address]);
+  }, [projectId, phone, address, t]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-navy-950 via-navy-900 to-slate-950">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950">
       <div className="w-full max-w-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/80 dark:border-slate-700">
-        <div className="flex items-center justify-between px-5 py-4 bg-navy-950 text-white">
-          <Link
-            href="/escrow"
-            className="text-sm font-bold tracking-widest text-electric-400"
-          >
-            CLINKA
-          </Link>
+        <div className="flex items-center justify-between px-5 py-4 bg-brand-teal text-white">
+          <BrandLink logoClassName="h-8 w-auto max-w-[140px] brightness-0 invert" />
           <div className="text-end">
             <p className="text-[10px] uppercase tracking-wider text-white/50">
-              Secure checkout
+              {t("checkout.secure")}
             </p>
             {amount > 0 && (
               <p className="text-lg font-bold">{formatMoney(amount)}</p>
@@ -159,10 +282,10 @@ function CheckoutForm({ projectId }: { projectId: number }) {
         {status === "form" && (
           <div className="flex flex-col gap-4 px-5 py-6">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Please enter your contact details to continue
+              {t("checkout.contactDetails")}
             </p>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500">Phone number</label>
+              <label className="text-xs text-slate-500">{t("checkout.phone")}</label>
               <input
                 type="tel"
                 value={phone}
@@ -172,12 +295,12 @@ function CheckoutForm({ projectId }: { projectId: number }) {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500">Address</label>
+              <label className="text-xs text-slate-500">{t("checkout.address")}</label>
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Your billing address"
+                placeholder={t("checkout.addressPh")}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
               />
             </div>
@@ -187,7 +310,7 @@ function CheckoutForm({ projectId }: { projectId: number }) {
               disabled={!phone.trim() || !address.trim()}
               className="mt-1 w-full py-2.5 rounded-lg bg-electric-500 text-white text-sm font-semibold hover:bg-electric-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Continue to Payment
+              {t("checkout.continue")}
             </button>
           </div>
         )}
@@ -195,52 +318,32 @@ function CheckoutForm({ projectId }: { projectId: number }) {
         {status === "loading" && (
           <div className="flex flex-col items-center gap-3 py-16 px-6">
             <div className="h-10 w-10 rounded-full border-2 border-electric-500 border-t-transparent animate-spin" />
-            <p className="text-sm text-slate-500">Loading Fawaterak payment…</p>
+            <p className="text-sm text-slate-500">{t("checkout.loading")}</p>
           </div>
         )}
 
         {status === "error" && (
           <div className="flex flex-col items-center gap-3 py-12 px-6 text-center">
             <p className="text-base font-semibold text-slate-900 dark:text-white">
-              Payment unavailable
+              {t("checkout.unavailable")}
             </p>
             <p className="text-sm text-slate-500">{errorMsg}</p>
             <button
               type="button"
-              onClick={() => router.push("/escrow")}
+              onClick={() => router.push("/projects")}
               className="mt-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              Back to escrow
+              {t("side.findProjects")}
             </button>
           </div>
         )}
 
-        <div
-          id="fawaterkDivId"
-          className={status === "ready" ? "min-h-[280px] p-2" : "hidden"}
-        />
+
 
         <div className="px-5 py-3 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-slate-800">
-          Payments secured by Fawaterak
+          {t("checkout.securedBy")}
         </div>
       </div>
     </div>
   );
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = src;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error(`Script failed to load: ${src}`));
-    document.head.appendChild(s);
-  });
 }

@@ -12,6 +12,8 @@ import {
 import {
   registerClient,
   registerEngineer,
+  resumeEngineerRegistration,
+  checkRegistrationEmail,
   login,
   verifyEmail,
   forgotPassword,
@@ -34,6 +36,23 @@ import {
 } from "./google.service";
 import { isGoogleAuthEnabled } from "../../config/google";
 
+export async function checkRegistrationEmailController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const email = typeof req.query.email === "string" ? req.query.email : "";
+    if (!email.trim()) {
+      throw new ApiError(400, "Email is required");
+    }
+    const result = await checkRegistrationEmail(email);
+    res.status(200).json(ApiResponse(200, "Registration status checked", result));
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function registerClientController(
   req: Request,
   res: Response,
@@ -41,7 +60,8 @@ export async function registerClientController(
 ) {
   try {
     const validatedData = clientRegisterSchema.parse(req.body);
-    const user = await registerClient(validatedData);
+    const { user, token } = await registerClient(validatedData);
+    res.cookie("token", token, authCookieOptions(req.headers.origin));
     res.status(201).json(ApiResponse(201, "Registered successfully", user));
   } catch (error) {
     next(error);
@@ -55,13 +75,47 @@ export async function registerEngineerController(
 ) {
   try {
     const validatedData = engineerRegisterSchema.parse(req.body);
-    const fileUrl = req.file?.path ?? "";
+    const files = req.files as
+      | {
+          document?: { path: string }[];
+          portfolio?: { path: string }[];
+        }
+      | undefined;
+    const documentFile = files?.document?.[0] ?? req.file;
+    const fileUrl = documentFile?.path ?? "";
     const documentType = req.body.documentType as
       | "collegeIdUrl"
       | "certificateUrl"
       | "syndicateCardUrl";
-    const user = await registerEngineer(validatedData, fileUrl, documentType);
+    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const { user, token } = await registerEngineer(
+      validatedData,
+      fileUrl,
+      documentType,
+      portfolioUrls,
+    );
+    res.cookie("token", token, authCookieOptions(req.headers.origin));
     res.status(201).json(ApiResponse(201, "Registered successfully", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resumeEngineerRegistrationController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const validatedData = clientRegisterSchema.parse(req.body);
+    const files = req.files as { portfolio?: { path: string }[] } | undefined;
+    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const { user, token } = await resumeEngineerRegistration(
+      validatedData,
+      portfolioUrls,
+    );
+    res.cookie("token", token, authCookieOptions(req.headers.origin));
+    res.status(200).json(ApiResponse(200, "Portfolio submitted successfully", user));
   } catch (error) {
     next(error);
   }
@@ -125,7 +179,7 @@ export async function logoutController(
   next: NextFunction,
 ) {
   try {
-    res.clearCookie("token", authCookieOptions());
+    res.clearCookie("token", authCookieOptions(req.headers.origin));
     res.status(200).json(ApiResponse(200, "Logged out successfully"));
   } catch (error) {
     next(error);
@@ -194,7 +248,7 @@ export async function verifyOtpController(req: Request, res: Response, next: Nex
     const { userId, otp } = verifyOtpSchema.parse(req.body);
     const result = await verifyOtp(userId, otp);
 
-    res.cookie("token", result.token, authCookieOptions());
+    res.cookie("token", result.token, authCookieOptions(req.headers.origin));
 
     res.status(200).json(ApiResponse(200, "Logged in successfully", result.user));
   } catch (error) {
@@ -215,7 +269,13 @@ export async function googleAuthStartController(
       typeof req.query.next === "string" ? req.query.next : undefined;
     const role =
       req.query.role === "ENGINEER" ? ("ENGINEER" as const) : ("CLIENT" as const);
-    const url = getGoogleAuthRedirectUrl({ next, role });
+    const apiOrigin =
+      typeof req.query.api_origin === "string" ? req.query.api_origin : undefined;
+    const clientOrigin =
+      typeof req.query.client_origin === "string"
+        ? req.query.client_origin
+        : undefined;
+    const url = getGoogleAuthRedirectUrl({ next, role, apiOrigin, clientOrigin });
     res.redirect(url);
   } catch (error) {
     next(error);
@@ -236,7 +296,7 @@ export async function googleAuthCallbackController(
     const result = await handleGoogleCallback(code, state, error);
 
     if (result.token) {
-      res.cookie("token", result.token, authCookieOptions());
+      res.cookie("token", result.token, authCookieOptions(req.headers.origin));
     }
 
     res.redirect(result.redirectUrl);
