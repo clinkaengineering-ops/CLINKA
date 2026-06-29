@@ -72,7 +72,7 @@ export function AboutPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* Hero */}
-      <section className="relative overflow-hidden py-16 sm:py-24 px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/85">
+      <section className="relative overflow-hidden pt-6 pb-16 sm:pt-10 sm:pb-24 px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/85">
         <div className="absolute inset-0 grid-bg opacity-30 dark:opacity-40" />
         <div className="absolute inset-x-0 -top-40 h-[600px] bg-gradient-to-b from-brand-teal/10 via-brand-copper/5 to-transparent blur-3xl" />
 
@@ -85,11 +85,11 @@ export function AboutPage() {
             {t("about.hero.eyebrow")}
           </p>
 
-          <h1 className="mt-3 text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-brand-teal via-brand-teal to-brand-copper bg-clip-text text-transparent">
+          <h1 className="mt-3 pb-3 sm:pb-4 text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight leading-normal sm:leading-snug bg-gradient-to-r from-brand-teal via-brand-teal to-brand-copper bg-clip-text text-transparent">
             {t("about.hero.tagline")}
           </h1>
 
-          <div className="mt-8 space-y-4 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed text-start sm:text-center">
+          <div className="mt-10 sm:mt-12 space-y-4 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed text-start sm:text-center">
             <p>{t("about.hero.p1")}</p>
             <p>{t("about.hero.p2")}</p>
             <p>{t("about.hero.p3")}</p>
