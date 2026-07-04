@@ -2,20 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { authApi } from "@/features/auth/api/auth.api";
-import useAuthStore from "@/store/authStore";
 import { Card, Button } from "@/components/UI";
 import { IconArrow } from "@/components/Icons";
 import { useI18n } from "@/i18n";
-import type { Me } from "@/types";
 
 type Status = "loading" | "success" | "error";
 
 export function VerifyEmailForm() {
   const { t } = useI18n();
-  const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
   const [status, setStatus] = useState<Status>("loading");
   const [message, setMessage] = useState("");
 
@@ -35,14 +30,8 @@ export function VerifyEmailForm() {
       try {
         const res = await authApi.verifyEmail(token);
         if (cancelled) return;
-
-        const user = res.data.data as Me;
-        setUser(user);
         setStatus("success");
-        setMessage(t("auth.verifyEmail.redirecting"));
-
-        const destination = user.role === "ADMIN" ? "/admin" : "/dashboard";
-        router.replace(destination);
+        setMessage(res?.data?.message || t("auth.verifyEmail.successMsg"));
       } catch (error: unknown) {
         if (cancelled) return;
         setStatus("error");
@@ -68,7 +57,7 @@ export function VerifyEmailForm() {
     return () => {
       cancelled = true;
     };
-  }, [router, setUser, t]);
+  }, [t]);
 
   return (
     <Card className="p-6 sm:p-8">
@@ -97,15 +86,16 @@ export function VerifyEmailForm() {
               !
             </div>
             <h1 className="text-2xl font-bold">{t("auth.verifyEmail.failed")}</h1>
-            <Link href="/login" className="block">
-              <Button className="w-full" icon={<IconArrow width={14} height={14} />}>
-                {t("auth.verifyEmail.goLogin")}
-              </Button>
-            </Link>
           </>
         )}
 
         <p className="text-sm text-slate-500">{message}</p>
+
+        <Link href="/login" className="block">
+          <Button className="w-full" icon={<IconArrow width={14} height={14} />}>
+            {t("auth.verifyEmail.goLogin")}
+          </Button>
+        </Link>
       </div>
     </Card>
   );

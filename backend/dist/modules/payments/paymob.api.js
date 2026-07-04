@@ -56,6 +56,29 @@ function listConfiguredPaymobMethods() {
         redirect: "true",
     }));
 }
+function extractPaymobCheckoutSecret(payload) {
+    const directSecret = payload.client_secret ?? payload.clientSecret;
+    if (typeof directSecret === "string" && directSecret.trim()) {
+        return directSecret.trim();
+    }
+    const paymentKeys = Array.isArray(payload.payment_keys)
+        ? payload.payment_keys
+        : [];
+    for (const paymentKey of paymentKeys) {
+        if (!paymentKey || typeof paymentKey !== "object")
+            continue;
+        const candidate = paymentKey;
+        const nestedSecret = candidate.client_secret ?? candidate.clientSecret;
+        if (typeof nestedSecret === "string" && nestedSecret.trim()) {
+            return nestedSecret.trim();
+        }
+        const keyValue = candidate.key;
+        if (typeof keyValue === "string" && keyValue.trim()) {
+            return keyValue.trim();
+        }
+    }
+    return undefined;
+}
 async function createPaymobIntention(input) {
     const data = await paymobRequest("v1/intention/", {
         method: "POST",
@@ -89,12 +112,13 @@ async function createPaymobIntention(input) {
     const orderId = data.intention_order_id ??
         data.payment_keys?.[0]?.order_id ??
         0;
-    if (!data.client_secret || !data.id) {
-        throw new ApiError_1.default(502, "Paymob intention response missing client secret");
+    const clientSecret = extractPaymobCheckoutSecret(data);
+    if (!clientSecret) {
+        throw new ApiError_1.default(502, "Paymob intention response missing checkout secret");
     }
     return {
-        id: data.id,
-        clientSecret: data.client_secret,
+        id: data.id ?? input.specialReference,
+        clientSecret,
         orderId,
     };
 }

@@ -13,6 +13,10 @@ export interface AdminStats {
   gmv: number;
   inEscrow: number;
   openSupportTickets: number;
+  newUsersLast30: number;
+  newUsersPrev30: number;
+  activeBans: number;
+  totalCommission: number;
 }
 
 export interface PendingVerification {
@@ -25,6 +29,7 @@ export interface PendingVerification {
   collegeIdUrl: string | null;
   certificateUrl: string | null;
   syndicateCardUrl: string | null;
+  portfolios: string[];
   submittedAt: string;
 }
 
@@ -243,10 +248,67 @@ export const overrideAdminPayment = (paymentId: number, status: "RELEASED" | "RE
 export interface AnalyticsData {
   dailySignups: Array<{ date: string; count: number }>;
   dailyGmv: Array<{ date: string; amount: number }>;
+  dailyCommission: Array<{ date: string; amount: number }>;
+  monthlySignups: Array<{ month: string; count: number }>;
+  monthlyRevenue: Array<{ month: string; amount: number }>;
+  revenueYtd: number;
+  yoyGrowth: number;
+  netMargin: number;
+  platformFeePercent: number;
+  totalGmv: number;
+  totalSignups: number;
 }
 
-export const fetchAdminAnalytics = () =>
-  unwrap(api.get<ApiResponse<AnalyticsData>>("/admin/analytics"));
+export interface EscrowOverview {
+  totalInEscrow: number;
+  released30d: number;
+  refunded30d: number;
+  disputed: number;
+  utilizationPercent: number;
+  dailyEscrowHeld: Array<{ date: string; amount: number }>;
+}
+
+export interface ActiveDispute {
+  id: number;
+  caseId: string;
+  parties: string;
+  subject: string;
+  amount: number | null;
+  status: string;
+  statusColor: "amber" | "blue" | "green" | "red";
+  ageHours: number;
+  createdAt: string;
+}
+
+export interface SystemHealth {
+  services: Array<{ name: string; up: boolean; uptime: number }>;
+  allOperational: boolean;
+  apiLatencyMs: number;
+  queueStatus: string;
+}
+
+export const fetchAdminAnalytics = (): Promise<AnalyticsData> =>
+  unwrap(api.get<ApiResponse<AnalyticsData>>("/admin/analytics")).then((d) => {
+    if (!d) throw new Error("Failed to load analytics");
+    return d;
+  });
+
+export const fetchEscrowOverview = (): Promise<EscrowOverview> =>
+  unwrap(api.get<ApiResponse<EscrowOverview>>("/admin/escrow-overview")).then((d) => {
+    if (!d) throw new Error("Failed to load escrow overview");
+    return d;
+  });
+
+export const fetchActiveDisputes = (limit = 6): Promise<ActiveDispute[]> =>
+  unwrap(
+    api.get<ApiResponse<ActiveDispute[]>>("/admin/disputes", { params: { limit } }),
+  ).then((d) => d ?? []);
+
+export const fetchSystemHealth = (): Promise<SystemHealth> =>
+  unwrap(api.get<ApiResponse<SystemHealth>>("/admin/system-health")).then((d) => {
+    if (!d) throw new Error("Failed to load system health");
+    return d;
+  });
 
 export interface SystemLog {
   timestamp: string;
@@ -254,8 +316,8 @@ export interface SystemLog {
   message: string;
 }
 
-export const fetchSystemLogs = () =>
-  unwrap(api.get<ApiResponse<SystemLog[]>>("/admin/logs"));
+export const fetchSystemLogs = (): Promise<SystemLog[]> =>
+  unwrap(api.get<ApiResponse<SystemLog[]>>("/admin/logs")).then((d) => d ?? []);
 
 export interface AdminSupportTicket {
   id: number;

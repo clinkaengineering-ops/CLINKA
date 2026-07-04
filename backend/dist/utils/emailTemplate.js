@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.EMAIL_LOGO_CID = void 0;
 exports.getLogoUrl = getLogoUrl;
 exports.getEmailFrom = getEmailFrom;
 exports.buildEmailHtml = buildEmailHtml;
@@ -8,6 +9,10 @@ exports.loginOtpEmailHtml = loginOtpEmailHtml;
 exports.passwordResetEmailHtml = passwordResetEmailHtml;
 exports.emailChangeOtpHtml = emailChangeOtpHtml;
 exports.withdrawalNotificationEmailHtml = withdrawalNotificationEmailHtml;
+exports.newMessageEmailHtml = newMessageEmailHtml;
+exports.notificationEmailHtml = notificationEmailHtml;
+const clientUrl_1 = require("../config/clientUrl");
+exports.EMAIL_LOGO_CID = "clinka-logo";
 const BRAND = {
     teal: "#196481",
     tealDark: "#145268",
@@ -27,7 +32,8 @@ function escapeHtml(value) {
         .replace(/'/g, "&#39;");
 }
 function getLogoUrl() {
-    return "https://res.cloudinary.com/dczhvcc0v/image/upload/v1782741323/brand/logo-09.png";
+    const base = (0, clientUrl_1.getPublicClientUrl)();
+    return `${base}/brand/logo/PNG/logo-09.png`;
 }
 function getEmailFrom() {
     const address = process.env.EMAIL_USER?.trim();
@@ -106,7 +112,7 @@ function buildEmailHtml(options) {
           </tr>
           <tr>
             <td class="email-header" align="center" style="padding:28px 32px 20px;background-color:${BRAND.white};border-bottom:1px solid ${BRAND.border};">
-              <a href="${escapeHtml((process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, ""))}" target="_blank" style="text-decoration:none;">
+              <a href="${escapeHtml((0, clientUrl_1.getPublicClientUrl)())}" target="_blank" style="text-decoration:none;">
                 <img src="${logoUrl}" alt="CLINKA — Civil Link Architecture" width="200" style="display:block;margin:0 auto;max-width:200px;height:auto;border:0;" />
               </a>
             </td>
@@ -213,5 +219,35 @@ function withdrawalNotificationEmailHtml(input) {
         ${row("Account number", input.accountNumber)}
         ${row("Request date", input.requestDate)}
       </table>`,
+    });
+}
+function newMessageEmailHtml(input) {
+    return buildEmailHtml({
+        title: "You have a new message",
+        preheader: `New message from ${input.senderName}`,
+        contentHtml: `
+      <p style="margin:0 0 16px;color:${BRAND.text};">
+        You have received a new message from <strong>${escapeHtml(input.senderName)}</strong> regarding the project <strong>${escapeHtml(input.projectTitle)}</strong>.
+      </p>
+      <p style="margin:0 0 20px;color:${BRAND.muted};font-size:14px;">
+        Click the button below to view the message and reply.
+      </p>`,
+        cta: { label: "View Message", href: input.messageUrl },
+    });
+}
+function notificationEmailHtml(input) {
+    const bodyHtml = input.body
+        ? `<p style="margin:0 0 20px;color:${BRAND.text};white-space:pre-wrap;">${escapeHtml(input.body)}</p>`
+        : "";
+    return buildEmailHtml({
+        title: input.title,
+        preheader: input.body?.slice(0, 120) ?? input.title,
+        contentHtml: bodyHtml,
+        cta: input.actionUrl
+            ? {
+                label: input.actionLabel ?? "Open CLINKA",
+                href: input.actionUrl,
+            }
+            : undefined,
     });
 }

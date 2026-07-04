@@ -249,6 +249,7 @@ export const Progress = ({
   );
 };
 
+/* ---------- StatCard ---------- */
 export const StatCard = ({
   label,
   value,
@@ -260,57 +261,34 @@ export const StatCard = ({
   value: string;
   change?: string;
   icon: ReactNode;
-  accent?: "up" | "down" | "neutral";
-}) => {
-  let displayAccent = accent;
-  if (!displayAccent && change) {
-    const cleanChange = change.trim();
-    if (
-      cleanChange === "—" ||
-      cleanChange.startsWith("0") ||
-      cleanChange.startsWith("-0")
-    ) {
-      displayAccent = "neutral";
-    } else if (cleanChange.startsWith("-")) {
-      displayAccent = "down";
-    } else {
-      displayAccent = "up";
-    }
-  }
-
-  return (
-    <Card className="p-5 hover:border-electric-500/40 transition group">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-            {label}
+  accent?: "up" | "down";
+}) => (
+  <Card className="p-5 hover:border-electric-500/40 transition group">
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          {label}
+        </p>
+        <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+          {value}
+        </p>
+        {change && (
+          <p
+            className={cn(
+              "mt-1 text-xs font-medium",
+              accent === "down" ? "text-rose-500" : "text-emerald-500",
+            )}
+          >
+            {accent === "down" ? "↓" : "↑"} {change}
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-            {value}
-          </p>
-          {change && (
-            <p
-              className={cn(
-                "mt-1 text-xs font-medium",
-                displayAccent === "down"
-                  ? "text-rose-500"
-                  : displayAccent === "neutral"
-                    ? "text-slate-500 dark:text-slate-400"
-                    : "text-emerald-500",
-              )}
-            >
-              {displayAccent === "down" ? "↓ " : displayAccent === "up" ? "↑ " : ""}
-              {change}
-            </p>
-          )}
-        </div>
-        <div className="h-10 w-10 rounded-xl bg-electric-500/10 text-electric-600 dark:text-electric-400 flex items-center justify-center group-hover:scale-110 transition">
-          {icon}
-        </div>
+        )}
       </div>
-    </Card>
-  );
-};
+      <div className="h-10 w-10 rounded-xl bg-electric-500/10 text-electric-600 dark:text-electric-400 flex items-center justify-center group-hover:scale-110 transition">
+        {icon}
+      </div>
+    </div>
+  </Card>
+);
 
 export const Field = ({
   label,
@@ -353,7 +331,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <ThemeToggle />
         </div>
         <div className="w-full max-w-md min-w-0">
-          <BrandLink logoClassName="h-8 w-auto max-w-[160px] sm:h-9 sm:max-w-[180px]" priority />
+          <BrandLink logoClassName="h-11 w-auto max-w-[220px] sm:h-12 sm:max-w-[260px]" priority />
           {children}
         </div>
       </div>
@@ -369,15 +347,21 @@ export function SectionHeader({
   subtitle,
   center,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   center?: boolean;
 }) {
   return (
     <div className={center ? "text-center" : ""}>
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brand-copper-strong dark:text-brand-copper">{eyebrow}</p>
-      <h2 className="mt-4 text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-950 dark:text-white">{title}</h2>
+      {eyebrow ? (
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brand-copper-strong dark:text-brand-copper">
+          {eyebrow}
+        </p>
+      ) : null}
+      <h2 className={cn("text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-950 dark:text-white", eyebrow ? "mt-4" : "")}>
+        {title}
+      </h2>
       {subtitle ? <p className="mt-3 sm:mt-4 text-base sm:text-lg leading-relaxed sm:leading-8 text-slate-600 dark:text-slate-300">{subtitle}</p> : null}
     </div>
   );

@@ -21,6 +21,7 @@ import {
   STATUS_COLORS,
   STATUS_LABEL_KEYS,
 } from "@/features/projects/utils/projectStatus";
+import { MessagesPolicyNotice } from "./MessagesPolicyNotice";
 
 interface ProjectPayment {
   id: number;
@@ -191,6 +192,10 @@ export function ProjectContextPanel({
           {isClient ? "Engineer" : "Client"}
         </p>
         <p className="text-sm font-medium">{conversation.participantName}</p>
+      </div>
+
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+        <MessagesPolicyNotice />
       </div>
 
       {latestSubmission && (

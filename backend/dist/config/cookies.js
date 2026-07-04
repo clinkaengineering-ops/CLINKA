@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authCookieOptions = authCookieOptions;
 const cors_1 = require("./cors");
-function isLocalhostHost(host) {
-    return host === "localhost" || host === "127.0.0.1" || host.startsWith("localhost:");
+function isLocalDevHost(host) {
+    return host.startsWith("localhost:") || host.startsWith("127.0.0.1:");
 }
 function authCookieOptions(requestOrigin) {
     const isProd = process.env.NODE_ENV === "production";
@@ -11,20 +11,22 @@ function authCookieOptions(requestOrigin) {
     const apiUrl = (process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 5000}`).replace(/\/$/, "");
     let crossHost = false;
     let useSecure = isProd || clientUrl.startsWith("https://");
-    if (requestOrigin) {
-        useSecure = useSecure || requestOrigin.startsWith("https://");
-        if ((0, cors_1.isDevTunnelFrontendOrigin)(requestOrigin)) {
+    const frontendOrigin = requestOrigin ?? clientUrl;
+    if (frontendOrigin) {
+        useSecure = useSecure || frontendOrigin.startsWith("https://");
+        if ((0, cors_1.isDevTunnelFrontendOrigin)(frontendOrigin)) {
             crossHost = true;
             useSecure = true;
         }
         else {
             try {
-                const clientHost = new URL(requestOrigin).host;
+                const frontendHost = new URL(frontendOrigin).host;
                 const apiHost = new URL(apiUrl).host;
-                crossHost =
-                    isLocalhostHost(clientHost) && isLocalhostHost(apiHost)
-                        ? clientHost !== apiHost
-                        : clientHost !== apiHost;
+                crossHost = frontendHost !== apiHost;
+                // localhost:3000 → localhost:5000 needs SameSite=None; Chrome allows Secure on localhost.
+                if (crossHost && isLocalDevHost(frontendHost) && isLocalDevHost(apiHost)) {
+                    useSecure = true;
+                }
             }
             catch {
                 crossHost = false;
@@ -42,10 +44,11 @@ function authCookieOptions(requestOrigin) {
         }
         useSecure = useSecure || clientUrl.startsWith("https://");
     }
+    const needsCrossSiteCookie = crossHost && useSecure;
     return {
         httpOnly: true,
         secure: useSecure,
-        sameSite: crossHost && useSecure ? "none" : isProd ? "strict" : "lax",
+        sameSite: needsCrossSiteCookie ? "none" : isProd ? "strict" : "lax",
         maxAge: 30 * 24 * 60 * 60 * 1000,
     };
 }

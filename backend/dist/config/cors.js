@@ -13,13 +13,20 @@ function getAllowedOrigins() {
     const clientUrl = process.env.CLIENT_URL?.replace(/\/$/, "");
     if (clientUrl)
         origins.add(clientUrl);
+    const publicClientUrl = process.env.PUBLIC_CLIENT_URL?.replace(/\/$/, "");
+    if (publicClientUrl)
+        origins.add(publicClientUrl);
     for (const raw of process.env.CORS_EXTRA_ORIGINS?.split(",") ?? []) {
         const trimmed = raw.trim().replace(/\/$/, "");
         if (trimmed)
             origins.add(trimmed);
     }
-    origins.add("http://localhost:3000");
-    origins.add("http://127.0.0.1:3000");
+    if (process.env.NODE_ENV !== "production") {
+        origins.add("http://localhost:3000");
+        origins.add("http://127.0.0.1:3000");
+        origins.add("http://localhost:4000");
+        origins.add("http://127.0.0.1:4000");
+    }
     return [...origins];
 }
 function isAllowedOrigin(origin) {

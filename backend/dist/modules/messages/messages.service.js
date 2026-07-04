@@ -173,7 +173,12 @@ async function sendMessage(conversationId, senderId, data) {
         select: { title: true },
     });
     const preview = formatLastMessagePreview(message) ?? "New message";
-    await (0, notifications_1.createNotification)(recipientId, "NEW_MESSAGE", "New message", preview.slice(0, 120), `/messages?project=${conv.projectId}`);
+    await (0, notifications_1.createNotification)(recipientId, "NEW_MESSAGE", "New message", preview.slice(0, 120), `/messages?project=${conv.projectId}`, {
+        email: {
+            senderName: message.sender.name,
+            projectTitle: project?.title ?? "a project",
+        },
+    });
     return message;
 }
 async function markConversationReadOnFetch(conversationId, userId) {

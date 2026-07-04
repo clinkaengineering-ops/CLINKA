@@ -2,10 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchActiveDisputes,
+  fetchAdminAnalytics,
   fetchAdminStats,
+  fetchEscrowOverview,
   fetchPendingVerifications,
   updateVerification,
+  type ActiveDispute,
   type AdminStats,
+  type AnalyticsData,
+  type EscrowOverview,
   type PendingVerification,
 } from "../api/admin.api";
 
@@ -19,6 +25,9 @@ function axiosMessage(err: unknown): string {
 
 export function useAdmin() {
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [escrow, setEscrow] = useState<EscrowOverview | null>(null);
+  const [disputes, setDisputes] = useState<ActiveDispute[]>([]);
   const [verifications, setVerifications] = useState<PendingVerification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,12 +37,18 @@ export function useAdmin() {
     setLoading(true);
     setError(null);
     try {
-      const [s, v] = await Promise.all([
+      const [s, v, a, e, d] = await Promise.all([
         fetchAdminStats(),
         fetchPendingVerifications(),
+        fetchAdminAnalytics(),
+        fetchEscrowOverview(),
+        fetchActiveDisputes(6),
       ]);
       setStats(s);
       setVerifications(v);
+      setAnalytics(a);
+      setEscrow(e);
+      setDisputes(d);
     } catch (err) {
       setError(axiosMessage(err));
     } finally {
@@ -77,6 +92,9 @@ export function useAdmin() {
 
   return {
     stats,
+    analytics,
+    escrow,
+    disputes,
     verifications,
     loading,
     error,

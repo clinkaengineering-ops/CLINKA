@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authApi } from "@/features/auth/api/auth.api";
 import { getMe } from "@/features/engineers/api/engineer.api";
 import useAuthStore from "@/store/authStore";
 import { Card } from "@/components/UI";
@@ -17,7 +16,6 @@ function GoogleCallbackContent() {
   const setUser = useAuthStore((s) => s.setUser);
   const error = searchParams.get("error");
   const success = searchParams.get("success");
-  const sessionToken = searchParams.get("session");
   const signingInMessage = t("auth.callback.signingIn");
   const initialMessage = error
     ? decodeURIComponent(error)
@@ -32,25 +30,29 @@ function GoogleCallbackContent() {
     let cancelled = false;
 
     async function finish() {
-      try {
-        const next = searchParams.get("next");
-        const safeNext =
-          next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      const maxAttempts = 3;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+          const me = await getMe();
+          if (cancelled) return;
+          setUser(me);
 
-        let me;
-        if (sessionToken) {
-          const res = await authApi.completeOAuthSession(sessionToken);
-          me = res.data.data;
-        } else {
-          me = await getMe();
-        }
+          const next = searchParams.get("next");
+          const safeNext =
+            next && next.startsWith("/") && !next.startsWith("//")
+              ? next
+              : "/dashboard";
 
-        if (cancelled) return;
-        setUser(me);
-        router.replace(safeNext);
-      } catch {
-        if (!cancelled) {
-          setMessage(t("auth.callback.sessionFailed"));
+          router.replace(safeNext);
+          return;
+        } catch {
+          if (attempt < maxAttempts - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            continue;
+          }
+          if (!cancelled) {
+            setMessage(t("auth.callback.sessionFailed"));
+          }
         }
       }
     }
@@ -59,7 +61,7 @@ function GoogleCallbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [error, success, sessionToken, searchParams, router, setUser, t]);
+  }, [error, success, searchParams, router, setUser, t]);
 
   const isError =
     searchParams.get("error") ||

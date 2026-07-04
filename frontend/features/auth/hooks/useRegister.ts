@@ -2,16 +2,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "../api/auth.api";
+import { getMe } from "@/features/engineers/api/engineer.api";
 import { parseApiValidation } from "@/lib/validation";
+import useAuthStore from "@/store/authStore";
+import type { User } from "@/types";
+
+async function finishRegistration(
+  router: ReturnType<typeof useRouter>,
+  setUser: (user: User | null) => void,
+) {
+  const me = await getMe();
+  setUser(me);
+  router.push(me.role === "ADMIN" ? "/admin" : "/dashboard");
+}
 
 export function useRegister() {
   const router = useRouter();
+  const setUser = useAuthStore((s) => s.setUser);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  function goToCheckEmail(email: string) {
-    router.push(`/register/check-email?email=${encodeURIComponent(email)}`);
-  }
 
   async function registerClient(data: {
     name: string;
@@ -22,7 +31,7 @@ export function useRegister() {
     setError("");
     try {
       await authApi.registerClient(data);
-      goToCheckEmail(data.email);
+      await finishRegistration(router, setUser);
     } catch (err) {
       setError(parseApiValidation(err).message);
     } finally {
@@ -57,7 +66,7 @@ export function useRegister() {
         formData.append("portfolio", file);
       }
       await authApi.registerEngineer(formData);
-      goToCheckEmail(data.email);
+      await finishRegistration(router, setUser);
     } catch (err) {
       setError(parseApiValidation(err).message);
     } finally {
@@ -80,7 +89,7 @@ export function useRegister() {
         formData.append("portfolio", file);
       }
       await authApi.resumeEngineerRegistration(formData);
-      goToCheckEmail(data.email);
+      await finishRegistration(router, setUser);
     } catch (err) {
       setError(parseApiValidation(err).message);
     } finally {

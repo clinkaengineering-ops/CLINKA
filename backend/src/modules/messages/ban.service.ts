@@ -62,7 +62,7 @@ export async function banUserFor30Days(
 
 export async function isUserBanned(
   userId: number,
-): Promise<{ banned: boolean; expiresAt: Date | null }> {
+): Promise<{ banned: boolean; expiresAt: Date | null; reason?: string }> {
   const ban = await db.ban.findUnique({ where: { userId } });
 
   if (!ban) {
@@ -81,7 +81,12 @@ export async function isUserBanned(
     return { banned: false, expiresAt: null };
   }
 
-  return { banned: true, expiresAt: ban.expiresAt };
+  const reason =
+    ban.reason === "CONTACT_INFO_SHARING"
+      ? "Sharing contact information outside the platform"
+      : ban.note || "Administrator action";
+
+  return { banned: true, expiresAt: ban.expiresAt, reason };
 }
 
 export function formatBanExpiry(expiresAt: Date | null): string {
@@ -91,8 +96,10 @@ export function formatBanExpiry(expiresAt: Date | null): string {
 export function bannedUserMessage(
   expiresAt: Date | null,
   action: string,
+  reason?: string,
 ): string {
-  return `Your account is suspended until ${formatBanExpiry(expiresAt)}. You cannot ${action}.`;
+  const reasonText = reason ? ` Cause: ${reason}.` : "";
+  return `Your account is suspended until ${formatBanExpiry(expiresAt)}.${reasonText} You cannot ${action}.`;
 }
 
 export async function assertUserNotBanned(
@@ -103,7 +110,7 @@ export async function assertUserNotBanned(
   if (banStatus.banned) {
     throw new ApiError(
       403,
-      bannedUserMessage(banStatus.expiresAt, action),
+      bannedUserMessage(banStatus.expiresAt, action, banStatus.reason),
     );
   }
 }

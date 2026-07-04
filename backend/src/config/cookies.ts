@@ -1,8 +1,8 @@
 import type { CookieOptions } from "express";
 import { isDevTunnelFrontendOrigin } from "./cors";
 
-function isLocalhostHost(host: string): boolean {
-  return host === "localhost" || host === "127.0.0.1" || host.startsWith("localhost:");
+function isLocalDevHost(host: string): boolean {
+  return host.startsWith("localhost:") || host.startsWith("127.0.0.1:");
 }
 
 export function authCookieOptions(requestOrigin?: string): CookieOptions {
@@ -15,20 +15,23 @@ export function authCookieOptions(requestOrigin?: string): CookieOptions {
   let crossHost = false;
   let useSecure = isProd || clientUrl.startsWith("https://");
 
-  if (requestOrigin) {
-    useSecure = useSecure || requestOrigin.startsWith("https://");
+  const frontendOrigin = requestOrigin ?? clientUrl;
 
-    if (isDevTunnelFrontendOrigin(requestOrigin)) {
+  if (frontendOrigin) {
+    useSecure = useSecure || frontendOrigin.startsWith("https://");
+
+    if (isDevTunnelFrontendOrigin(frontendOrigin)) {
       crossHost = true;
       useSecure = true;
     } else {
       try {
-        const clientHost = new URL(requestOrigin).host;
+        const frontendHost = new URL(frontendOrigin).host;
         const apiHost = new URL(apiUrl).host;
-        crossHost =
-          isLocalhostHost(clientHost) && isLocalhostHost(apiHost)
-            ? clientHost !== apiHost
-            : clientHost !== apiHost;
+        crossHost = frontendHost !== apiHost;
+        // localhost:3000 → localhost:5000 needs SameSite=None; Chrome allows Secure on localhost.
+        if (crossHost && isLocalDevHost(frontendHost) && isLocalDevHost(apiHost)) {
+          useSecure = true;
+        }
       } catch {
         crossHost = false;
       }
@@ -44,10 +47,12 @@ export function authCookieOptions(requestOrigin?: string): CookieOptions {
     useSecure = useSecure || clientUrl.startsWith("https://");
   }
 
+  const needsCrossSiteCookie = crossHost && useSecure;
+
   return {
     httpOnly: true,
     secure: useSecure,
-    sameSite: crossHost && useSecure ? "none" : isProd ? "strict" : "lax",
+    sameSite: needsCrossSiteCookie ? "none" : isProd ? "strict" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000,
   };
 }

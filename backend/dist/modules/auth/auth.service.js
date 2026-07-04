@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -7,6 +40,7 @@ exports.checkRegistrationEmail = checkRegistrationEmail;
 exports.registerClient = registerClient;
 exports.registerEngineer = registerEngineer;
 exports.resumeEngineerRegistration = resumeEngineerRegistration;
+exports.applyClientAsEngineer = applyClientAsEngineer;
 exports.login = login;
 exports.verifyOtp = verifyOtp;
 exports.verifyEmail = verifyEmail;
@@ -19,6 +53,7 @@ exports.changePassword = changePassword;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const ApiError_1 = __importDefault(require("../../utils/ApiError"));
 const db_1 = __importDefault(require("../../config/db"));
+const clientUrl_1 = require("../../config/clientUrl");
 const generateToken_1 = __importDefault(require("../../utils/generateToken"));
 const sendVerificationEmail_1 = require("../../utils/sendVerificationEmail");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -27,6 +62,10 @@ const emailTemplate_1 = require("../../utils/emailTemplate");
 const redis_1 = require("../../config/redis");
 function stripPassword({ password: _, ...safe }) {
     return safe;
+}
+function issueRegistrationSession(user) {
+    const token = (0, generateToken_1.default)(user.id, user.role);
+    return { user: stripPassword(user), token };
 }
 async function checkRegistrationEmail(email) {
     const normalized = email.toLowerCase().trim();
@@ -62,11 +101,11 @@ async function registerClient(data) {
             email,
             password: hashedPassword,
             role: "CLIENT",
-            isVerified: false,
+            isVerified: true,
         },
     });
     void (0, sendVerificationEmail_1.sendVerificationEmail)(user.id, user.email).catch(() => undefined);
-    return stripPassword(user);
+    return issueRegistrationSession(user);
 }
 async function registerEngineer(data, fileUrl, documentType, portfolioUrls = []) {
     const { name, email, password, specialty, bio, nationality } = data;
@@ -84,7 +123,7 @@ async function registerEngineer(data, fileUrl, documentType, portfolioUrls = [])
             email,
             password: hashedPassword,
             role: "ENGINEER",
-            isVerified: false,
+            isVerified: true,
             profile: {
                 create: {
                     specialty,
@@ -103,7 +142,7 @@ async function registerEngineer(data, fileUrl, documentType, portfolioUrls = [])
         include: { profile: true },
     });
     void (0, sendVerificationEmail_1.sendVerificationEmail)(user.id, user.email).catch(() => undefined);
-    return stripPassword(user);
+    return issueRegistrationSession(user);
 }
 async function resumeEngineerRegistration(data, portfolioUrls) {
     const { email, password } = data;
@@ -138,15 +177,73 @@ async function resumeEngineerRegistration(data, portfolioUrls) {
             description: `Portfolio work ${existingCount + index + 1}`,
         })),
     });
-    const refreshed = await db_1.default.user.findUnique({
+    const refreshed = await db_1.default.user.update({
         where: { id: user.id },
+        data: { isVerified: true },
         include: { profile: true },
     });
-    if (!refreshed)
-        throw new ApiError_1.default(404, "User not found");
-    if (!refreshed.isVerified) {
-        void (0, sendVerificationEmail_1.sendVerificationEmail)(refreshed.id, refreshed.email).catch(() => undefined);
+    return issueRegistrationSession(refreshed);
+}
+async function applyClientAsEngineer(userId, data, fileUrl, documentType, portfolioUrls = []) {
+    const { specialty, bio, nationality } = data;
+    if (portfolioUrls.length < 3) {
+        throw new ApiError_1.default(400, "Upload at least 3 portfolio work samples");
     }
+    const user = await db_1.default.user.findUnique({
+        where: { id: userId },
+        include: { profile: { include: { portfolio: true } } },
+    });
+    if (!user)
+        throw new ApiError_1.default(404, "User not found");
+    if (user.role === "ENGINEER") {
+        throw new ApiError_1.default(400, "You are already an engineer");
+    }
+    if (user.role === "ADMIN") {
+        throw new ApiError_1.default(403, "Admins cannot apply as engineers");
+    }
+    if (user.profile?.verificationStatus === "PENDING") {
+        throw new ApiError_1.default(400, "Your engineer application is already under review");
+    }
+    const portfolioCreate = portfolioUrls.map((imageUrl, index) => ({
+        imageUrl,
+        description: `Portfolio work ${index + 1}`,
+    }));
+    if (user.profile) {
+        await db_1.default.portfolioItem.deleteMany({ where: { engineerId: user.profile.id } });
+        await db_1.default.engineerProfile.update({
+            where: { id: user.profile.id },
+            data: {
+                specialty,
+                bio,
+                nationality,
+                verificationStatus: "PENDING",
+                collegeIdUrl: null,
+                certificateUrl: null,
+                syndicateCardUrl: null,
+                [documentType]: fileUrl,
+                portfolio: { create: portfolioCreate },
+            },
+        });
+    }
+    else {
+        await db_1.default.engineerProfile.create({
+            data: {
+                userId,
+                specialty,
+                bio,
+                nationality,
+                verificationStatus: "PENDING",
+                [documentType]: fileUrl,
+                portfolio: { create: portfolioCreate },
+            },
+        });
+    }
+    const { createNotification } = await Promise.resolve().then(() => __importStar(require("../../utils/notifications")));
+    await createNotification(userId, "ENGINEER_APPLICATION_RECEIVED", "Engineer application received", "We are reviewing your documents and portfolio. We will notify you when you are accepted.", "/settings", { force: true });
+    const refreshed = await db_1.default.user.findUnique({
+        where: { id: userId },
+        include: { profile: { include: { portfolio: true } } },
+    });
     return stripPassword(refreshed);
 }
 // Step 1 — validate credentials, send OTP
@@ -174,10 +271,6 @@ async function login(data) {
             to: email,
             subject: "Your CLINKA login code",
             html: (0, emailTemplate_1.loginOtpEmailHtml)(otp),
-            text: `Use the verification code below to sign in to your CLINKA account:\n\n${otp}\n\nThis code will expire in 10 minutes.\n\nNever share it with anyone.`,
-            headers: {
-                "X-Auto-Response-Suppress": "All",
-            },
         });
         console.log("OTP email sent:", info.messageId, info.accepted);
     }
@@ -205,34 +298,23 @@ async function verifyOtp(userId, otp) {
 }
 async function verifyEmail(token) {
     const payload = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-    const user = await db_1.default.user.findUnique({ where: { id: payload.userId } });
-    if (!user)
-        throw new ApiError_1.default(404, "User not found");
-    if (!user.isVerified) {
-        await db_1.default.user.update({
-            where: { id: payload.userId },
-            data: { isVerified: true },
-        });
-    }
-    const sessionToken = (0, generateToken_1.default)(user.id, user.role);
-    return { token: sessionToken, userId: user.id };
+    await db_1.default.user.update({
+        where: { id: payload.userId },
+        data: { isVerified: true },
+    });
 }
 async function forgotPassword(email) {
     const user = await db_1.default.user.findUnique({ where: { email } });
     if (!user)
         throw new ApiError_1.default(404, "No account found with this email");
     const token = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "15m" });
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    const resetUrl = `${(0, clientUrl_1.getPublicClientUrl)()}/reset-password?token=${token}`;
     try {
         const info = await mailer_1.default.sendMail({
             from: (0, emailTemplate_1.getEmailFrom)(),
             to: email,
             subject: "Reset your CLINKA password",
             html: (0, emailTemplate_1.passwordResetEmailHtml)(resetUrl),
-            text: `We received a request to reset the password for your CLINKA account.\n\nReset your password by clicking the link below:\n\n${resetUrl}\n\nThis link will expire in 15 minutes. If you did not request a reset, you can safely ignore this email.`,
-            headers: {
-                "X-Auto-Response-Suppress": "All",
-            },
         });
         console.log("Reset email sent:", info.messageId, info.accepted);
     }
@@ -277,10 +359,6 @@ async function requestEmailChange(userId, newEmail) {
             to: newEmail,
             subject: "Confirm your new CLINKA email",
             html: (0, emailTemplate_1.emailChangeOtpHtml)(otp),
-            text: `Enter the verification code below in your account settings to confirm your new email address:\n\n${otp}\n\nThis code will expire in 10 minutes.`,
-            headers: {
-                "X-Auto-Response-Suppress": "All",
-            },
         });
     }
     catch (error) {

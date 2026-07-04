@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Button } from "@/components/UI";
+import { usePathname } from "next/navigation";
 import { BrandLink } from "@/components/BrandLogo";
 import { useI18n } from "@/i18n";
-import useAuthStore from "@/store/authStore";
-import { NavbarActions } from "@/components/NavbarActions";
+import { AuthNavSlot } from "@/components/AuthNavSlot";
 import { LangToggle } from "@/components/LangToggle";
 import { ThemeToggle } from "@/components/theme";
 import { IconClose, IconMenu } from "@/components/Icons";
@@ -22,9 +20,7 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useI18n();
-  const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -38,12 +34,6 @@ export function Navbar() {
     };
   }, [mobileOpen]);
 
-  async function handleLogout() {
-    await logout();
-    setMobileOpen(false);
-    router.push("/login");
-  }
-
   function closeMobile() {
     setMobileOpen(false);
   }
@@ -51,7 +41,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-900/80 dark:bg-slate-950/90">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <BrandLink logoClassName="h-8 w-auto max-w-[160px] sm:h-9 sm:max-w-[200px]" priority />
+        <BrandLink logoClassName="h-12 w-auto sm:h-14" priority />
 
         <nav className="hidden md:flex items-center gap-6" aria-label="Main">
           {navItems.map((item) => {
@@ -75,25 +65,7 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-2 shrink-0">
           <LangToggle compact />
           <ThemeToggle compact />
-          {user ? (
-            <>
-              <NavbarActions showInbox />
-              <Button variant="secondary" size="sm" onClick={handleLogout}>
-                {t("nav.signOut")}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  {t("auth.signin")}
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button size="sm">{t("auth.create")}</Button>
-              </Link>
-            </>
-          )}
+          <AuthNavSlot />
         </div>
 
         <div className="flex md:hidden items-center gap-1 shrink-0">
@@ -152,27 +124,7 @@ export function Navbar() {
           </ul>
 
           <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-            {user ? (
-              <>
-                <div className="flex items-center justify-center gap-2 py-1">
-                  <NavbarActions showInbox />
-                </div>
-                <Button variant="secondary" className="w-full" onClick={handleLogout}>
-                  {t("nav.signOut")}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" onClick={closeMobile} className="w-full">
-                  <Button variant="secondary" className="w-full">
-                    {t("auth.signin")}
-                  </Button>
-                </Link>
-                <Link href="/register" onClick={closeMobile} className="w-full">
-                  <Button className="w-full">{t("auth.create")}</Button>
-                </Link>
-              </>
-            )}
+            <AuthNavSlot stacked showInbox onNavigate={closeMobile} />
           </div>
         </div>
       </nav>

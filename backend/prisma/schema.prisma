@@ -156,6 +156,7 @@ model EngineerProfile {
   bio                String?
   coverImageUrl      String?
   verificationStatus VerificationStatus @default(PENDING)
+  nationalId         String?            /// Egyptian national ID (14 digits) — required for Paymob payouts
 
   collegeIdUrl     String?
   certificateUrl   String?
@@ -381,16 +382,20 @@ model WalletTransaction {
 }
 
 model WithdrawalRequest {
-  id            Int                     @id @default(autoincrement())
-  userId        Int
-  amount        Float
-  method        String
-  accountNumber String
-  status        WithdrawalRequestStatus @default(PENDING)
-  adminNotes    String?
-  processedAt   DateTime?
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
+  id                      Int                     @id @default(autoincrement())
+  userId                  Int
+  amount                  Float
+  method                  String
+  accountNumber           String
+  status                  WithdrawalRequestStatus @default(PENDING)
+  adminNotes              String?
+  paymobTransactionId     String?
+  paymobDisbursementStatus String?
+  paymobStatusDescription String?
+  paymobClientReference   String?
+  processedAt             DateTime?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

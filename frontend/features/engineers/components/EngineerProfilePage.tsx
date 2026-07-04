@@ -1,6 +1,7 @@
 // features/users/components/EngineerProfilePage.tsx
 "use client";
 import { Avatar, Button, Card } from "@/components/UI";
+import { NationalityLabel } from "@/components/NationalityLabel";
 import { IconStar, IconMessage, IconBriefcase, IconClose, IconArrow } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import { useRouter } from "next/navigation";
@@ -8,7 +9,6 @@ import { useEffect, useState } from "react";
 import { fetchConversations } from "@/features/messages/api/messages.api";
 import useAuthStore from "@/store/authStore";
 import { useEngineerById } from "../hooks/useEngineerById";
-import { NationalityLabel } from "@/components/NationalityLabel";
 
 export function EngineerProfilePage({ id }: { id: number }) {
   const { t } = useI18n();
@@ -127,11 +127,11 @@ export function EngineerProfilePage({ id }: { id: number }) {
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{engineer.name}</h1>
-            <p className="mt-1 text-slate-500 flex flex-wrap items-center gap-x-1 gap-y-0.5">
+            <p className="mt-1 text-slate-500 flex flex-wrap items-center gap-1">
               <span>{profile?.specialty}</span>
               {profile?.nationality && (
                 <>
-                  <span aria-hidden>·</span>
+                  <span>·</span>
                   <NationalityLabel nationality={profile.nationality} />
                 </>
               )}

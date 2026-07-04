@@ -24,6 +24,9 @@ exports.getAllPaymentsController = getAllPaymentsController;
 exports.overridePaymentController = overridePaymentController;
 exports.getAnalyticsController = getAnalyticsController;
 exports.getSystemLogsController = getSystemLogsController;
+exports.getEscrowOverviewController = getEscrowOverviewController;
+exports.getActiveDisputesController = getActiveDisputesController;
+exports.getSystemHealthController = getSystemHealthController;
 exports.getSupportTicketsController = getSupportTicketsController;
 exports.updateSupportTicketController = updateSupportTicketController;
 exports.getWithdrawalRequestsController = getWithdrawalRequestsController;
@@ -246,10 +249,39 @@ async function getAnalyticsController(_req, res, next) {
         next(error);
     }
 }
-async function getSystemLogsController(_req, res, next) {
+async function getSystemLogsController(req, res, next) {
     try {
-        const logs = await (0, admin_service_1.getSystemLogs)();
+        const limit = Number(req.query.limit) || 50;
+        const logs = await (0, admin_service_1.getSystemLogs)(limit);
         res.status(200).json((0, ApiResponse_1.default)(200, "System logs fetched", logs));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function getEscrowOverviewController(_req, res, next) {
+    try {
+        const data = await (0, admin_service_1.getEscrowOverview)();
+        res.status(200).json((0, ApiResponse_1.default)(200, "Escrow overview fetched", data));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function getActiveDisputesController(req, res, next) {
+    try {
+        const limit = Number(req.query.limit) || 10;
+        const data = await (0, admin_service_1.getActiveDisputes)(limit);
+        res.status(200).json((0, ApiResponse_1.default)(200, "Active disputes fetched", data));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function getSystemHealthController(_req, res, next) {
+    try {
+        const data = await (0, admin_service_1.getSystemHealth)();
+        res.status(200).json((0, ApiResponse_1.default)(200, "System health fetched", data));
     }
     catch (error) {
         next(error);

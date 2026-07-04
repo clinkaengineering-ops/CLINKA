@@ -7,6 +7,7 @@ exports.checkRegistrationEmailController = checkRegistrationEmailController;
 exports.registerClientController = registerClientController;
 exports.registerEngineerController = registerEngineerController;
 exports.resumeEngineerRegistrationController = resumeEngineerRegistrationController;
+exports.applyClientAsEngineerController = applyClientAsEngineerController;
 exports.loginController = loginController;
 exports.verifyEmailController = verifyEmailController;
 exports.forgotPasswordController = forgotPasswordController;
@@ -17,15 +18,12 @@ exports.changePasswordController = changePasswordController;
 exports.requestEmailChangeController = requestEmailChangeController;
 exports.confirmEmailChangeController = confirmEmailChangeController;
 exports.verifyOtpController = verifyOtpController;
-exports.oauthSessionController = oauthSessionController;
 exports.googleAuthStartController = googleAuthStartController;
 exports.googleAuthCallbackController = googleAuthCallbackController;
 exports.googleAuthStatusController = googleAuthStatusController;
 const auth_validation_1 = require("./auth.validation");
 const auth_service_1 = require("./auth.service");
 const auth_validation_2 = require("./auth.validation");
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const user_service_1 = require("../users/user.service");
 const ApiResponse_1 = __importDefault(require("../../utils/ApiResponse"));
 const ApiError_1 = __importDefault(require("../../utils/ApiError"));
 const cookies_1 = require("../../config/cookies");
@@ -47,10 +45,9 @@ async function checkRegistrationEmailController(req, res, next) {
 async function registerClientController(req, res, next) {
     try {
         const validatedData = auth_validation_1.clientRegisterSchema.parse(req.body);
-        const user = await (0, auth_service_1.registerClient)(validatedData);
-        res
-            .status(201)
-            .json((0, ApiResponse_1.default)(201, "Check your email to verify your account", user));
+        const { user, token } = await (0, auth_service_1.registerClient)(validatedData);
+        res.cookie("token", token, (0, cookies_1.authCookieOptions)(req.headers.origin));
+        res.status(201).json((0, ApiResponse_1.default)(201, "Registered successfully", user));
     }
     catch (error) {
         next(error);
@@ -64,10 +61,9 @@ async function registerEngineerController(req, res, next) {
         const fileUrl = documentFile?.path ?? "";
         const documentType = req.body.documentType;
         const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-        const user = await (0, auth_service_1.registerEngineer)(validatedData, fileUrl, documentType, portfolioUrls);
-        res
-            .status(201)
-            .json((0, ApiResponse_1.default)(201, "Check your email to verify your account", user));
+        const { user, token } = await (0, auth_service_1.registerEngineer)(validatedData, fileUrl, documentType, portfolioUrls);
+        res.cookie("token", token, (0, cookies_1.authCookieOptions)(req.headers.origin));
+        res.status(201).json((0, ApiResponse_1.default)(201, "Registered successfully", user));
     }
     catch (error) {
         next(error);
@@ -78,10 +74,29 @@ async function resumeEngineerRegistrationController(req, res, next) {
         const validatedData = auth_validation_1.clientRegisterSchema.parse(req.body);
         const files = req.files;
         const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-        const user = await (0, auth_service_1.resumeEngineerRegistration)(validatedData, portfolioUrls);
+        const { user, token } = await (0, auth_service_1.resumeEngineerRegistration)(validatedData, portfolioUrls);
+        res.cookie("token", token, (0, cookies_1.authCookieOptions)(req.headers.origin));
+        res.status(200).json((0, ApiResponse_1.default)(200, "Portfolio submitted successfully", user));
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function applyClientAsEngineerController(req, res, next) {
+    try {
+        const validatedData = auth_validation_1.clientApplyEngineerSchema.parse(req.body);
+        const files = req.files;
+        const documentFile = files?.document?.[0] ?? req.file;
+        const fileUrl = documentFile?.path ?? "";
+        if (!fileUrl) {
+            throw new ApiError_1.default(400, "Verification document is required");
+        }
+        const documentType = req.body.documentType;
+        const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+        const user = await (0, auth_service_1.applyClientAsEngineer)(req.user.userId, validatedData, fileUrl, documentType, portfolioUrls);
         res
             .status(200)
-            .json((0, ApiResponse_1.default)(200, "Check your email to verify your account", user));
+            .json((0, ApiResponse_1.default)(200, "Engineer application submitted", user));
     }
     catch (error) {
         next(error);
@@ -100,10 +115,8 @@ async function loginController(req, res, next) {
 async function verifyEmailController(req, res, next) {
     try {
         const { token } = req.query;
-        const { token: sessionToken, userId } = await (0, auth_service_1.verifyEmail)(token);
-        const user = await (0, user_service_1.getMe)(userId);
-        res.cookie("token", sessionToken, (0, cookies_1.authCookieOptions)(req.headers.origin));
-        res.status(200).json((0, ApiResponse_1.default)(200, "Email verified successfully", user));
+        await (0, auth_service_1.verifyEmail)(token);
+        res.status(200).json((0, ApiResponse_1.default)(200, "Email verified successfully"));
     }
     catch (error) {
         next(error);
@@ -188,25 +201,6 @@ async function verifyOtpController(req, res, next) {
         next(error);
     }
 }
-/** Exchange a short-lived OAuth session JWT for an httpOnly cookie on the frontend origin. */
-async function oauthSessionController(req, res, next) {
-    try {
-        const { session } = auth_validation_2.oauthSessionSchema.parse(req.body);
-        let payload;
-        try {
-            payload = jsonwebtoken_1.default.verify(session, process.env.JWT_SECRET);
-        }
-        catch {
-            throw new ApiError_1.default(401, "Invalid or expired session");
-        }
-        res.cookie("token", session, (0, cookies_1.authCookieOptions)(req.headers.origin));
-        const user = await (0, user_service_1.getMe)(payload.userId);
-        res.status(200).json((0, ApiResponse_1.default)(200, "Signed in successfully", user));
-    }
-    catch (error) {
-        next(error);
-    }
-}
 async function googleAuthStartController(req, res, next) {
     try {
         if (!(0, google_1.isGoogleAuthEnabled)()) {
@@ -232,6 +226,8 @@ async function googleAuthCallbackController(req, res, next) {
         const error = typeof req.query.error === "string" ? req.query.error : undefined;
         const result = await (0, google_service_1.handleGoogleCallback)(code, state, error);
         if (result.token) {
+            // Google redirects here without an Origin header — use the frontend origin
+            // stored in OAuth state so cross-site cookies work (localhost ports + dev tunnels).
             res.cookie("token", result.token, (0, cookies_1.authCookieOptions)(result.clientOrigin ?? req.headers.origin));
         }
         res.redirect(result.redirectUrl);

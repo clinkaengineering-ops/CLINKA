@@ -6,20 +6,28 @@ import {
   loginInput,
 } from "./auth.validation";
 import db from "../../config/db";
+import { getPublicClientUrl } from "../../config/clientUrl";
 import generateToken from "../../utils/generateToken";
 import { sendVerificationEmail } from "../../utils/sendVerificationEmail";
 import jwt from "jsonwebtoken";
+import transporter from "../../config/mailer";
 import {
   emailChangeOtpHtml,
+  getEmailFrom,
   loginOtpEmailHtml,
   passwordResetEmailHtml,
 } from "../../utils/emailTemplate";
-import { getPublicClientUrl } from "../../config/clientUrl";
-import { sendBrandedEmail } from "../../utils/sendEmail";
 import { cacheDel, cacheGet, cacheSet } from "../../config/redis";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
+}
+
+function issueRegistrationSession<T extends { id: number; role: string; password: string }>(
+  user: T,
+) {
+  const token = generateToken(user.id, user.role);
+  return { user: stripPassword(user), token };
 }
 
 export async function checkRegistrationEmail(email: string) {
@@ -65,12 +73,12 @@ export async function registerClient(data: clientRegisterInput) {
       email,
       password: hashedPassword,
       role: "CLIENT",
-      isVerified: false,
+      isVerified: true,
     },
   });
 
   void sendVerificationEmail(user.id, user.email).catch(() => undefined);
-  return stripPassword(user);
+  return issueRegistrationSession(user);
 }
 
 export async function registerEngineer(
@@ -98,7 +106,7 @@ export async function registerEngineer(
       email,
       password: hashedPassword,
       role: "ENGINEER",
-      isVerified: false,
+      isVerified: true,
       profile: {
         create: {
           specialty,
@@ -118,7 +126,7 @@ export async function registerEngineer(
   });
 
   void sendVerificationEmail(user.id, user.email).catch(() => undefined);
-  return stripPassword(user);
+  return issueRegistrationSession(user);
 }
 
 export async function resumeEngineerRegistration(
@@ -168,17 +176,95 @@ export async function resumeEngineerRegistration(
     })),
   });
 
-  const refreshed = await db.user.findUnique({
+  const refreshed = await db.user.update({
     where: { id: user.id },
+    data: { isVerified: true },
     include: { profile: true },
   });
-  if (!refreshed) throw new ApiError(404, "User not found");
 
-  if (!refreshed.isVerified) {
-    void sendVerificationEmail(refreshed.id, refreshed.email).catch(() => undefined);
+  return issueRegistrationSession(refreshed);
+}
+
+export async function applyClientAsEngineer(
+  userId: number,
+  data: import("./auth.validation").ClientApplyEngineerInput,
+  fileUrl: string,
+  documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl",
+  portfolioUrls: string[] = [],
+) {
+  const { specialty, bio, nationality } = data;
+
+  if (portfolioUrls.length < 3) {
+    throw new ApiError(400, "Upload at least 3 portfolio work samples");
   }
 
-  return stripPassword(refreshed);
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { profile: { include: { portfolio: true } } },
+  });
+  if (!user) throw new ApiError(404, "User not found");
+  if (user.role === "ENGINEER") {
+    throw new ApiError(400, "You are already an engineer");
+  }
+  if (user.role === "ADMIN") {
+    throw new ApiError(403, "Admins cannot apply as engineers");
+  }
+
+  if (user.profile?.verificationStatus === "PENDING") {
+    throw new ApiError(400, "Your engineer application is already under review");
+  }
+
+  const portfolioCreate = portfolioUrls.map((imageUrl, index) => ({
+    imageUrl,
+    description: `Portfolio work ${index + 1}`,
+  }));
+
+  if (user.profile) {
+    await db.portfolioItem.deleteMany({ where: { engineerId: user.profile.id } });
+    await db.engineerProfile.update({
+      where: { id: user.profile.id },
+      data: {
+        specialty,
+        bio,
+        nationality,
+        verificationStatus: "PENDING",
+        collegeIdUrl: null,
+        certificateUrl: null,
+        syndicateCardUrl: null,
+        [documentType]: fileUrl,
+        portfolio: { create: portfolioCreate },
+      },
+    });
+  } else {
+    await db.engineerProfile.create({
+      data: {
+        userId,
+        specialty,
+        bio,
+        nationality,
+        verificationStatus: "PENDING",
+        [documentType]: fileUrl,
+        portfolio: { create: portfolioCreate },
+      },
+    });
+  }
+
+  const { createNotification } = await import("../../utils/notifications");
+  await createNotification(
+    userId,
+    "ENGINEER_APPLICATION_RECEIVED",
+    "Engineer application received",
+    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
+    "/settings",
+    { force: true },
+  );
+
+  const refreshed = await db.user.findUnique({
+    where: { id: userId },
+    include: { profile: { include: { portfolio: true } } },
+  });
+
+  return stripPassword(refreshed!);
 }
 
 // Step 1 — validate credentials, send OTP
@@ -205,21 +291,13 @@ export async function login(data: loginInput) {
 
   // send to email
   try {
-    await sendBrandedEmail({
+    const info = await transporter.sendMail({
+      from: getEmailFrom(),
       to: email,
-      subject: "Your CLINKA sign-in code",
+      subject: "Your CLINKA login code",
       html: loginOtpEmailHtml(otp),
-      text: [
-        "Your CLINKA sign-in code",
-        "",
-        otp,
-        "",
-        "This code expires in 10 minutes. Never share it with anyone.",
-        "",
-        "— CLINKA",
-      ].join("\n"),
     });
-    console.log("OTP email sent to:", email);
+    console.log("OTP email sent:", info.messageId, info.accepted);
   } catch (error) {
     // Log email error but don't fail the login
     console.warn(
@@ -255,18 +333,10 @@ export async function verifyEmail(token: string) {
     userId: number;
   };
 
-  const user = await db.user.findUnique({ where: { id: payload.userId } });
-  if (!user) throw new ApiError(404, "User not found");
-
-  if (!user.isVerified) {
-    await db.user.update({
-      where: { id: payload.userId },
-      data: { isVerified: true },
-    });
-  }
-
-  const sessionToken = generateToken(user.id, user.role);
-  return { token: sessionToken, userId: user.id };
+  await db.user.update({
+    where: { id: payload.userId },
+    data: { isVerified: true },
+  });
 }
 
 export async function forgotPassword(email: string) {
@@ -282,23 +352,13 @@ export async function forgotPassword(email: string) {
   const resetUrl = `${getPublicClientUrl()}/reset-password?token=${token}`;
 
   try {
-    await sendBrandedEmail({
+    const info = await transporter.sendMail({
+      from: getEmailFrom(),
       to: email,
       subject: "Reset your CLINKA password",
       html: passwordResetEmailHtml(resetUrl),
-      text: [
-        "We received a request to reset your CLINKA password.",
-        "",
-        resetUrl,
-        "",
-        "This link expires in 15 minutes.",
-        "",
-        "If you did not request this, you can ignore this email.",
-        "",
-        "— CLINKA",
-      ].join("\n"),
     });
-    console.log("Reset email sent to:", email);
+    console.log("Reset email sent:", info.messageId, info.accepted);
   } catch (error) {
     // Log email error but don't fail the request
     console.warn(
@@ -351,19 +411,11 @@ export async function requestEmailChange(userId: number, newEmail: string) {
   );
 
   try {
-    await sendBrandedEmail({
+    await transporter.sendMail({
+      from: getEmailFrom(),
       to: newEmail,
       subject: "Confirm your new CLINKA email",
       html: emailChangeOtpHtml(otp),
-      text: [
-        "Confirm your new CLINKA email address with this code:",
-        "",
-        otp,
-        "",
-        "This code expires in 10 minutes.",
-        "",
-        "— CLINKA",
-      ].join("\n"),
     });
   } catch (error) {
     console.warn("Failed to send email-change OTP:", error);

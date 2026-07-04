@@ -16,6 +16,7 @@ import { ProjectFilters } from "./ProjectFilters";
 import { ProjectListPanel } from "./ProjectListPanel";
 import { ProjectDetailPanel } from "./ProjectDetailPanel";
 import { PostProjectModal } from "./PostProjectModal";
+import { matchesBudget, matchesPostedTimeline } from "../utils/projectFilters";
 
 export default function ProjectMarketplace() {
   const { t } = useI18n();
@@ -25,8 +26,8 @@ export default function ProjectMarketplace() {
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [budget, setBudget] = useState("");
+  const [timeline, setTimeline] = useState("");
   const [serviceType, setServiceType] = useState("");
-  const [activeDisc, setActiveDisc] = useState("All");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [postOpen, setPostOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"browse" | "mine" | "contracts">(
@@ -93,17 +94,13 @@ export default function ProjectMarketplace() {
       )
         return false;
 
-      if (budget) {
-        const [min, max] = budget.split("-").map(Number);
-        if (p.budget < min || p.budget > max) return false;
-      }
-
+      if (!matchesBudget(p.budget, budget)) return false;
+      if (!matchesPostedTimeline(p.createdAt, timeline)) return false;
       if (serviceType && p.serviceType !== serviceType) return false;
-      if (activeDisc !== "All" && p.serviceType !== activeDisc) return false;
 
       return true;
     });
-  }, [projects, search, budget, serviceType, activeDisc]);
+  }, [projects, search, budget, timeline, serviceType]);
 
   const handleSelect = useCallback((id: number) => setSelectedId(id), []);
 
@@ -219,10 +216,10 @@ export default function ProjectMarketplace() {
         onSearch={setSearch}
         budget={budget}
         onBudget={setBudget}
+        timeline={timeline}
+        onTimeline={setTimeline}
         serviceType={serviceType}
         onServiceType={setServiceType}
-        activeDisc={activeDisc}
-        onDisc={setActiveDisc}
       />
 
       {!listLoading && (

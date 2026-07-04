@@ -1,31 +1,21 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { Badge, Button, Card } from "../../../components/UI";
-import {
-  IconArrow,
-  IconBolt,
-  IconBriefcase,
-  IconClock,
-  IconLocation,
-  IconSearch,
-  IconStar,
-  IconWallet,
-} from "../../../components/Icons";
+import { IconSearch } from "../../../components/Icons";
 import { useI18n } from "../../../i18n";
-import { cn } from "../../../utils/cn";
-import { useProjects } from "../hooks/useProjects";
-import type { Project, ServiceType } from "../api/project.api";
+import { Card } from "../../../components/UI";
+import type { ServiceType } from "../api/project.api";
+
+const SERVICE_TYPES: ServiceType[] = ["DESIGN", "SUPERVISION", "REVIEW"];
 
 interface ProjectFiltersProps {
   search: string;
   onSearch: (v: string) => void;
   budget: string;
   onBudget: (v: string) => void;
+  timeline: string;
+  onTimeline: (v: string) => void;
   serviceType: string;
   onServiceType: (v: string) => void;
-  activeDisc: string;
-  onDisc: (v: string) => void;
 }
 
 export function ProjectFilters({
@@ -33,25 +23,29 @@ export function ProjectFilters({
   onSearch,
   budget,
   onBudget,
+  timeline,
+  onTimeline,
   serviceType,
   onServiceType,
-  activeDisc,
-  onDisc,
 }: ProjectFiltersProps) {
   const { t } = useI18n();
 
-  const discs = [
-    { id: "All", label: t("disc.all") },
-    { id: "DESIGN", label: t("disc.structural") }, // maps to DESIGN service type
-    { id: "SUPERVISION", label: t("disc.civil") }, // maps to SUPERVISION
-    { id: "REVIEW", label: t("disc.architecture") }, // maps to REVIEW
-  ];
+  const serviceLabel = (type: ServiceType) => {
+    const map: Record<ServiceType, string> = {
+      DESIGN: t("service.design"),
+      SUPERVISION: t("service.supervision"),
+      REVIEW: t("service.review"),
+    };
+    return map[type];
+  };
+
+  const selectClass =
+    "h-11 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 text-sm min-w-[9.5rem]";
 
   return (
     <Card className="p-4">
-      <div className="flex flex-col md:flex-row gap-3">
-        {/* keyword search */}
-        <div className="flex-1 relative">
+      <div className="flex flex-col gap-3">
+        <div className="relative">
           <IconSearch
             width={16}
             height={16}
@@ -65,47 +59,45 @@ export function ProjectFilters({
           />
         </div>
 
-        {/* budget filter */}
-        <select
-          value={budget}
-          onChange={(e) => onBudget(e.target.value)}
-          className="h-11 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 text-sm"
-        >
-          <option value="">{t("pm.anyBudget")}</option>
-          <option value="0-5000">$0 – $5k</option>
-          <option value="5000-15000">$5k – $15k</option>
-          <option value="15000-999999">$15k+</option>
-        </select>
-
-        {/* service type filter */}
-        <select
-          value={serviceType}
-          onChange={(e) => onServiceType(e.target.value)}
-          className="h-11 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 text-sm"
-        >
-          <option value="">{t("pm.anyTimeline")}</option>
-          <option value="DESIGN">Design</option>
-          <option value="SUPERVISION">Supervision</option>
-          <option value="REVIEW">Review</option>
-        </select>
-      </div>
-
-      {/* discipline tabs */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {discs.map((d) => (
-          <button
-            key={d.id}
-            onClick={() => onDisc(d.id)}
-            className={cn(
-              "px-3.5 h-8 rounded-full text-xs font-semibold border transition",
-              activeDisc === d.id
-                ? "bg-electric-500 text-white border-electric-500"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 hover:text-electric-600 hover:border-electric-500/40",
-            )}
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+          <select
+            value={budget}
+            onChange={(e) => onBudget(e.target.value)}
+            aria-label={t("common.budget")}
+            className={selectClass}
           >
-            {d.label}
-          </button>
-        ))}
+            <option value="">{t("pm.anyBudget")}</option>
+            <option value="0-5000">$0 – $5k</option>
+            <option value="5000-15000">$5k – $15k</option>
+            <option value="15000-999999">$15k+</option>
+          </select>
+
+          <select
+            value={timeline}
+            onChange={(e) => onTimeline(e.target.value)}
+            aria-label={t("common.timeline")}
+            className={selectClass}
+          >
+            <option value="">{t("pm.anyTimeline")}</option>
+            <option value="under4w">{t("pm.under4w")}</option>
+            <option value="1to3m">{t("pm.1to3m")}</option>
+            <option value="3plus">{t("pm.3plus")}</option>
+          </select>
+
+          <select
+            value={serviceType}
+            onChange={(e) => onServiceType(e.target.value)}
+            aria-label={t("pm.postModal.serviceType")}
+            className={selectClass}
+          >
+            <option value="">{t("pm.anyServiceType")}</option>
+            {SERVICE_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {serviceLabel(type)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </Card>
   );

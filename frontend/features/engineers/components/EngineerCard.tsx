@@ -2,10 +2,10 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card, VerifiedBadge } from "@/components/UI";
+import { NationalityLabel } from "@/components/NationalityLabel";
 import { IconStar, IconArrow } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import type { Engineer } from "@/types";
-import { NationalityLabel } from "@/components/NationalityLabel";
 
 export function EngineerCard({ engineer }: { engineer: Engineer }) {
   const router = useRouter();
@@ -26,12 +26,12 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
               <VerifiedBadge size={16} />
             )}
           </div>
-          <p className="text-xs text-slate-500 flex flex-wrap items-center gap-x-1 gap-y-0.5">
+          <p className="text-xs text-slate-500 flex flex-wrap items-center gap-1">
             <span>{engineer.profile?.specialty}</span>
             {engineer.profile?.nationality && (
               <>
-                <span aria-hidden>·</span>
-                <NationalityLabel nationality={engineer.profile.nationality} />
+                <span>·</span>
+                <NationalityLabel nationality={engineer.profile.nationality} flagClassName="text-sm" />
               </>
             )}
           </p>

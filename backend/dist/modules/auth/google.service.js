@@ -15,56 +15,7 @@ const google_1 = require("../../config/google");
 const generateToken_1 = __importDefault(require("../../utils/generateToken"));
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
-function profileFromIdToken(idToken) {
-    const payload = jsonwebtoken_1.default.decode(idToken);
-    if (!payload?.sub || !payload.email) {
-        throw new ApiError_1.default(400, "Google account is missing required profile data");
-    }
-    return {
-        id: payload.sub,
-        email: payload.email,
-        verified_email: payload.email_verified,
-        name: payload.name,
-        picture: payload.picture,
-    };
-}
-function normalizeGoogleProfile(raw) {
-    const id = String(raw.sub ?? raw.id ?? "");
-    const email = String(raw.email ?? "");
-    if (!id || !email) {
-        throw new ApiError_1.default(400, "Google account is missing required profile data");
-    }
-    return {
-        id,
-        email,
-        verified_email: typeof raw.email_verified === "boolean"
-            ? raw.email_verified
-            : typeof raw.verified_email === "boolean"
-                ? raw.verified_email
-                : undefined,
-        name: typeof raw.name === "string" ? raw.name : undefined,
-        picture: typeof raw.picture === "string" ? raw.picture : undefined,
-    };
-}
-function assertVerifiedEmail(profile) {
-    if (profile.verified_email === false) {
-        throw new ApiError_1.default(400, "Please use a Google account with a verified email");
-    }
-    return profile;
-}
-async function fetchGoogleProfile(accessToken) {
-    const profileRes = await fetch(GOOGLE_USERINFO_URL, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!profileRes.ok) {
-        const errText = await profileRes.text();
-        console.warn("Google profile fetch failed:", errText);
-        throw new ApiError_1.default(400, "Could not load your Google profile");
-    }
-    const raw = (await profileRes.json());
-    return normalizeGoogleProfile(raw);
-}
+const GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v2/userinfo";
 function normalizeOrigin(origin) {
     return origin.replace(/\/$/, "");
 }
@@ -134,13 +85,23 @@ async function exchangeCodeForProfile(code, redirectUri) {
         throw new ApiError_1.default(400, "Google sign-in failed. Please try again.");
     }
     const tokens = (await tokenRes.json());
-    if (tokens.id_token) {
-        return assertVerifiedEmail(profileFromIdToken(tokens.id_token));
-    }
     if (!tokens.access_token) {
         throw new ApiError_1.default(400, "Google did not return an access token");
     }
-    return assertVerifiedEmail(await fetchGoogleProfile(tokens.access_token));
+    const profileRes = await fetch(GOOGLE_USERINFO_URL, {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (!profileRes.ok) {
+        throw new ApiError_1.default(400, "Could not load your Google profile");
+    }
+    const profile = (await profileRes.json());
+    if (!profile.id || !profile.email) {
+        throw new ApiError_1.default(400, "Google account is missing required profile data");
+    }
+    if (profile.verified_email === false) {
+        throw new ApiError_1.default(400, "Please use a Google account with a verified email");
+    }
+    return profile;
 }
 async function randomPasswordHash() {
     return bcryptjs_1.default.hash(crypto_1.default.randomBytes(32).toString("hex"), 10);
@@ -214,15 +175,28 @@ async function findOrCreateGoogleUser(profile, role) {
     const { password: _, ...safe } = user;
     return safe;
 }
+function parseClientOriginFromState(stateParam) {
+    if (!stateParam)
+        return undefined;
+    try {
+        return verifyState(stateParam).clientOrigin;
+    }
+    catch {
+        return undefined;
+    }
+}
 async function handleGoogleCallback(code, stateParam, oauthError) {
+    const fallbackClientOrigin = parseClientOriginFromState(stateParam);
     if (oauthError) {
         return {
-            redirectUrl: clientUrl(`/auth/callback?error=${encodeURIComponent(oauthError)}`),
+            redirectUrl: clientUrl(`/auth/callback?error=${encodeURIComponent(oauthError)}`, fallbackClientOrigin),
+            clientOrigin: fallbackClientOrigin,
         };
     }
     if (!code || !stateParam) {
         return {
-            redirectUrl: clientUrl(`/auth/callback?error=${encodeURIComponent("Missing Google authorization")}`),
+            redirectUrl: clientUrl(`/auth/callback?error=${encodeURIComponent("Missing Google authorization")}`, fallbackClientOrigin),
+            clientOrigin: fallbackClientOrigin,
         };
     }
     try {
@@ -244,7 +218,7 @@ async function handleGoogleCallback(code, stateParam, oauthError) {
                 nextPath = "/settings";
             }
         }
-        const redirectUrl = clientUrl(`/auth/callback?success=1&next=${encodeURIComponent(nextPath)}&session=${encodeURIComponent(token)}`, state.clientOrigin);
+        const redirectUrl = clientUrl(`/auth/callback?success=1&next=${encodeURIComponent(nextPath)}`, state.clientOrigin);
         return { redirectUrl, token, clientOrigin: state.clientOrigin };
     }
     catch (error) {
@@ -254,7 +228,8 @@ async function handleGoogleCallback(code, stateParam, oauthError) {
                 ? error.message
                 : "Google sign-in failed";
         return {
-            redirectUrl: clientUrl(`/auth/callback?error=${encodeURIComponent(message)}`),
+            redirectUrl: clientUrl(`/auth/callback?error=${encodeURIComponent(message)}`, fallbackClientOrigin),
+            clientOrigin: fallbackClientOrigin,
         };
     }
 }

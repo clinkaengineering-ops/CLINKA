@@ -29,6 +29,9 @@ export interface WithdrawalRequest {
   accountNumber: string;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
   adminNotes: string | null;
+  paymobTransactionId?: string | null;
+  paymobDisbursementStatus?: string | null;
+  paymobStatusDescription?: string | null;
   processedAt: string | null;
   createdAt: string;
 }
@@ -108,4 +111,17 @@ export interface CreateWithdrawalPayload {
   amount: number;
   method: string;
   accountNumber: string;
+}
+
+export type AutoWithdrawalChannel = "mobile_wallet" | "bank_transfer";
+
+export interface AutoWithdrawalPayload {
+  amount: number;
+  channel: AutoWithdrawalChannel;
+  msisdn?: string;
+  accountNumber?: string;
+  bankCode?: string;
+  fullName?: string;
+  nationalId?: string;
+  bankTransactionType?: "cash_transfer" | "salary";
 }

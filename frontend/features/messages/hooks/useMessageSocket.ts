@@ -13,6 +13,7 @@ import type { ChatMessage } from "../types";
 export function useMessageSocket(
   conversationId: number | null,
   onNewMessage: (msg: ChatMessage) => void,
+  onError?: (err: { message: string }) => void,
 ) {
   const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
   const [typingUserId, setTypingUserId] = useState<number | null>(null);
@@ -38,6 +39,9 @@ export function useMessageSocket(
       onTypingStart: ({ userId }: TypingEvent) => setTypingUserId(userId),
       onTypingStop: ({ userId }: TypingEvent) => {
         setTypingUserId((cur) => (cur === userId ? null : cur));
+      },
+      onError: (err: { message: string }) => {
+        if (onError) onError(err);
       },
     };
 

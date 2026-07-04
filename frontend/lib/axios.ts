@@ -2,18 +2,22 @@ import axios from "axios";
 import { resolveApiBaseUrl } from "./apiBaseUrl";
 
 const api = axios.create({
-  baseURL: resolveApiBaseUrl(),
   withCredentials: true,
+});
+
+api.interceptors.request.use((config) => {
+  config.baseURL = resolveApiBaseUrl();
+  return config;
 });
 
 const PUBLIC_PATH_PREFIXES = [
   "/login",
   "/register",
-  "/register/check-email",
   "/verify",
   "/forgot-password",
   "/reset-password",
   "/auth/callback",
+  "/checkout",
 ];
 
 api.interceptors.response.use(

@@ -1,259 +1,221 @@
 "use client";
 
 import Link from "next/link";
-import { BrandLogo } from "@/components/BrandLogo";
 import { useI18n } from "@/i18n";
-import { Button, Card } from "@/components/UI";
-import {
-  IconShield,
-  IconWallet,
-  IconCube,
-  IconLayers,
-  IconBolt,
-} from "@/components/Icons";
-
-function SectionHeading({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-      <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
-        {title}
-      </h2>
-      {subtitle && (
-        <p className="mt-4 text-slate-600 dark:text-slate-400 text-base sm:text-lg">
-          {subtitle}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function BulletList({ items }: { items: string[] }) {
-  return (
-    <ul className="space-y-2.5">
-      {items.map((item) => (
-        <li
-          key={item}
-          className="flex items-start gap-2.5 text-sm sm:text-base text-slate-600 dark:text-slate-400"
-        >
-          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-copper" />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
+import { Button, Card, Badge, SectionHeader } from "@/components/UI";
+import { IconShield, IconWallet, IconCube, IconLayers, IconTrend, IconCheck, IconCompass } from "@/components/Icons";
+import { cn } from "@/utils/cn";
 
 export function AboutPage() {
   const { t } = useI18n();
 
-  const differentiators = [
-    { title: t("about.different.1.title"), desc: t("about.different.1.desc"), Icon: IconShield },
-    { title: t("about.different.2.title"), desc: t("about.different.2.desc"), Icon: IconWallet },
-    { title: t("about.different.3.title"), desc: t("about.different.3.desc"), Icon: IconBolt },
-    { title: t("about.different.4.title"), desc: t("about.different.4.desc"), Icon: IconLayers },
-    { title: t("about.different.5.title"), desc: t("about.different.5.desc"), Icon: IconCube },
+  const diffItems = [
+    { title: t("about.diff1Title"), desc: t("about.diff1Desc"), Icon: IconShield, color: "text-emerald-500" },
+    { title: t("about.diff2Title"), desc: t("about.diff2Desc"), Icon: IconWallet, color: "text-blue-500" },
+    { title: t("about.diff3Title"), desc: t("about.diff3Desc"), Icon: IconTrend, color: "text-brand-copper" },
+    { title: t("about.diff4Title"), desc: t("about.diff4Desc"), Icon: IconLayers, color: "text-purple-500" },
+    { title: t("about.diff5Title"), desc: t("about.diff5Desc"), Icon: IconCube, color: "text-amber-500" },
   ];
 
-  const audience = Array.from({ length: 9 }, (_, i) => t(`about.who.${i + 1}`));
+  const whoItems = [
+    t("about.who1"), t("about.who2"), t("about.who3"), t("about.who4"), t("about.who5"), 
+    t("about.who6"), t("about.who7"), t("about.who8"), t("about.who9")
+  ];
 
-  const steps = Array.from({ length: 4 }, (_, i) => ({
-    title: t(`about.how.${i + 1}.title`),
-    desc: t(`about.how.${i + 1}.desc`),
-  }));
+  const howSteps = [
+    { title: t("about.how1Title"), desc: t("about.how1Desc") },
+    { title: t("about.how2Title"), desc: t("about.how2Desc") },
+    { title: t("about.how3Title"), desc: t("about.how3Desc") },
+    { title: t("about.how4Title"), desc: t("about.how4Desc") },
+  ];
 
-  const values = Array.from({ length: 6 }, (_, i) => t(`about.values.${i + 1}`));
+  const valueItems = [
+    t("about.val1"), t("about.val2"), t("about.val3"), t("about.val4"), t("about.val5"), t("about.val6")
+  ];
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      {/* Hero */}
-      <section className="relative overflow-hidden pt-6 pb-16 sm:pt-10 sm:pb-24 px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/85">
+      
+      {/* Hero Section */}
+      <section className="relative overflow-hidden py-16 sm:py-24 lg:py-32 px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/85">
         <div className="absolute inset-0 grid-bg opacity-30 dark:opacity-40" />
-        <div className="absolute inset-x-0 -top-40 h-[600px] bg-gradient-to-b from-brand-teal/10 via-brand-copper/5 to-transparent blur-3xl" />
-
+        <div className="absolute inset-x-0 -top-40 h-[600px] bg-gradient-to-b from-brand-teal/10 via-brand-copper/5 to-transparent blur-3xl pointer-events-none" />
+        
         <div className="relative max-w-4xl mx-auto flex flex-col items-center text-center">
-          <div className="p-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur rounded-3xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm">
-            <BrandLogo variant="stacked" className="w-32 sm:w-40" priority />
-          </div>
-
-          <p className="mt-8 text-sm font-bold uppercase tracking-[0.2em] text-brand-copper">
-            {t("about.hero.eyebrow")}
-          </p>
-
-          <h1 className="mt-3 pb-3 sm:pb-4 text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight leading-normal sm:leading-snug bg-gradient-to-r from-brand-teal via-brand-teal to-brand-copper bg-clip-text text-transparent">
-            {t("about.hero.tagline")}
+          <Badge color="electric" className="mb-6">{t("about.whatWeDo")}</Badge>
+          
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-brand-teal via-brand-teal to-brand-copper bg-clip-text text-transparent pb-2">
+            {t("about.heroTitle")}
           </h1>
-
-          <div className="mt-10 sm:mt-12 space-y-4 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed text-start sm:text-center">
-            <p>{t("about.hero.p1")}</p>
-            <p>{t("about.hero.p2")}</p>
-            <p>{t("about.hero.p3")}</p>
+          
+          <div className="mt-8 space-y-6 text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
+            <p>{t("about.heroDesc1")}</p>
+            <p>{t("about.heroDesc2")}</p>
+            <p className="font-semibold text-slate-900 dark:text-slate-200">{t("about.heroDesc3")}</p>
           </div>
         </div>
       </section>
 
       {/* Mission & Vision */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-6xl mx-auto">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur border-slate-200/80 dark:border-slate-800/85">
-            <h2 className="text-xl font-bold text-brand-teal">{t("about.mission.title")}</h2>
-            <p className="mt-4 text-slate-600 dark:text-slate-400 leading-relaxed">
-              {t("about.mission.text")}
-            </p>
-          </Card>
-          <Card className="p-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur border-slate-200/80 dark:border-slate-800/85">
-            <h2 className="text-xl font-bold text-brand-teal">{t("about.vision.title")}</h2>
-            <p className="mt-4 text-slate-600 dark:text-slate-400 leading-relaxed">
-              {t("about.vision.text")}
-            </p>
-          </Card>
-        </div>
-      </section>
-
-      {/* Problem */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-6xl mx-auto border-t border-slate-200/80 dark:border-slate-800/85">
-        <SectionHeading title={t("about.problem.title")} subtitle={t("about.problem.intro")} />
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-8">
-            <h3 className="font-bold text-lg">{t("about.problem.clientsTitle")}</h3>
-            <div className="mt-5">
-              <BulletList
-                items={[
-                  t("about.problem.client1"),
-                  t("about.problem.client2"),
-                  t("about.problem.client3"),
-                  t("about.problem.client4"),
-                ]}
-              />
+      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8">
+          <Card className="p-8 sm:p-12 bg-white/50 dark:bg-slate-900/50 backdrop-blur border-slate-200/80 dark:border-slate-800/85 hover:shadow-xl transition-shadow">
+            <div className="h-14 w-14 rounded-2xl bg-brand-teal/10 flex items-center justify-center mb-6">
+              <IconCompass className="w-7 h-7 text-brand-teal" />
             </div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-4">{t("about.missionTitle")}</h2>
+            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed">{t("about.missionDesc")}</p>
           </Card>
-          <Card className="p-8">
-            <h3 className="font-bold text-lg">{t("about.problem.engineersTitle")}</h3>
-            <div className="mt-5">
-              <BulletList
-                items={[
-                  t("about.problem.engineer1"),
-                  t("about.problem.engineer2"),
-                  t("about.problem.engineer3"),
-                  t("about.problem.engineer4"),
-                ]}
-              />
+          <Card className="p-8 sm:p-12 bg-white/50 dark:bg-slate-900/50 backdrop-blur border-slate-200/80 dark:border-slate-800/85 hover:shadow-xl transition-shadow">
+            <div className="h-14 w-14 rounded-2xl bg-electric-500/10 flex items-center justify-center mb-6">
+              <IconTrend className="w-7 h-7 text-electric-500" />
             </div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-4">{t("about.visionTitle")}</h2>
+            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed">{t("about.visionDesc")}</p>
           </Card>
         </div>
-        <p className="mt-10 text-center text-lg font-semibold text-brand-teal">
-          {t("about.problem.closing")}
-        </p>
       </section>
 
-      {/* Differentiators */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-6xl mx-auto border-t border-slate-200/80 dark:border-slate-800/85">
-        <SectionHeading title={t("about.different.title")} />
-        <div className="grid gap-6 sm:grid-cols-2">
-          {differentiators.map(({ title, desc, Icon }) => (
-            <Card
-              key={title}
-              className="p-7 bg-white/50 dark:bg-slate-900/50 hover:border-brand-teal/30 transition-colors"
-            >
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-brand-teal/10 text-brand-teal flex items-center justify-center shrink-0">
-                  <Icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">{title}</h3>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {desc}
-                  </p>
-                </div>
-              </div>
+      {/* The Problem We Solve */}
+      <section className="py-16 sm:py-24 bg-white dark:bg-slate-900/30 border-y border-slate-200 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <SectionHeader
+            title={t("about.problemTitle")}
+            subtitle={t("about.problemSubtitle")}
+            center
+          />
+          
+          <div className="mt-16 grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <Card className="p-8 border-rose-200/50 dark:border-rose-900/30 bg-rose-50/30 dark:bg-rose-950/10 hover:shadow-lg transition-shadow">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                {t("about.problemClientTitle")}
+              </h3>
+              <ul className="space-y-4 text-slate-600 dark:text-slate-400">
+                {[t("about.problemClient1"), t("about.problemClient2"), t("about.problemClient3"), t("about.problemClient4")].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="mt-0.5 text-rose-500 shrink-0">×</span> {item}
+                  </li>
+                ))}
+              </ul>
             </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Audience */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-6xl mx-auto border-t border-slate-200/80 dark:border-slate-800/85">
-        <SectionHeading title={t("about.who.title")} />
-        <div className="flex flex-wrap justify-center gap-3">
-          {audience.map((label) => (
-            <span
-              key={label}
-              className="px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300"
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-6xl mx-auto border-t border-slate-200/80 dark:border-slate-800/85">
-        <SectionHeading title={t("about.how.title")} />
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step, i) => (
-            <Card key={step.title} className="p-6 text-center">
-              <div className="mx-auto h-10 w-10 rounded-full bg-brand-teal text-white flex items-center justify-center font-bold">
-                {i + 1}
-              </div>
-              <h3 className="mt-4 font-bold">{step.title}</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{step.desc}</p>
+            
+            <Card className="p-8 border-amber-200/50 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-950/10 hover:shadow-lg transition-shadow">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                {t("about.problemEngTitle")}
+              </h3>
+              <ul className="space-y-4 text-slate-600 dark:text-slate-400">
+                {[t("about.problemEng1"), t("about.problemEng2"), t("about.problemEng3"), t("about.problemEng4")].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="mt-0.5 text-amber-500 shrink-0">×</span> {item}
+                  </li>
+                ))}
+              </ul>
             </Card>
-          ))}
+          </div>
+          
+          <div className="mt-12 text-center">
+            <div className="inline-block p-4 sm:px-8 sm:py-6 rounded-2xl bg-brand-teal/5 border border-brand-teal/20 text-brand-teal dark:text-electric-300 font-semibold text-lg sm:text-xl">
+              {t("about.problemConclusion")}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Values */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-6xl mx-auto border-t border-slate-200/80 dark:border-slate-800/85">
-        <SectionHeading title={t("about.values.title")} />
-        <div className="flex flex-wrap justify-center gap-3">
-          {values.map((value) => (
-            <span
-              key={value}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-teal/10 text-brand-teal border border-brand-teal/20"
-            >
-              {value}
-            </span>
-          ))}
+      {/* What Makes CLINKA Different */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-7xl mx-auto">
+        <SectionHeader title={t("about.diffTitle")} center />
+        <div className="mt-16 flex flex-wrap justify-center gap-6">
+          {diffItems.map((item, i) => {
+            const IconComp = item.Icon;
+            return (
+              <Card key={i} className="p-6 w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] hover:shadow-lg hover:-translate-y-1 transition-all bg-white/60 dark:bg-slate-900/60 backdrop-blur">
+                <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 mb-5", item.color)}>
+                  <IconComp className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold mb-2">{item.title}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{item.desc}</p>
+              </Card>
+            )
+          })}
         </div>
       </section>
 
-      {/* Future */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-4xl mx-auto text-center border-t border-slate-200/80 dark:border-slate-800/85">
-        <h2 className="text-2xl sm:text-3xl font-extrabold">{t("about.future.title")}</h2>
-        <p className="mt-6 text-lg text-slate-600 dark:text-slate-400">{t("about.future.p1")}</p>
-        <p className="mt-3 text-lg text-slate-600 dark:text-slate-400">{t("about.future.p2")}</p>
-        <p className="mt-8 text-xl font-bold bg-gradient-to-r from-brand-teal to-brand-copper bg-clip-text text-transparent">
-          {t("about.future.tagline")}
-        </p>
+      {/* How CLINKA Works */}
+      <section className="py-16 sm:py-24 bg-brand-ice dark:bg-navy-950/50 border-y border-slate-200 dark:border-slate-900 overflow-hidden relative">
+        <div className="absolute inset-0 grid-bg opacity-30 dark:opacity-40" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
+          <SectionHeader title={t("about.howTitle")} center />
+          
+          <div className="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6 relative">
+            <div className="hidden lg:block absolute top-12 left-12 right-12 h-0.5 bg-slate-300 dark:bg-slate-700" />
+            {howSteps.map((step, i) => {
+              // Strip the number "1. " from the title
+              const titleRaw = step.title.replace(/^\d+\.\s*/, '');
+              return (
+                <div key={i} className="relative z-10 flex flex-col items-center text-center">
+                  <div className="w-24 h-24 rounded-full bg-white dark:bg-slate-900 border-4 border-slate-100 dark:border-slate-800 shadow-xl flex items-center justify-center text-3xl font-extrabold text-brand-teal dark:text-electric-400 mb-6">
+                    {i + 1}
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">{titleRaw}</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs">{step.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
-      {/* CTA */}
-      <section className="pb-16 sm:pb-24 px-4 sm:px-6 max-w-6xl mx-auto">
-        <Card className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950 p-8 sm:p-12 lg:p-16 text-white border-none shadow-xl shadow-brand-teal/10">
+      {/* Who Is CLINKA For & Values */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-16">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight mb-8">{t("about.whoTitle")}</h2>
+          <div className="flex flex-wrap gap-3">
+            {whoItems.map((item, i) => (
+              <span key={i} className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-brand-teal dark:hover:border-electric-500 transition-colors cursor-default">
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight mb-8">{t("about.valuesTitle")}</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {valueItems.map((val, i) => (
+              <Card key={i} className="p-4 flex items-center justify-center sm:justify-start gap-3 bg-white/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                <IconCheck className="w-5 h-5 text-electric-500 shrink-0" />
+                <span className="font-semibold text-sm text-center sm:text-start">{val}</span>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA / Future */}
+      <section className="pb-16 sm:pb-24 px-4 sm:px-6 max-w-5xl mx-auto">
+        <Card className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950 p-8 sm:p-12 lg:p-16 text-white border-none shadow-2xl shadow-brand-teal/20 text-center">
           <div className="absolute inset-0 grid-bg opacity-20" />
-          <div className="relative flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="max-w-2xl text-center md:text-start">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold leading-tight">
-                {t("about.ctaTitle")}
-              </h2>
-              <p className="mt-4 text-white/80 text-base sm:text-lg">{t("about.ctaDesc")}</p>
-            </div>
-            <Link href="/projects" className="shrink-0">
-              <Button
-                size="lg"
-                className="!bg-white !text-brand-teal hover:!bg-brand-ice transition-all duration-200 shadow-md font-semibold border-none"
-              >
+          <div className="absolute -bottom-20 -end-20 h-80 w-80 bg-electric-500/30 blur-[100px] rounded-full" />
+          
+          <div className="relative z-10 max-w-3xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight mb-6">
+              {t("about.futureTitle")}
+            </h2>
+            <p className="text-lg sm:text-xl text-white/80 leading-relaxed mb-10">
+              {t("about.futureDesc")}
+            </p>
+            
+            <Link href="/projects?create=1">
+              <Button size="lg" className="!bg-white !text-brand-teal hover:!bg-brand-ice hover:scale-105 transition-transform font-bold px-8 shadow-xl">
                 {t("about.ctaBtn")}
               </Button>
             </Link>
           </div>
         </Card>
       </section>
+      
     </div>
   );
 }

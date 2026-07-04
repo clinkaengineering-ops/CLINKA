@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { Badge, Button, Card, SectionHeader } from "@/components/UI";
 import { BrandLogo } from "@/components/BrandLogo";
+import { LiveBackground } from "@/components/LiveBackground";
 import {
   IconArrow,
-  IconBolt,
   IconBriefcase,
   IconCheck,
   IconShield,
@@ -17,7 +17,7 @@ import {
 } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import { cn } from "@/utils/cn";
-import { LiveBackground } from "@/components/LiveBackground";
+import { JoinAsEngineerButton } from "../components/JoinAsEngineerButton";
 import { marketingFeatures, howItWorksSteps } from "../api/landing.api";
 
 const iconMap: Record<string, React.ComponentType<{ width?: number; height?: number; className?: string }>> = {
@@ -49,54 +49,62 @@ export function LandingPage() {
   return (
     <div className="overflow-x-hidden">
       {/* HERO */}
-      <section className="relative overflow-x-hidden min-h-[90vh] flex flex-col justify-center">
-        <LiveBackground />
-        <div className="absolute inset-0 grid-bg opacity-60 dark:opacity-20" />
+      <section className="relative overflow-x-hidden min-h-[90vh]">
+        <LiveBackground className="z-0" />
+        <div className="absolute inset-0 z-0 grid-bg opacity-60 dark:opacity-20" />
         <div className="absolute inset-x-0 -top-40 h-[600px] bg-gradient-to-b from-brand-teal/15 via-brand-copper/5 to-transparent blur-3xl pointer-events-none" />
         <div
           className={cn(
-            "relative max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24 lg:pb-32",
+            "relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24 lg:pb-32",
             isRtl ? "pt-12 sm:pt-16 lg:pt-24" : "pt-16 sm:pt-20 lg:pt-28",
           )}
         >
-          <div className="max-w-4xl mx-auto text-center animate-fade-up flex flex-col items-center">
+          <div className="max-w-3xl mx-auto text-center animate-fade-up relative">
+            <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none select-none">
+              <BrandLogo
+                variant="mark"
+                className="w-[280px] sm:w-[420px] lg:w-[560px] h-auto opacity-[0.2] dark:opacity-[0.25]"
+              />
+            </div>
             <BrandLogo
               variant="horizontal"
-              className="h-12 sm:h-16 md:h-20 w-auto max-w-[min(100%,420px)] mb-8 sm:mb-10"
+              className="mx-auto h-16 sm:h-20 md:h-24 w-auto max-w-[min(100%,480px)] mb-6"
               priority
             />
-            
-            <Badge color="electric" className="mb-6 sm:mb-8 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-brand-teal animate-pulse" />
-              {t("hero.badge")}
+            <Badge color="electric">
+              <span className="h-1.5 w-1.5 rounded-full bg-electric-500 animate-pulse" />
+              {t("hero.badge2")}
             </Badge>
-            
             <h1
               className={cn(
-                "font-extrabold tracking-tight pb-3 sm:pb-4 leading-normal sm:leading-snug bg-gradient-to-r from-brand-teal via-brand-teal to-brand-copper bg-clip-text text-transparent",
+                "font-bold tracking-tight text-slate-900 dark:text-white overflow-visible relative",
                 isRtl
-                  ? "text-4xl sm:text-5xl lg:text-7xl"
-                  : "text-4xl sm:text-6xl md:text-7xl lg:text-[5rem]",
+                  ? "mt-4 text-3xl sm:text-4xl lg:text-6xl leading-[1.35]"
+                  : "mt-4 sm:mt-6 text-3xl sm:text-4xl md:text-5xl lg:text-7xl leading-[1.1] sm:leading-[1.05]",
               )}
             >
-              {t("about.hero.tagline")}
+              {t("hero.title1")}
+              {t("hero.title2") ? (
+                <span
+                  className={cn(
+                    "block bg-gradient-to-r from-brand-teal via-brand-teal to-brand-copper bg-clip-text text-transparent",
+                    isRtl && "pb-1 leading-[1.4]",
+                  )}
+                >
+                  {t("hero.title2")}
+                </span>
+              ) : null}
             </h1>
-            
-            <p className="mt-6 sm:mt-8 text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
               {t("hero.subtitle")}
             </p>
-            
-            <div className="mt-10 sm:mt-12 flex flex-wrap justify-center gap-4">
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link href="/projects?create=1" className="inline-block">
                 <Button size="lg" icon={<IconBriefcase width={18} height={18} />}>
                   {t("hero.hire")}
                 </Button>
               </Link>
-              <Link href="/register?role=engineer" className="inline-block">
-                <Button size="lg" variant="secondary" icon={<IconBolt width={18} height={18} />}>
-                  {t("hero.findWork")}
-                </Button>
-              </Link>
+              <JoinAsEngineerButton />
             </div>
             <div className="mt-10 flex flex-wrap justify-center items-center gap-x-8 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
               {[t("hero.f1"), t("hero.f2"), t("hero.f3")].map((p, i) => (

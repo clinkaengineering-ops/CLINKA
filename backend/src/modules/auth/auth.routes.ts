@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   registerClientController,
   registerEngineerController,
+  applyClientAsEngineerController,
   resumeEngineerRegistrationController,
   checkRegistrationEmailController,
   loginController,
@@ -17,7 +18,6 @@ import {
   googleAuthStartController,
   googleAuthCallbackController,
   googleAuthStatusController,
-  oauthSessionController,
 } from "./auth.controller";
 import upload from "../../middlewares/upload.middleware";
 import { authenticate } from "../../middlewares/auth.middleware";
@@ -39,6 +39,15 @@ router.post(
   upload.array("portfolio", 10),
   resumeEngineerRegistrationController,
 );
+router.post(
+  "/apply-engineer",
+  authenticate,
+  upload.fields([
+    { name: "document", maxCount: 1 },
+    { name: "portfolio", maxCount: 10 },
+  ]),
+  applyClientAsEngineerController,
+);
 router.post("/login", loginController);
 router.post("/logout", authenticate, logoutController);
 router.get("/verify-email", verifyEmailController);
@@ -49,7 +58,6 @@ router.post("/change-password", authenticate, changePasswordController);
 router.post("/request-email-change", authenticate, requestEmailChangeController);
 router.post("/confirm-email-change", authenticate, confirmEmailChangeController);
 router.post("/verify-otp", verifyOtpController);
-router.post("/oauth-session", oauthSessionController);
 
 router.get("/google/status", googleAuthStatusController);
 router.get("/google", googleAuthStartController);

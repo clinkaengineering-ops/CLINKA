@@ -1,30 +1,20 @@
 import { cn } from "@/utils/cn";
-import { getNationalityFlag } from "@/lib/nationalities";
-
-type NationalityLabelProps = {
-  nationality: string;
-  className?: string;
-  flagClassName?: string;
-};
+import { nationalityFlag } from "@/lib/nationalityFlags";
 
 export function NationalityLabel({
   nationality,
   className,
   flagClassName,
-}: NationalityLabelProps) {
-  const flag = getNationalityFlag(nationality);
-
+}: {
+  nationality: string;
+  className?: string;
+  flagClassName?: string;
+}) {
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
-      {flag ? (
-        <span
-          aria-hidden
-          className={cn("text-base leading-none shrink-0", flagClassName)}
-          title={nationality}
-        >
-          {flag}
-        </span>
-      ) : null}
+      <span className={cn("text-base leading-none", flagClassName)} aria-hidden>
+        {nationalityFlag(nationality)}
+      </span>
       <span>{nationality}</span>
     </span>
   );

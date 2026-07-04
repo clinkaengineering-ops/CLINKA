@@ -7,8 +7,19 @@ import { IconShield, IconWallet, IconClock } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import { useEngineerBalance } from "../hooks/useEngineerBalance";
 import { formatMoney } from "../utils/formatMoney";
-import { createEngineerWithdrawal } from "../api/payments.api";
-import type { EngineerPaymentStatus } from "../types";
+import { createEngineerAutoWithdrawal } from "../api/payments.api";
+import type { AutoWithdrawalChannel, EngineerPaymentStatus } from "../types";
+
+const BANK_OPTIONS = [
+  { code: "CIB", label: "Commercial International Bank (CIB)" },
+  { code: "NBE", label: "National Bank of Egypt (NBE)" },
+  { code: "MISR", label: "Banque Misr" },
+  { code: "AAIB", label: "Arab African International Bank (AAIB)" },
+  { code: "HSBC", label: "HSBC Egypt" },
+  { code: "QNB", label: "QNB Alahli" },
+  { code: "ADIB", label: "Abu Dhabi Islamic Bank" },
+  { code: "FAB", label: "First Abu Dhabi Bank" },
+];
 
 function statusBadgeColor(
   status: EngineerPaymentStatus,
@@ -28,11 +39,14 @@ export function EngineerBalancePage() {
   const { balance, loading, error, refetch } = useEngineerBalance();
   const [withdrawing, setWithdrawing] = useState(false);
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<"Instapay" | "Digital Wallet">("Instapay");
+  const [channel, setChannel] = useState<AutoWithdrawalChannel>("mobile_wallet");
+  const [msisdn, setMsisdn] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
+  const [bankCode, setBankCode] = useState("CIB");
+  const [fullName, setFullName] = useState("");
+  const [nationalId, setNationalId] = useState("");
   const [modalError, setModalError] = useState("");
   const [modalSuccess, setModalSuccess] = useState("");
 
@@ -43,44 +57,97 @@ export function EngineerBalancePage() {
 
   const openWithdrawalModal = () => {
     setAmount(String(balance.availableBalance));
-    setMethod("Instapay");
+    setChannel("mobile_wallet");
+    setMsisdn("");
     setAccountNumber("");
+    setBankCode("CIB");
+    setFullName("");
+    setNationalId("");
     setModalError("");
     setModalSuccess("");
     setIsModalOpen(true);
   };
 
-  const submitWithdrawal = async (e: React.FormEvent) => {
+  const submitAutoWithdrawal = async (e: React.FormEvent) => {
     e.preventDefault();
     const withdrawAmount = Number(amount);
-    if (isNaN(withdrawAmount) || withdrawAmount <= 0 || withdrawAmount > balance.availableBalance) {
+    if (
+      isNaN(withdrawAmount) ||
+      withdrawAmount <= 0 ||
+      withdrawAmount > balance.availableBalance
+    ) {
       setModalError("Invalid amount.");
       return;
     }
-    if (!accountNumber.trim()) {
-      setModalError("Please enter your account details.");
+
+    if (nationalId.trim() && !/^\d{14}$/.test(nationalId.trim())) {
+      setModalError("National ID must be exactly 14 digits.");
       return;
+    }
+
+    if (channel === "mobile_wallet" && !msisdn.trim()) {
+      setModalError("Enter your mobile wallet number.");
+      return;
+    }
+
+    if (channel === "bank_transfer") {
+      if (!accountNumber.trim()) {
+        setModalError("Enter your bank account number or IBAN.");
+        return;
+      }
+      if (!fullName.trim()) {
+        setModalError("Enter the account holder full name.");
+        return;
+      }
     }
 
     setWithdrawing(true);
     setModalError("");
     try {
-      await createEngineerWithdrawal({
+      const result = await createEngineerAutoWithdrawal({
         amount: withdrawAmount,
-        method,
-        accountNumber: accountNumber.trim(),
+        channel,
+        msisdn: channel === "mobile_wallet" ? msisdn.trim() : undefined,
+        accountNumber:
+          channel === "bank_transfer" ? accountNumber.trim() : undefined,
+        bankCode: channel === "bank_transfer" ? bankCode : undefined,
+        fullName: channel === "bank_transfer" ? fullName.trim() : undefined,
+        nationalId: nationalId.trim() || undefined,
       });
-      setModalSuccess(t("bal.withdrawSuccess"));
+
+      if (result.status === "COMPLETED") {
+        setModalSuccess(t("bal.withdrawSuccessInstant"));
+      } else if (result.status === "PROCESSING") {
+        setModalSuccess(t("bal.withdrawSuccessProcessing"));
+      } else {
+        setModalError(
+          result.paymobStatusDescription ?? t("bal.withdrawError"),
+        );
+        return;
+      }
+
       setTimeout(() => {
         setIsModalOpen(false);
         refetch();
       }, 2000);
     } catch (err: any) {
-      setModalError(err?.response?.data?.message ?? err.message ?? t("bal.withdrawError"));
+      setModalError(
+        err?.response?.data?.message ?? err.message ?? t("bal.withdrawError"),
+      );
     } finally {
       setWithdrawing(false);
     }
   };
+
+  /*
+  OLD_WITHDRAWAL_START — Manual admin-reviewed withdrawal submit (commented out for Paymob auto-withdrawal)
+  const [method, setMethod] = useState<"Instapay" | "Digital Wallet">("Instapay");
+  const submitWithdrawal = async (e: React.FormEvent) => {
+    ...
+    await createEngineerWithdrawal({ amount, method, accountNumber });
+  };
+  OLD_WITHDRAWAL_END
+  */
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -99,12 +166,12 @@ export function EngineerBalancePage() {
           </p>
           <p className="text-xs text-white/60 mt-2">{t("bal.availableHint")}</p>
         </div>
-        <Button 
-          onClick={openWithdrawalModal} 
+        <Button
+          onClick={openWithdrawalModal}
           disabled={loading || withdrawing || balance.availableBalance <= 0}
           className="bg-white text-navy-900 hover:bg-slate-100"
         >
-          {withdrawing ? "Processing..." : "Withdraw Funds"}
+          {withdrawing ? t("bal.withdrawProcessing") : t("bal.withdraw")}
         </Button>
       </Card>
 
@@ -148,7 +215,7 @@ export function EngineerBalancePage() {
       {!loading && balance.withdrawalRequests && balance.withdrawalRequests.length > 0 && (
         <Card className="divide-y divide-slate-100 dark:divide-slate-800">
           <div className="p-4 border-b border-slate-100 dark:border-slate-800">
-            <h2 className="font-bold">Withdrawal History</h2>
+            <h2 className="font-bold">{t("bal.withdrawHistory")}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -172,12 +239,31 @@ export function EngineerBalancePage() {
                     <td className="p-3">
                       <p>{req.method}</p>
                       <p className="text-xs text-slate-500">{req.accountNumber}</p>
+                      {req.paymobTransactionId && (
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Paymob: {req.paymobTransactionId}
+                        </p>
+                      )}
                     </td>
                     <td className="p-3">
-                      <Badge color={req.status === "COMPLETED" ? "green" : req.status === "REJECTED" ? "rose" : req.status === "PROCESSING" ? "blue" : "amber"}>
+                      <Badge
+                        color={
+                          req.status === "COMPLETED"
+                            ? "green"
+                            : req.status === "REJECTED"
+                              ? "rose"
+                              : req.status === "PROCESSING"
+                                ? "blue"
+                                : "amber"
+                        }
+                      >
                         {req.status}
                       </Badge>
-                      {req.adminNotes && <p className="text-xs mt-1 text-slate-500">Note: {req.adminNotes}</p>}
+                      {(req.paymobStatusDescription || req.adminNotes) && (
+                        <p className="text-xs mt-1 text-slate-500">
+                          {req.paymobStatusDescription ?? req.adminNotes}
+                        </p>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -212,9 +298,7 @@ export function EngineerBalancePage() {
                 <p className="font-semibold">{tx.projectTitle}</p>
                 <p className="text-sm text-slate-500 mt-0.5">
                   {formatMoney(tx.netAmount)}{" "}
-                  <span className="text-xs">
-                    ({t("bal.netAfterFee")})
-                  </span>
+                  <span className="text-xs">({t("bal.netAfterFee")})</span>
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -235,14 +319,13 @@ export function EngineerBalancePage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
             <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                   {t("bal.withdrawTitle")}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {t("bal.withdrawSub")}
+                  {t("bal.withdrawSubAuto")}
                 </p>
               </div>
               <button
@@ -254,8 +337,7 @@ export function EngineerBalancePage() {
               </button>
             </div>
 
-            {/* Modal Form */}
-            <form onSubmit={submitWithdrawal} className="p-6 space-y-4">
+            <form onSubmit={submitAutoWithdrawal} className="p-6 space-y-4">
               {modalError && (
                 <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-red-600 dark:text-red-400">
                   {modalError}
@@ -267,7 +349,6 @@ export function EngineerBalancePage() {
                 </div>
               )}
 
-              {/* Amount field */}
               <div className="space-y-1">
                 <div className="flex justify-between items-center text-xs">
                   <label className="font-medium text-slate-700 dark:text-slate-300">
@@ -292,7 +373,6 @@ export function EngineerBalancePage() {
                 />
               </div>
 
-              {/* Method field */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   {t("bal.withdrawMethod")}
@@ -300,59 +380,122 @@ export function EngineerBalancePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setMethod("Instapay")}
+                    onClick={() => setChannel("mobile_wallet")}
                     className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
-                      method === "Instapay"
+                      channel === "mobile_wallet"
                         ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
                         : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
-                    <span className="text-xs font-bold text-slate-950 dark:text-white">Instapay</span>
-                    <span className="text-[10px] text-slate-500">Instant IPA / Bank</span>
+                    <span className="text-xs font-bold text-slate-950 dark:text-white">
+                      {t("bal.withdrawMobileWallet")}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Vodafone / Etisalat / Orange
+                    </span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setMethod("Digital Wallet")}
+                    onClick={() => setChannel("bank_transfer")}
                     className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
-                      method === "Digital Wallet"
+                      channel === "bank_transfer"
                         ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
                         : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
-                    <span className="text-xs font-bold text-slate-950 dark:text-white">Digital Wallet</span>
-                    <span className="text-[10px] text-slate-500">Vodafone, Orange, Cash</span>
+                    <span className="text-xs font-bold text-slate-950 dark:text-white">
+                      {t("bal.withdrawBankTransfer")}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      IBAN / account (min 112 EGP)
+                    </span>
                   </button>
                 </div>
               </div>
 
-              {/* Account details field */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {t("bal.withdrawAccount")}
+                  {t("bal.withdrawNationalId")}
                 </label>
                 <input
                   type="text"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder={
-                    method === "Instapay"
-                      ? "e.g. name@instapay or Bank Acc/IBAN"
-                      : "e.g. 01xxxxxxxxx"
-                  }
-                  required
+                  inputMode="numeric"
+                  value={nationalId}
+                  onChange={(e) => setNationalId(e.target.value)}
+                  placeholder="29005270102927"
+                  maxLength={14}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
                 />
               </div>
 
-              {/* Notice Banner */}
+              {channel === "mobile_wallet" ? (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {t("bal.withdrawWalletNumber")}
+                  </label>
+                  <input
+                    type="text"
+                    value={msisdn}
+                    onChange={(e) => setMsisdn(e.target.value)}
+                    placeholder="010xxxxxxxx"
+                    required
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      {t("bal.withdrawFullName")}
+                    </label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Account holder name"
+                      required
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      {t("bal.withdrawBank")}
+                    </label>
+                    <select
+                      value={bankCode}
+                      onChange={(e) => setBankCode(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                    >
+                      {BANK_OPTIONS.map((bank) => (
+                        <option key={bank.code} value={bank.code}>
+                          {bank.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      {t("bal.withdrawAccount")}
+                    </label>
+                    <input
+                      type="text"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder="EGxxxxxxxxxxxxxxxxxxxxxxxxxx or account number"
+                      required
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 p-3 flex items-start gap-2">
                 <span className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">ℹ️</span>
                 <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
-                  {t("bal.withdrawNotice")}
+                  {t("bal.withdrawNoticeAuto")}
                 </p>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
                 <Button
                   type="button"
@@ -362,8 +505,8 @@ export function EngineerBalancePage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={withdrawing || !amount || !accountNumber}>
-                  {withdrawing ? "Submitting..." : "Submit Request"}
+                <Button type="submit" disabled={withdrawing || !amount}>
+                  {withdrawing ? t("bal.withdrawProcessing") : t("bal.withdrawSubmitAuto")}
                 </Button>
               </div>
             </form>

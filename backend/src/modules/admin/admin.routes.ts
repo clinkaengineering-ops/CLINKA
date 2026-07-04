@@ -24,6 +24,9 @@ import {
   getAllPaymentsController,
   overridePaymentController,
   getAnalyticsController,
+  getEscrowOverviewController,
+  getActiveDisputesController,
+  getSystemHealthController,
   getSystemLogsController,
   getSupportTicketsController,
   updateSupportTicketController,
@@ -66,6 +69,9 @@ router.get("/payments", getAllPaymentsController);
 router.patch("/payments/:paymentId/override", overridePaymentController);
 
 router.get("/analytics", getAnalyticsController);
+router.get("/escrow-overview", getEscrowOverviewController);
+router.get("/disputes", getActiveDisputesController);
+router.get("/system-health", getSystemHealthController);
 router.get("/logs", getSystemLogsController);
 
 router.get("/support-tickets", getSupportTicketsController);

@@ -104,11 +104,46 @@ export const fetchEscrowPaymentById = (
 export const fetchProjectPayment = (projectId: number) =>
   unwrap(api.get<ApiResponse<unknown>>(`/payments/projects/${projectId}`));
 
+/** GET /payments/gateway/:gatewayId */
+export const fetchPaymentByGatewayId = (gatewayId: string) =>
+  unwrap(api.get<ApiResponse<unknown>>(`/payments/gateway/${encodeURIComponent(gatewayId)}`));
+
+/** POST /payments/verify-return — resolve Paymob return params and verify escrow */
+export const verifyCheckoutReturn = (payload: {
+  projectId?: number;
+  paymentId?: number;
+  orderId?: number;
+  transactionId?: number;
+  specialReference?: string;
+  merchantOrderId?: string;
+  returnQuery?: string;
+}): Promise<{ id: number; projectId: number; status: string }> =>
+  unwrap(
+    api.post<ApiResponse<{ id: number; projectId: number; status: string }>>(
+      "/payments/verify-return",
+      payload,
+    ),
+  ).then((d) => {
+    if (!d) throw new Error("Payment verification failed");
+    return d;
+  });
+
 /** POST /payments/:paymentId/verify */
 export const verifyPayment = (paymentId: number): Promise<unknown> =>
   unwrap(api.post<ApiResponse<unknown>>(`/payments/${paymentId}/verify`));
 
-/** POST /payments/engineer/withdrawals */
+/** POST /payments/engineer/withdrawals/auto — Paymob instant payout */
+export const createEngineerAutoWithdrawal = (
+  payload: import("../types").AutoWithdrawalPayload,
+): Promise<import("../types").WithdrawalRequest> =>
+  unwrap(
+    api.post<ApiResponse<import("../types").WithdrawalRequest>>(
+      `/payments/engineer/withdrawals/auto`,
+      payload,
+    ),
+  );
+
+/* OLD_WITHDRAWAL_START — Manual admin-reviewed withdrawal (commented out for Paymob auto-withdrawal)
 export const createEngineerWithdrawal = (
   payload: import("../types").CreateWithdrawalPayload,
 ): Promise<import("../types").WithdrawalRequest> =>
@@ -118,3 +153,4 @@ export const createEngineerWithdrawal = (
       payload,
     ),
   );
+OLD_WITHDRAWAL_END */

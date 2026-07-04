@@ -64,17 +64,21 @@ async function isUserBanned(userId) {
         }
         return { banned: false, expiresAt: null };
     }
-    return { banned: true, expiresAt: ban.expiresAt };
+    const reason = ban.reason === "CONTACT_INFO_SHARING"
+        ? "Sharing contact information outside the platform"
+        : ban.note || "Administrator action";
+    return { banned: true, expiresAt: ban.expiresAt, reason };
 }
 function formatBanExpiry(expiresAt) {
     return expiresAt?.toLocaleDateString("en-EG") ?? "the expiry date";
 }
-function bannedUserMessage(expiresAt, action) {
-    return `Your account is suspended until ${formatBanExpiry(expiresAt)}. You cannot ${action}.`;
+function bannedUserMessage(expiresAt, action, reason) {
+    const reasonText = reason ? ` Cause: ${reason}.` : "";
+    return `Your account is suspended until ${formatBanExpiry(expiresAt)}.${reasonText} You cannot ${action}.`;
 }
 async function assertUserNotBanned(userId, action) {
     const banStatus = await isUserBanned(userId);
     if (banStatus.banned) {
-        throw new ApiError_1.default(403, bannedUserMessage(banStatus.expiresAt, action));
+        throw new ApiError_1.default(403, bannedUserMessage(banStatus.expiresAt, action, banStatus.reason));
     }
 }

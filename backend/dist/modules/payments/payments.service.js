@@ -41,25 +41,29 @@ exports.getProjectPayment = getProjectPayment;
 exports.initiateProjectCheckout = initiateProjectCheckout;
 exports.prepareProjectCheckoutSession = prepareProjectCheckoutSession;
 exports.handlePaymobWebhook = handlePaymobWebhook;
+exports.getPaymentByGatewayId = getPaymentByGatewayId;
 exports.getEngineerBalance = getEngineerBalance;
 exports.listEngineerWithdrawalRequests = listEngineerWithdrawalRequests;
-exports.createEngineerWithdrawalRequest = createEngineerWithdrawalRequest;
+exports.createEngineerAutoWithdrawal = createEngineerAutoWithdrawal;
 exports.listEngineerEscrow = listEngineerEscrow;
 exports.listClientEscrow = listClientEscrow;
 exports.releaseEscrowPayment = releaseEscrowPayment;
 exports.getEscrowPaymentById = getEscrowPaymentById;
+exports.resolvePaymentForCheckoutReturn = resolvePaymentForCheckoutReturn;
+exports.verifyCheckoutReturn = verifyCheckoutReturn;
 exports.verifyOrSimulatePaymentSuccess = verifyOrSimulatePaymentSuccess;
 exports.refundEscrowPayment = refundEscrowPayment;
 const db_1 = __importDefault(require("../../config/db"));
+const clientUrl_1 = require("../../config/clientUrl");
 const paymob_1 = require("../../config/paymob");
 const ApiError_1 = __importDefault(require("../../utils/ApiError"));
 const paymob_api_1 = require("./paymob.api");
 const paymob_webhook_1 = require("./paymob.webhook");
+const checkoutReturnQuery_1 = require("./checkoutReturnQuery");
+const paymob_payout_api_1 = require("./paymob.payout.api");
 const payments_validation_1 = require("./payments.validation");
 const paymentLedger_1 = require("../../utils/paymentLedger");
 const project_status_1 = require("../projects/project.status");
-const mailer_1 = __importDefault(require("../../config/mailer"));
-const emailTemplate_1 = require("../../utils/emailTemplate");
 const wallet_1 = require("../../utils/wallet");
 function toNumber(value) {
     return typeof value === "number" ? value : Number(value.toString());
@@ -120,10 +124,8 @@ function splitCustomerName(fullName) {
     };
 }
 function getRedirectionUrls(projectId, paymentId) {
-    const clientUrl = (process.env.CLIENT_URL ?? "http://localhost:3000").replace(/\/$/, "");
-    const apiUrl = (process.env.PUBLIC_API_URL ??
-        process.env.API_URL ??
-        `http://localhost:${process.env.PORT ?? 5000}`).replace(/\/$/, "");
+    const clientUrl = (0, clientUrl_1.getClientUrl)();
+    const apiUrl = (process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 5000}`).replace(/\/$/, "");
     return {
         successUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=success`,
         failUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=fail`,
@@ -134,44 +136,50 @@ function getRedirectionUrls(projectId, paymentId) {
 function formatEgp(amount) {
     return `${Math.round(amount * 100) / 100} EGP`;
 }
-async function sendWithdrawalRequestEmailToAdmins(input) {
-    const admins = await db_1.default.user.findMany({
-        where: { role: "ADMIN" },
-        select: { email: true },
+/* OLD_WITHDRAWAL_START — Manual withdrawal email notification (commented out for auto-withdrawal via Paymob)
+async function sendWithdrawalRequestEmailToAdmins(input: {
+  engineerName: string;
+  engineerEmail: string;
+  amount: number;
+  method: string;
+  accountNumber: string;
+  requestDate: Date;
+}) {
+  const admins = await db.user.findMany({
+    where: { role: "ADMIN" },
+    select: { email: true },
+  });
+  const recipients = admins
+    .map((a) => a.email?.trim())
+    .filter((email): email is string => Boolean(email));
+
+  if (recipients.length === 0) return;
+
+  try {
+    await transporter.sendMail({
+      from: getEmailFrom(),
+      to: recipients.join(","),
+      subject: `New Withdrawal Request - ${formatEgp(input.amount)}`,
+      html: withdrawalNotificationEmailHtml({
+        engineerName: input.engineerName,
+        engineerEmail: input.engineerEmail,
+        amount: formatEgp(input.amount),
+        method: input.method,
+        accountNumber: input.accountNumber,
+        requestDate: input.requestDate.toLocaleString("en-EG", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }),
+      }),
     });
-    const recipients = admins
-        .map((a) => a.email?.trim())
-        .filter((email) => Boolean(email));
-    if (recipients.length === 0)
-        return;
-    try {
-        const amountStr = formatEgp(input.amount);
-        const dateStr = input.requestDate.toLocaleString("en-EG", {
-            dateStyle: "medium",
-            timeStyle: "short",
-        });
-        await mailer_1.default.sendMail({
-            from: (0, emailTemplate_1.getEmailFrom)(),
-            to: recipients.join(","),
-            subject: `New Withdrawal Request - ${amountStr}`,
-            html: (0, emailTemplate_1.withdrawalNotificationEmailHtml)({
-                engineerName: input.engineerName,
-                engineerEmail: input.engineerEmail,
-                amount: amountStr,
-                method: input.method,
-                accountNumber: input.accountNumber,
-                requestDate: dateStr,
-            }),
-            text: `New withdrawal request details:\n\nEngineer: ${input.engineerName}\nEmail: ${input.engineerEmail}\nAmount: ${amountStr}\nMethod: ${input.method}\nAccount number: ${input.accountNumber}\nRequest date: ${dateStr}\n\nReview this request in the admin dashboard.`,
-            headers: {
-                "X-Auto-Response-Suppress": "All",
-            },
-        });
-    }
-    catch (error) {
-        console.warn("Failed to send withdrawal notification email:", error instanceof Error ? error.message : "Unknown error");
-    }
+  } catch (error) {
+    console.warn(
+      "Failed to send withdrawal notification email:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+  }
 }
+OLD_WITHDRAWAL_END */
 async function getAcceptedBidForProject(projectId) {
     const bid = await db_1.default.bid.findFirst({
         where: { projectId, status: "ACCEPTED" },
@@ -416,6 +424,44 @@ async function handlePaymobWebhook(body, hmac) {
     await createNotification(updated.project.clientId, "PAYMENT_RECEIVED", "Payment successful", `Your payment for "${updated.project.title}" is secured in escrow.`, `/escrow?project=${updated.projectId}`);
     return { handled: true, type: "paid", paymentId: payment.id };
 }
+async function getPaymentByGatewayId(gatewayId, userId) {
+    const ref = (0, paymob_webhook_1.parsePaymobSpecialReference)(gatewayId);
+    const payment = await db_1.default.payment.findFirst({
+        where: {
+            OR: [
+                { gatewayInvoiceId: gatewayId },
+                { gatewayInvoiceKey: gatewayId },
+                ...(ref?.paymentId ? [{ id: ref.paymentId }] : []),
+            ],
+        },
+        include: {
+            project: { select: { id: true, title: true, status: true, clientId: true } },
+        },
+    });
+    if (!payment)
+        return null;
+    const isClient = payment.clientId === userId;
+    const acceptedBid = await db_1.default.bid.findFirst({
+        where: { projectId: payment.projectId, status: "ACCEPTED" },
+        include: { engineer: { include: { user: { select: { id: true } } } } },
+    });
+    const isEngineer = acceptedBid?.engineer.user.id === userId;
+    if (!isClient && !isEngineer) {
+        throw new ApiError_1.default(403, "You do not have access to this payment");
+    }
+    return {
+        id: payment.id,
+        projectId: payment.projectId,
+        projectTitle: payment.project.title,
+        amount: payment.amount,
+        commission: payment.commission,
+        status: payment.status,
+        gatewayInvoiceId: payment.gatewayInvoiceId,
+        gatewayInvoiceKey: payment.gatewayInvoiceKey,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+    };
+}
 function mapEngineerPaymentStatus(paymentStatus, projectStatus) {
     if (paymentStatus === "PENDING")
         return "awaiting_payment";
@@ -498,6 +544,92 @@ async function getEngineerBalance(engineerUserId) {
         withdrawalRequests,
     };
 }
+/* OLD_WITHDRAWAL_START — Manual withdrawal list (commented out for auto-withdrawal via Paymob)
+export async function listEngineerWithdrawalRequests(engineerUserId: number) {
+  await db.$transaction(async (tx) =>
+    settleMaturedWalletTransactions(tx, engineerUserId),
+  );
+
+  return db.withdrawalRequest.findMany({
+    where: { userId: engineerUserId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+OLD_WITHDRAWAL_END */
+/* OLD_WITHDRAWAL_START — Manual withdrawal creation (commented out for auto-withdrawal via Paymob)
+export async function createEngineerWithdrawalRequest(
+  engineerUserId: number,
+  input: CreateWithdrawalRequestInput,
+) {
+  const engineer = await db.user.findUnique({
+    where: { id: engineerUserId },
+    select: { id: true, name: true, email: true, role: true },
+  });
+  if (!engineer || engineer.role !== "ENGINEER") {
+    throw new ApiError(403, "Only engineers can request withdrawals");
+  }
+
+  const amount = Math.round(input.amount * 100) / 100;
+  if (amount <= 0) {
+    throw new ApiError(400, "Withdrawal amount must be greater than zero");
+  }
+
+  const request = await db.$transaction(async (tx) => {
+    const { wallet } = await settleMaturedWalletTransactions(tx, engineerUserId);
+
+    const pendingRequests = await tx.withdrawalRequest.aggregate({
+      where: {
+        userId: engineerUserId,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+      _sum: { amount: true },
+    });
+
+    const reserved = pendingRequests._sum.amount ?? 0;
+    const spendable = wallet.availableBalance - reserved;
+    if (amount > spendable) {
+      throw new ApiError(
+        400,
+        `Withdrawal exceeds available spendable balance (${formatEgp(spendable)})`,
+      );
+    }
+
+    const created = await tx.withdrawalRequest.create({
+      data: {
+        userId: engineerUserId,
+        amount,
+        method: input.method,
+        accountNumber: input.accountNumber,
+        status: "PENDING",
+      },
+    });
+
+    await tx.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        amount,
+        type: "WITHDRAWAL",
+        status: "PENDING",
+        description: `Withdrawal requested via ${input.method}`,
+        relatedWithdrawalId: created.id,
+      },
+    });
+
+    return created;
+  });
+
+  await sendWithdrawalRequestEmailToAdmins({
+    engineerName: engineer.name,
+    engineerEmail: engineer.email,
+    amount,
+    method: input.method,
+    accountNumber: input.accountNumber,
+    requestDate: request.createdAt,
+  });
+
+  return request;
+}
+OLD_WITHDRAWAL_END */
 async function listEngineerWithdrawalRequests(engineerUserId) {
     await db_1.default.$transaction(async (tx) => (0, wallet_1.settleMaturedWalletTransactions)(tx, engineerUserId));
     return db_1.default.withdrawalRequest.findMany({
@@ -505,7 +637,85 @@ async function listEngineerWithdrawalRequests(engineerUserId) {
         orderBy: { createdAt: "desc" },
     });
 }
-async function createEngineerWithdrawalRequest(engineerUserId, input) {
+function isPaymobWithdrawalSuccessful(result) {
+    return result.disbursementStatus.toLowerCase() === "success";
+}
+function isPaymobWithdrawalPending(result) {
+    return result.disbursementStatus.toLowerCase() === "pending";
+}
+async function resolveEngineerNationalId(engineerUserId, override) {
+    if (override?.trim()) {
+        return (0, paymob_payout_api_1.normalizeNationalId)(override);
+    }
+    const profile = await db_1.default.engineerProfile.findUnique({
+        where: { userId: engineerUserId },
+        select: { nationalId: true },
+    });
+    if (!profile?.nationalId?.trim()) {
+        throw new ApiError_1.default(400, "National ID is required for Paymob withdrawals. Add it in your profile or include it in the withdrawal request.");
+    }
+    return (0, paymob_payout_api_1.normalizeNationalId)(profile.nationalId);
+}
+async function applyPaymobWithdrawalResult(withdrawalId, walletId, amount, result) {
+    const paymobFields = {
+        paymobTransactionId: result.transactionId,
+        paymobDisbursementStatus: result.disbursementStatus,
+        paymobStatusDescription: result.statusDescription,
+    };
+    if (isPaymobWithdrawalSuccessful(result)) {
+        return db_1.default.$transaction(async (tx) => {
+            await tx.wallet.update({
+                where: { id: walletId },
+                data: { availableBalance: { decrement: amount } },
+            });
+            await tx.walletTransaction.updateMany({
+                where: {
+                    walletId,
+                    relatedWithdrawalId: withdrawalId,
+                    type: "WITHDRAWAL",
+                },
+                data: { status: "COMPLETED" },
+            });
+            return tx.withdrawalRequest.update({
+                where: { id: withdrawalId },
+                data: {
+                    ...paymobFields,
+                    status: "COMPLETED",
+                    processedAt: new Date(),
+                },
+            });
+        });
+    }
+    if (isPaymobWithdrawalPending(result)) {
+        return db_1.default.withdrawalRequest.update({
+            where: { id: withdrawalId },
+            data: {
+                ...paymobFields,
+                status: "PROCESSING",
+            },
+        });
+    }
+    return db_1.default.$transaction(async (tx) => {
+        await tx.walletTransaction.updateMany({
+            where: {
+                walletId,
+                relatedWithdrawalId: withdrawalId,
+                type: "WITHDRAWAL",
+            },
+            data: { status: "REJECTED" },
+        });
+        return tx.withdrawalRequest.update({
+            where: { id: withdrawalId },
+            data: {
+                ...paymobFields,
+                status: "REJECTED",
+                processedAt: new Date(),
+                adminNotes: result.statusDescription,
+            },
+        });
+    });
+}
+async function createEngineerAutoWithdrawal(engineerUserId, input) {
     const engineer = await db_1.default.user.findUnique({
         where: { id: engineerUserId },
         select: { id: true, name: true, email: true, role: true },
@@ -513,12 +723,50 @@ async function createEngineerWithdrawalRequest(engineerUserId, input) {
     if (!engineer || engineer.role !== "ENGINEER") {
         throw new ApiError_1.default(403, "Only engineers can request withdrawals");
     }
+    if (!(0, paymob_1.isPaymobPayoutConfigured)()) {
+        throw new ApiError_1.default(503, "Automatic withdrawals are unavailable until Paymob payout credentials are configured");
+    }
     const amount = Math.round(input.amount * 100) / 100;
     if (amount <= 0) {
         throw new ApiError_1.default(400, "Withdrawal amount must be greater than zero");
     }
-    const request = await db_1.default.$transaction(async (tx) => {
-        const { wallet } = await (0, wallet_1.settleMaturedWalletTransactions)(tx, engineerUserId);
+    const nationalId = await resolveEngineerNationalId(engineerUserId, input.nationalId);
+    let paymobInput;
+    let methodLabel;
+    let accountNumber;
+    if (input.channel === "mobile_wallet") {
+        const msisdn = (0, paymob_payout_api_1.normalizeEgyptianMsisdn)(input.msisdn);
+        const issuer = (0, paymob_payout_api_1.detectWalletIssuerFromMsisdn)(msisdn);
+        paymobInput = {
+            issuer,
+            amount,
+            nationalId,
+            msisdn,
+        };
+        methodLabel = issuer;
+        accountNumber = msisdn;
+    }
+    else {
+        const payoutConfig = (0, paymob_1.getPaymobPayoutConfig)();
+        if (amount < payoutConfig.instantBankMinAmount) {
+            throw new ApiError_1.default(400, `Bank withdrawals require at least ${formatEgp(payoutConfig.instantBankMinAmount)}`);
+        }
+        const normalizedAccount = input.accountNumber.replace(/\s+/g, "").toUpperCase();
+        paymobInput = {
+            issuer: "instant_bank",
+            amount,
+            nationalId,
+            bankCardNumber: normalizedAccount,
+            bankCode: input.bankCode.toUpperCase(),
+            fullName: input.fullName.trim(),
+        };
+        methodLabel = `instant_bank:${input.bankCode.toUpperCase()}`;
+        accountNumber = normalizedAccount;
+    }
+    const clientReference = `clinka-withdrawal-${engineerUserId}-${Date.now()}`;
+    paymobInput.clientReference = clientReference;
+    const { withdrawal, wallet } = await db_1.default.$transaction(async (tx) => {
+        const { wallet: settledWallet } = await (0, wallet_1.settleMaturedWalletTransactions)(tx, engineerUserId);
         const pendingRequests = await tx.withdrawalRequest.aggregate({
             where: {
                 userId: engineerUserId,
@@ -527,7 +775,7 @@ async function createEngineerWithdrawalRequest(engineerUserId, input) {
             _sum: { amount: true },
         });
         const reserved = pendingRequests._sum.amount ?? 0;
-        const spendable = wallet.availableBalance - reserved;
+        const spendable = settledWallet.availableBalance - reserved;
         if (amount > spendable) {
             throw new ApiError_1.default(400, `Withdrawal exceeds available spendable balance (${formatEgp(spendable)})`);
         }
@@ -535,32 +783,54 @@ async function createEngineerWithdrawalRequest(engineerUserId, input) {
             data: {
                 userId: engineerUserId,
                 amount,
-                method: input.method,
-                accountNumber: input.accountNumber,
-                status: "PENDING",
+                method: methodLabel,
+                accountNumber,
+                status: "PROCESSING",
+                paymobClientReference: clientReference,
             },
         });
         await tx.walletTransaction.create({
             data: {
-                walletId: wallet.id,
+                walletId: settledWallet.id,
                 amount,
                 type: "WITHDRAWAL",
                 status: "PENDING",
-                description: `Withdrawal requested via ${input.method}`,
+                description: `Auto withdrawal via Paymob (${methodLabel})`,
                 relatedWithdrawalId: created.id,
             },
         });
-        return created;
+        return { withdrawal: created, wallet: settledWallet };
     });
-    await sendWithdrawalRequestEmailToAdmins({
-        engineerName: engineer.name,
-        engineerEmail: engineer.email,
-        amount,
-        method: input.method,
-        accountNumber: input.accountNumber,
-        requestDate: request.createdAt,
-    });
-    return request;
+    let paymobResult;
+    try {
+        paymobResult = await (0, paymob_payout_api_1.createPaymobInstantCashin)(paymobInput);
+    }
+    catch (error) {
+        await applyPaymobWithdrawalResult(withdrawal.id, wallet.id, amount, {
+            transactionId: null,
+            disbursementStatus: "failed",
+            statusCode: "502",
+            statusDescription: error instanceof ApiError_1.default
+                ? error.message
+                : "Paymob payout request failed",
+            issuer: paymobInput.issuer,
+            amount,
+            raw: {},
+        });
+        throw error;
+    }
+    const updated = await applyPaymobWithdrawalResult(withdrawal.id, wallet.id, amount, paymobResult);
+    const { createNotification } = await Promise.resolve().then(() => __importStar(require("../../utils/notifications")));
+    if (updated.status === "COMPLETED") {
+        await createNotification(engineerUserId, "FUNDS_RELEASED", "Withdrawal completed", `${formatEgp(amount)} was sent to your ${methodLabel} account via Paymob.`, "/balance");
+    }
+    else if (updated.status === "PROCESSING") {
+        await createNotification(engineerUserId, "FUNDS_RELEASED", "Withdrawal processing", `Your ${formatEgp(amount)} withdrawal via Paymob is being processed.`, "/balance");
+    }
+    else if (updated.status === "REJECTED") {
+        await createNotification(engineerUserId, "FUNDS_RELEASED", "Withdrawal failed", `Your ${formatEgp(amount)} withdrawal could not be completed.${updated.paymobStatusDescription ? ` ${updated.paymobStatusDescription}` : ""}`, "/balance");
+    }
+    return updated;
 }
 async function listEngineerEscrow(engineerUserId) {
     const balance = await getEngineerBalance(engineerUserId);
@@ -727,6 +997,83 @@ async function getEscrowPaymentById(paymentId, userId) {
         createdAt: payment.createdAt,
         updatedAt: payment.updatedAt,
     };
+}
+async function resolvePaymentForCheckoutReturn(clientId, input) {
+    const fromQuery = (0, checkoutReturnQuery_1.parseCheckoutReturnQuery)(input.returnQuery);
+    const projectId = input.projectId ?? fromQuery.projectId;
+    const paymentId = input.paymentId ?? fromQuery.paymentId;
+    const orderId = input.orderId ?? fromQuery.orderId;
+    const transactionId = input.transactionId ?? fromQuery.transactionId;
+    const specialReference = input.specialReference ?? fromQuery.specialReference;
+    const merchantOrderId = input.merchantOrderId ?? fromQuery.merchantOrderId;
+    const assertClientPayment = (payment) => {
+        if (payment.clientId !== clientId) {
+            throw new ApiError_1.default(403, "Only the client can verify this payment");
+        }
+    };
+    if (paymentId) {
+        const payment = await db_1.default.payment.findUnique({ where: { id: paymentId } });
+        if (payment) {
+            assertClientPayment(payment);
+            return payment;
+        }
+    }
+    if (projectId) {
+        const payment = await db_1.default.payment.findFirst({
+            where: { projectId, clientId },
+        });
+        if (payment)
+            return payment;
+    }
+    const referenceValues = [specialReference, merchantOrderId].filter((value) => Boolean(value?.trim()));
+    for (const reference of referenceValues) {
+        const parsed = (0, paymob_webhook_1.parsePaymobSpecialReference)(reference);
+        if (parsed?.paymentId) {
+            const payment = await db_1.default.payment.findUnique({
+                where: { id: parsed.paymentId },
+            });
+            if (payment) {
+                assertClientPayment(payment);
+                return payment;
+            }
+        }
+    }
+    const gatewayIds = (0, checkoutReturnQuery_1.collectGatewayIds)({
+        projectId,
+        paymentId,
+        orderId,
+        transactionId,
+        specialReference,
+        merchantOrderId,
+    });
+    if (gatewayIds.length > 0) {
+        const payment = await db_1.default.payment.findFirst({
+            where: {
+                OR: gatewayIds.flatMap((gatewayId) => [
+                    { gatewayInvoiceId: gatewayId },
+                    { gatewayInvoiceKey: gatewayId },
+                ]),
+            },
+        });
+        if (payment) {
+            assertClientPayment(payment);
+            return payment;
+        }
+    }
+    const latestPending = await db_1.default.payment.findFirst({
+        where: { clientId, status: "PENDING" },
+        orderBy: { updatedAt: "desc" },
+    });
+    if (latestPending)
+        return latestPending;
+    throw new ApiError_1.default(404, "Could not determine which payment to verify.");
+}
+async function verifyCheckoutReturn(clientId, input) {
+    const payment = await resolvePaymentForCheckoutReturn(clientId, input);
+    if (payment.status === "FUNDED" || payment.status === "RELEASED") {
+        return payment;
+    }
+    return verifyOrSimulatePaymentSuccess(clientId, payment.id);
 }
 async function verifyOrSimulatePaymentSuccess(clientId, paymentId) {
     const payment = await db_1.default.payment.findUnique({

@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPaymobConfig = getPaymobConfig;
 exports.buildPaymobCheckoutUrl = buildPaymobCheckoutUrl;
+exports.getPaymobPayoutConfig = getPaymobPayoutConfig;
+exports.isPaymobPayoutConfigured = isPaymobPayoutConfigured;
 function parseIntegrationIds(raw) {
     if (!raw?.trim())
         return [];
@@ -34,4 +36,34 @@ function buildPaymobCheckoutUrl(config, clientSecret) {
     url.searchParams.set("publicKey", config.publicKey);
     url.searchParams.set("clientSecret", clientSecret);
     return url.toString();
+}
+/**
+ * Returns Paymob Payout (Instant Cashin / Disbursement) OAuth configuration.
+ * Docs: https://payouts.paymobsolutions.com/docs/
+ */
+function getPaymobPayoutConfig() {
+    const clientId = process.env.PAYMOB_PAYOUT_CLIENT_ID?.trim();
+    const clientSecret = process.env.PAYMOB_PAYOUT_CLIENT_SECRET?.trim();
+    const username = process.env.PAYMOB_PAYOUT_USERNAME?.trim();
+    const password = process.env.PAYMOB_PAYOUT_PASSWORD?.trim();
+    if (!clientId || !clientSecret || !username || !password) {
+        throw new Error("Paymob payout OAuth credentials are not fully configured (PAYMOB_PAYOUT_CLIENT_ID, PAYMOB_PAYOUT_CLIENT_SECRET, PAYMOB_PAYOUT_USERNAME, PAYMOB_PAYOUT_PASSWORD)");
+    }
+    return {
+        baseUrl: (process.env.PAYMOB_PAYOUT_BASE_URL ??
+            "https://stagingpayouts.paymobsolutions.com/api/secure").replace(/\/$/, ""),
+        clientId,
+        clientSecret,
+        username,
+        password,
+        currency: process.env.PAYMOB_CURRENCY ?? "EGP",
+        instantBankMinAmount: Number(process.env.PAYMOB_PAYOUT_INSTANT_BANK_MIN ?? "112"),
+    };
+}
+/** Returns true when payout OAuth env vars are configured. */
+function isPaymobPayoutConfigured() {
+    return Boolean(process.env.PAYMOB_PAYOUT_CLIENT_ID?.trim() &&
+        process.env.PAYMOB_PAYOUT_CLIENT_SECRET?.trim() &&
+        process.env.PAYMOB_PAYOUT_USERNAME?.trim() &&
+        process.env.PAYMOB_PAYOUT_PASSWORD?.trim());
 }

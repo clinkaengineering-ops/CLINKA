@@ -1,7 +1,7 @@
+import transporter from "../config/mailer";
 import jwt from "jsonwebtoken";
 import { getPublicClientUrl } from "../config/clientUrl";
-import { sendBrandedEmail } from "./sendEmail";
-import { verificationEmailHtml } from "./emailTemplate";
+import { getEmailFrom, verificationEmailHtml } from "./emailTemplate";
 
 export async function sendVerificationEmail(userId: number, email: string) {
   const token = jwt.sign({ userId }, process.env.JWT_SECRET as string, { expiresIn: "1d" });
@@ -9,29 +9,16 @@ export async function sendVerificationEmail(userId: number, email: string) {
   const verifyUrl = `${getPublicClientUrl()}/verify-email?token=${token}`;
 
   try {
-    await sendBrandedEmail({
+    const info = await transporter.sendMail({
+      from: getEmailFrom(),
       to: email,
-      subject: "Confirm your CLINKA account",
+      subject: "Verify your CLINKA email",
       html: verificationEmailHtml(verifyUrl),
-      text: [
-        "Welcome to CLINKA!",
-        "",
-        "Please confirm your email address to activate your account:",
-        verifyUrl,
-        "",
-        "This link expires in 24 hours.",
-        "",
-        "If you did not create an account, you can ignore this email.",
-        "",
-        "— CLINKA",
-      ].join("\n"),
     });
-    console.log("Verification email sent to:", email);
+    console.log("Verification email sent:", info.messageId, info.accepted);
   } catch (error) {
-    console.warn(
-      "Failed to send verification email:",
-      error instanceof Error ? error.message : "Unknown error",
-    );
+    // Log email error but don't fail the registration
+    console.warn("Failed to send verification email:", error instanceof Error ? error.message : "Unknown error");
     console.warn(`Verification link: ${verifyUrl}`);
   }
 }

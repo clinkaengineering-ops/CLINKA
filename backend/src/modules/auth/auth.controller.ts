@@ -4,6 +4,7 @@ import {
   confirmEmailChangeSchema,
   requestEmailChangeSchema,
   clientRegisterSchema,
+  clientApplyEngineerSchema,
   engineerRegisterSchema,
   forgotPasswordSchema,
   loginSchema,
@@ -12,6 +13,7 @@ import {
 import {
   registerClient,
   registerEngineer,
+  applyClientAsEngineer,
   resumeEngineerRegistration,
   checkRegistrationEmail,
   login,
@@ -24,9 +26,7 @@ import {
   requestEmailChange,
   verifyOtp,
 } from "./auth.service";
-import { oauthSessionSchema, verifyOtpSchema } from "./auth.validation";
-import jwt from "jsonwebtoken";
-import { getMe } from "../users/user.service";
+import { verifyOtpSchema } from "./auth.validation";
 import ApiResponse from "../../utils/ApiResponse";
 import ApiError from "../../utils/ApiError";
 import { authCookieOptions } from "../../config/cookies";
@@ -62,10 +62,9 @@ export async function registerClientController(
 ) {
   try {
     const validatedData = clientRegisterSchema.parse(req.body);
-    const user = await registerClient(validatedData);
-    res
-      .status(201)
-      .json(ApiResponse(201, "Check your email to verify your account", user));
+    const { user, token } = await registerClient(validatedData);
+    res.cookie("token", token, authCookieOptions(req.headers.origin));
+    res.status(201).json(ApiResponse(201, "Registered successfully", user));
   } catch (error) {
     next(error);
   }
@@ -91,15 +90,14 @@ export async function registerEngineerController(
       | "certificateUrl"
       | "syndicateCardUrl";
     const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-    const user = await registerEngineer(
+    const { user, token } = await registerEngineer(
       validatedData,
       fileUrl,
       documentType,
       portfolioUrls,
     );
-    res
-      .status(201)
-      .json(ApiResponse(201, "Check your email to verify your account", user));
+    res.cookie("token", token, authCookieOptions(req.headers.origin));
+    res.status(201).json(ApiResponse(201, "Registered successfully", user));
   } catch (error) {
     next(error);
   }
@@ -114,13 +112,50 @@ export async function resumeEngineerRegistrationController(
     const validatedData = clientRegisterSchema.parse(req.body);
     const files = req.files as { portfolio?: { path: string }[] } | undefined;
     const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-    const user = await resumeEngineerRegistration(
+    const { user, token } = await resumeEngineerRegistration(
       validatedData,
+      portfolioUrls,
+    );
+    res.cookie("token", token, authCookieOptions(req.headers.origin));
+    res.status(200).json(ApiResponse(200, "Portfolio submitted successfully", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function applyClientAsEngineerController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const validatedData = clientApplyEngineerSchema.parse(req.body);
+    const files = req.files as
+      | {
+          document?: { path: string }[];
+          portfolio?: { path: string }[];
+        }
+      | undefined;
+    const documentFile = files?.document?.[0] ?? req.file;
+    const fileUrl = documentFile?.path ?? "";
+    if (!fileUrl) {
+      throw new ApiError(400, "Verification document is required");
+    }
+    const documentType = req.body.documentType as
+      | "collegeIdUrl"
+      | "certificateUrl"
+      | "syndicateCardUrl";
+    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const user = await applyClientAsEngineer(
+      req.user!.userId,
+      validatedData,
+      fileUrl,
+      documentType,
       portfolioUrls,
     );
     res
       .status(200)
-      .json(ApiResponse(200, "Check your email to verify your account", user));
+      .json(ApiResponse(200, "Engineer application submitted", user));
   } catch (error) {
     next(error);
   }
@@ -143,10 +178,8 @@ export async function verifyEmailController(
 ) {
   try {
     const { token } = req.query as { token: string };
-    const { token: sessionToken, userId } = await verifyEmail(token);
-    const user = await getMe(userId);
-    res.cookie("token", sessionToken, authCookieOptions(req.headers.origin));
-    res.status(200).json(ApiResponse(200, "Email verified successfully", user));
+    await verifyEmail(token);
+    res.status(200).json(ApiResponse(200, "Email verified successfully"));
   } catch (error) {
     next(error);
   }
@@ -263,32 +296,6 @@ export async function verifyOtpController(req: Request, res: Response, next: Nex
   }
 }
 
-/** Exchange a short-lived OAuth session JWT for an httpOnly cookie on the frontend origin. */
-export async function oauthSessionController(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    const { session } = oauthSessionSchema.parse(req.body);
-    let payload: { userId: number; role: string };
-    try {
-      payload = jwt.verify(session, process.env.JWT_SECRET as string) as {
-        userId: number;
-        role: string;
-      };
-    } catch {
-      throw new ApiError(401, "Invalid or expired session");
-    }
-
-    res.cookie("token", session, authCookieOptions(req.headers.origin));
-    const user = await getMe(payload.userId);
-    res.status(200).json(ApiResponse(200, "Signed in successfully", user));
-  } catch (error) {
-    next(error);
-  }
-}
-
 export async function googleAuthStartController(
   req: Request,
   res: Response,
@@ -329,6 +336,8 @@ export async function googleAuthCallbackController(
     const result = await handleGoogleCallback(code, state, error);
 
     if (result.token) {
+      // Google redirects here without an Origin header — use the frontend origin
+      // stored in OAuth state so cross-site cookies work (localhost ports + dev tunnels).
       res.cookie(
         "token",
         result.token,

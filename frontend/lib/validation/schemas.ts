@@ -30,9 +30,7 @@ export const clientRegisterFormSchema = z.object({
   password: passwordField,
 });
 
-export const engineerRegisterStep2Schema = clientRegisterFormSchema;
-
-export const engineerRegisterStep3Schema = z.object({
+export const engineerRegisterStep2Schema = clientRegisterFormSchema.extend({
   specialty: z.enum(["CIVIL", "ARCHITECTURAL"], {
     error: "Select your specialty",
   }),
@@ -40,20 +38,43 @@ export const engineerRegisterStep3Schema = z.object({
   nationality: z.string().min(1, "Select your nationality"),
 });
 
+export const engineerRegisterStep3Schema = engineerRegisterStep2Schema;
+
+const uploadFileSchema = z
+  .custom<File>((v) => v instanceof File, "Upload a file")
+  .refine((f) => f.size <= 10 * 1024 * 1024, "File must be 10 MB or smaller")
+  .refine(
+    (f) =>
+      ["image/jpeg", "image/png", "image/jpg", "application/pdf"].includes(
+        f.type,
+      ),
+    "File must be JPG, PNG, or PDF",
+  );
+
+const portfolioImageSchema = z
+  .custom<File>((v) => v instanceof File, "Upload a portfolio image")
+  .refine((f) => f.size <= 10 * 1024 * 1024, "File must be 10 MB or smaller")
+  .refine(
+    (f) => ["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(f.type),
+    "Image must be JPG, PNG, or WEBP",
+  );
+
 export const engineerRegisterStep4Schema = z.object({
   documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
     error: "Select a document type",
   }),
-  file: z
-    .custom<File>((v) => v instanceof File, "Upload a verification document")
-    .refine((f) => f.size <= 10 * 1024 * 1024, "File must be 10 MB or smaller")
-    .refine(
-      (f) =>
-        ["image/jpeg", "image/png", "image/jpg", "application/pdf"].includes(
-          f.type,
-        ),
-      "File must be JPG, PNG, or PDF",
-    ),
+  file: uploadFileSchema,
+  portfolioFiles: z
+    .array(portfolioImageSchema)
+    .min(3, "Upload at least 3 portfolio work samples"),
+});
+
+export const engineerResumePortfolioSchema = z.object({
+  email: emailField,
+  password: passwordField,
+  portfolioFiles: z
+    .array(portfolioImageSchema)
+    .min(3, "Upload at least 3 portfolio work samples"),
 });
 
 export const forgotPasswordFormSchema = z.object({
@@ -143,9 +164,4 @@ export const portfolioItemFormSchema = z.object({
         ["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(f.type),
       "Image must be JPG, PNG, or WebP",
     ),
-});
-
-export const engineerResumePortfolioSchema = z.object({
-  email: emailField,
-  password: passwordField,
 });

@@ -4,8 +4,9 @@ import {
   authorize,
 } from "../../middlewares/auth.middleware";
 import {
-  createEngineerWithdrawalController,
+  createEngineerAutoWithdrawalController,
   paymobWebhookController,
+  getPaymentByGatewayController,
   getCheckoutSessionController,
   getEscrowByIdController,
   listEngineerWithdrawalsController,
@@ -18,11 +19,18 @@ import {
   refundEscrowController,
   releaseEscrowController,
   verifyPaymentController,
+  verifyCheckoutReturnController,
 } from "./payments.controller";
 
 const router = Router();
 
 router.post("/webhook/paymob", paymobWebhookController);
+
+router.get(
+  "/gateway/:gatewayId",
+  authenticate,
+  getPaymentByGatewayController,
+);
 
 router.get("/methods", authenticate, getPaymentMethodsController);
 router.get("/escrow", authenticate, authorize("CLIENT"), listEscrowController);
@@ -38,6 +46,14 @@ router.get(
   authorize("ENGINEER"),
   getEngineerBalanceController,
 );
+/* OLD_WITHDRAWAL_START — Manual withdrawal routes (commented out for auto-withdrawal via Paymob)
+router.post(
+  "/engineer/withdrawals",
+  authenticate,
+  authorize("ENGINEER"),
+  createEngineerWithdrawalController,
+);
+OLD_WITHDRAWAL_END */
 router.get(
   "/engineer/withdrawals",
   authenticate,
@@ -45,10 +61,10 @@ router.get(
   listEngineerWithdrawalsController,
 );
 router.post(
-  "/engineer/withdrawals",
+  "/engineer/withdrawals/auto",
   authenticate,
   authorize("ENGINEER"),
-  createEngineerWithdrawalController,
+  createEngineerAutoWithdrawalController,
 );
 router.get(
   "/escrow/:paymentId",
@@ -83,6 +99,12 @@ router.post(
   authenticate,
   authorize("CLIENT"),
   refundEscrowController,
+);
+router.post(
+  "/verify-return",
+  authenticate,
+  authorize("CLIENT"),
+  verifyCheckoutReturnController,
 );
 router.post(
   "/:paymentId/verify",

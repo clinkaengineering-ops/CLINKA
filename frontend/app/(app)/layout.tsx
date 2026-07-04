@@ -123,9 +123,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex">
-          {/* Sidebar */}
+          {/* Sidebar — fixed on desktop so main content scrolls independently */}
           <aside className={cn(
-            "fixed lg:sticky inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-900 flex flex-col transition-transform lg:translate-x-0 h-screen top-0",
+            "fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-900 flex flex-col transition-transform h-screen",
             mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}>
             {/* Logo */}
@@ -196,11 +196,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <div onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/50 lg:hidden" />
           )}
 
-          {/* Main content */}
-          <main className="flex-1 min-w-0">
+          {/* Main content — offset by sidebar width on desktop */}
+          <main className="flex-1 min-w-0 lg:ml-72">
             {/* Top bar */}
             <div className="hidden lg:flex sticky top-0 z-30 items-center justify-between gap-2 h-16 px-6 lg:px-8 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900">
-              <BrandLink logoClassName="h-8 w-auto max-w-[160px]" priority />
+              <BrandLink logoClassName="h-11 w-auto max-w-[220px]" priority />
               <div className="flex items-center gap-2">
                 {user?.role === "CLIENT" && (
                   <Button variant="ghost" size="sm" onClick={handleNewProject}>
@@ -221,5 +221,5 @@ function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function Brand() {
-  return <BrandLink logoClassName="h-8 w-auto max-w-[140px] sm:h-9 sm:max-w-[200px]" priority />;
+  return <BrandLink logoClassName="h-12 w-auto max-w-[260px] sm:h-14 sm:max-w-[300px]" priority />;
 }

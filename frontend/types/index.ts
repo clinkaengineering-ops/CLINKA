@@ -128,8 +128,18 @@ export interface DashboardStats {
 
 export interface SpendOverview {
   total: string;
+  totalRaw: number;
   changePercent: number;
   series: number[];
+  monthlyLabels: string[];
+  monthlyAmounts: number[];
+  inEscrow: number;
+  released: number;
+  refunded: number;
+  pending: number;
+  utilizationPercent: number;
+  projectStatusLabels: string[];
+  projectStatusCounts: number[];
 }
 
 export interface ClientProject {

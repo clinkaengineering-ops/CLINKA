@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createWithdrawalRequestSchema = exports.paymobWebhookSchema = exports.initiateCheckoutSchema = void 0;
+exports.autoWithdrawalSchema = exports.paymobWebhookSchema = exports.verifyCheckoutReturnSchema = exports.initiateCheckoutSchema = void 0;
 const zod_1 = require("zod");
 const fields_1 = require("../../utils/fields");
 exports.initiateCheckoutSchema = zod_1.z.object({
@@ -16,6 +16,15 @@ exports.initiateCheckoutSchema = zod_1.z.object({
         .min(3, "Address must be at least 3 characters")
         .max(200, "Address must be at most 200 characters")
         .optional(),
+});
+exports.verifyCheckoutReturnSchema = zod_1.z.object({
+    projectId: zod_1.z.coerce.number().int().positive().optional(),
+    paymentId: zod_1.z.coerce.number().int().positive().optional(),
+    orderId: zod_1.z.coerce.number().int().positive().optional(),
+    transactionId: zod_1.z.coerce.number().int().positive().optional(),
+    specialReference: zod_1.z.string().trim().min(1).optional(),
+    merchantOrderId: zod_1.z.string().trim().min(1).optional(),
+    returnQuery: zod_1.z.string().trim().min(1).optional(),
 });
 exports.paymobWebhookSchema = zod_1.z.object({
     type: zod_1.z.string().optional(),
@@ -52,18 +61,69 @@ exports.paymobWebhookSchema = zod_1.z.object({
     }),
     merchant_order_id: zod_1.z.string().nullable().optional(),
 });
-exports.createWithdrawalRequestSchema = zod_1.z.object({
-    amount: zod_1.z.coerce
-        .number({ error: "Amount is required" })
-        .positive("Amount must be greater than zero"),
-    method: zod_1.z
-        .string()
-        .trim()
-        .min(2, "Withdrawal method is required")
-        .max(50, "Withdrawal method is too long"),
-    accountNumber: zod_1.z
-        .string()
-        .trim()
-        .min(6, "Account number is too short")
-        .max(60, "Account number is too long"),
+/* OLD_WITHDRAWAL_START — Manual withdrawal validation (commented out for auto-withdrawal via Paymob)
+export const createWithdrawalRequestSchema = z.object({
+  amount: z.coerce
+    .number({ error: "Amount is required" })
+    .positive("Amount must be greater than zero"),
+  method: z
+    .string()
+    .trim()
+    .min(2, "Withdrawal method is required")
+    .max(50, "Withdrawal method is too long"),
+  accountNumber: z
+    .string()
+    .trim()
+    .min(6, "Account number is too short")
+    .max(60, "Account number is too long"),
 });
+
+export type CreateWithdrawalRequestInput = z.infer<
+  typeof createWithdrawalRequestSchema
+>;
+OLD_WITHDRAWAL_END */
+exports.autoWithdrawalSchema = zod_1.z.discriminatedUnion("channel", [
+    zod_1.z.object({
+        amount: zod_1.z.coerce
+            .number({ error: "Amount is required" })
+            .positive("Amount must be greater than zero"),
+        channel: zod_1.z.literal("mobile_wallet"),
+        msisdn: zod_1.z
+            .string()
+            .trim()
+            .min(10, "Enter a valid mobile wallet number")
+            .max(15, "Mobile wallet number is too long"),
+        nationalId: zod_1.z
+            .string()
+            .trim()
+            .regex(/^\d{14}$/, "National ID must be exactly 14 digits")
+            .optional(),
+    }),
+    zod_1.z.object({
+        amount: zod_1.z.coerce
+            .number({ error: "Amount is required" })
+            .positive("Amount must be greater than zero"),
+        channel: zod_1.z.literal("bank_transfer"),
+        accountNumber: zod_1.z
+            .string()
+            .trim()
+            .min(6, "Account number or IBAN is too short")
+            .max(34, "Account number or IBAN is too long"),
+        bankCode: zod_1.z
+            .string()
+            .trim()
+            .min(2, "Bank code is required")
+            .max(10, "Bank code is too long"),
+        fullName: zod_1.z
+            .string()
+            .trim()
+            .min(3, "Full name is required for bank transfers")
+            .max(100, "Full name is too long"),
+        nationalId: zod_1.z
+            .string()
+            .trim()
+            .regex(/^\d{14}$/, "National ID must be exactly 14 digits")
+            .optional(),
+        bankTransactionType: zod_1.z.enum(["cash_transfer", "salary"]).default("cash_transfer"),
+    }),
+]);

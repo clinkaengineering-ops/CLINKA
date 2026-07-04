@@ -37,10 +37,6 @@ export const verifyOtpSchema = z.object({
   otp: otpField,
 });
 
-export const oauthSessionSchema = z.object({
-  session: z.string().min(1, "Missing session token"),
-});
-
 export const forgotPasswordSchema = z.object({
   email: emailField,
 });
@@ -76,4 +72,15 @@ export type forgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type resetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type RequestEmailChangeInput = z.infer<typeof requestEmailChangeSchema>;
 export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>;
-export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export const clientApplyEngineerSchema = z.object({
+  specialty: z.enum(["CIVIL", "ARCHITECTURAL"], {
+    error: "Select civil or architectural specialty",
+  }),
+  bio: optionalBioField,
+  nationality: z.string().min(1, "Nationality is required"),
+  documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
+    error: "Select a document type to upload",
+  }),
+});
+
+export type ClientApplyEngineerInput = z.infer<typeof clientApplyEngineerSchema>;

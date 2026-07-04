@@ -12,6 +12,26 @@ import type {
   Message,
 } from "@/types";
 
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function lastNMonths(n: number) {
+  const months: string[] = [];
+  const now = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(monthKey(d));
+  }
+  return months;
+}
+
+function monthLabel(monthKeyStr: string) {
+  const [, m] = monthKeyStr.split("-");
+  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return names[Number(m) - 1] ?? monthKeyStr;
+}
+
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
   const [projects, escrow, pendingReviews] = await Promise.all([
     fetchMyProjects(),
@@ -42,14 +62,68 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
 export const fetchSpendOverview = async (
   _period: "1M" | "6M" | "12M" | "all" = "12M",
 ): Promise<SpendOverview> => {
-  const escrow = await fetchEscrowPayments().catch(() => []);
-  const total = escrow.reduce((s, e) => s + e.amount, 0);
-  const series = escrow.slice(0, 6).map((e) => e.amount);
-  while (series.length < 6) series.push(0);
+  const [escrow, projects] = await Promise.all([
+    fetchEscrowPayments().catch(() => []),
+    fetchMyProjects().catch(() => []),
+  ]);
+
+  const totalRaw = escrow.reduce((s, e) => s + e.amount, 0);
+  const inEscrow = escrow
+    .filter((e) => e.status === "In escrow")
+    .reduce((s, e) => s + e.amount, 0);
+  const released = escrow
+    .filter((e) => e.status === "Released")
+    .reduce((s, e) => s + e.amount, 0);
+  const refunded = escrow
+    .filter((e) => e.status === "Refunded")
+    .reduce((s, e) => s + e.amount, 0);
+  const pending = escrow
+    .filter((e) => e.status === "Pending")
+    .reduce((s, e) => s + e.amount, 0);
+
+  const monthlyWindow = lastNMonths(6);
+  const monthlyTotals: Record<string, number> = {};
+  escrow.forEach((p) => {
+    const key = monthKey(new Date(p.createdAt));
+    monthlyTotals[key] = (monthlyTotals[key] ?? 0) + p.amount;
+  });
+
+  const monthlyAmounts = monthlyWindow.map((m) => monthlyTotals[m] ?? 0);
+  const monthlyLabels = monthlyWindow.map(monthLabel);
+
+  const utilizationPercent =
+    inEscrow + released > 0 ? Math.round((inEscrow / (inEscrow + released)) * 100) : 0;
+
+  const statusCounts: Record<string, number> = {
+    Open: 0,
+    "In progress": 0,
+    Completed: 0,
+    Other: 0,
+  };
+  projects.forEach((p) => {
+    if (p.status === "OPEN") statusCounts.Open += 1;
+    else if (p.status === "IN_PROGRESS") statusCounts["In progress"] += 1;
+    else if (p.status === "COMPLETED") statusCounts.Completed += 1;
+    else statusCounts.Other += 1;
+  });
+
+  const projectStatusLabels = Object.keys(statusCounts).filter((k) => statusCounts[k] > 0);
+  const projectStatusCounts = projectStatusLabels.map((k) => statusCounts[k]);
+
   return {
-    total: formatMoney(total),
+    total: formatMoney(totalRaw),
+    totalRaw,
     changePercent: 0,
-    series,
+    series: monthlyAmounts,
+    monthlyLabels,
+    monthlyAmounts,
+    inEscrow,
+    released,
+    refunded,
+    pending,
+    utilizationPercent,
+    projectStatusLabels: projectStatusLabels.length ? projectStatusLabels : ["No projects"],
+    projectStatusCounts: projectStatusLabels.length ? projectStatusCounts : [0],
   };
 };
 

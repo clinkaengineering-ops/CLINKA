@@ -2,13 +2,23 @@ import { Response, NextFunction, Request } from "express";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import ApiResponse from "../../utils/ApiResponse";
 import {
-  createWithdrawalRequestSchema,
+  // createWithdrawalRequestSchema, // OLD_WITHDRAWAL: commented out for auto-withdrawal
+  autoWithdrawalSchema,
   initiateCheckoutSchema,
+  verifyCheckoutReturnSchema,
 } from "./payments.validation";
 import {
-  createEngineerWithdrawalRequest,
+  clearCheckoutReturnCookie,
+  readCheckoutReturnCookie,
+  setCheckoutReturnCookie,
+  CHECKOUT_RETURN_COOKIE,
+} from "../../config/checkoutCookie";
+import {
+  createEngineerAutoWithdrawal,
+  // createEngineerWithdrawalRequest, // OLD_WITHDRAWAL: commented out for auto-withdrawal
   getEscrowPaymentById,
   getProjectPayment,
+  getPaymentByGatewayId,
   handlePaymobWebhook,
   initiateProjectCheckout,
   prepareProjectCheckoutSession,
@@ -52,6 +62,11 @@ export async function getCheckoutSessionController(
       projectId,
       phone,
       address,
+    );
+    setCheckoutReturnCookie(
+      res,
+      { projectId: session.projectId, paymentId: session.paymentId },
+      req.headers.origin,
     );
     res.status(200).json(ApiResponse(200, "Checkout session ready", session));
   } catch (error) {
@@ -143,6 +158,7 @@ export async function getEngineerBalanceController(
   }
 }
 
+/* OLD_WITHDRAWAL_START — Manual withdrawal list controller (commented out for auto-withdrawal via Paymob)
 export async function listEngineerWithdrawalsController(
   req: AuthRequest,
   res: Response,
@@ -169,6 +185,38 @@ export async function createEngineerWithdrawalController(
     res
       .status(201)
       .json(ApiResponse(201, "Withdrawal request submitted", item));
+  } catch (error) {
+    next(error);
+  }
+}
+OLD_WITHDRAWAL_END */
+
+export async function listEngineerWithdrawalsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const items = await listEngineerWithdrawalRequests(req.user!.userId);
+    res
+      .status(200)
+      .json(ApiResponse(200, "Engineer withdrawals fetched successfully", items));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createEngineerAutoWithdrawalController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = autoWithdrawalSchema.parse(req.body);
+    const item = await createEngineerAutoWithdrawal(req.user!.userId, input);
+    res
+      .status(201)
+      .json(ApiResponse(201, "Withdrawal processed via Paymob", item));
   } catch (error) {
     next(error);
   }
@@ -232,6 +280,44 @@ export async function paymobWebhookController(
       typeof req.query.hmac === "string" ? req.query.hmac : undefined;
     const result = await handlePaymobWebhook(req.body, hmac);
     res.status(200).json(ApiResponse(200, "Webhook processed", result));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPaymentByGatewayController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const gatewayId = String(req.params.gatewayId);
+    const payment = await getPaymentByGatewayId(gatewayId, req.user!.userId);
+    res.status(200).json(ApiResponse(200, "Payment fetched", payment));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyCheckoutReturnController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const body = verifyCheckoutReturnSchema.parse(req.body);
+    const cookie = readCheckoutReturnCookie(req.cookies[CHECKOUT_RETURN_COOKIE]);
+    const input = {
+      ...body,
+      projectId: body.projectId ?? cookie?.projectId,
+      paymentId: body.paymentId ?? cookie?.paymentId,
+    };
+    const { verifyCheckoutReturn } = await import("./payments.service");
+    const payment = await verifyCheckoutReturn(req.user!.userId, input);
+    clearCheckoutReturnCookie(res, req.headers.origin);
+    res
+      .status(200)
+      .json(ApiResponse(200, "Payment verified successfully", payment));
   } catch (error) {
     next(error);
   }

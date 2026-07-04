@@ -10,7 +10,8 @@ import { useMyBids } from "@/features/bids/hooks/useMyBids";
 import { fetchConversations } from "@/features/messages/api/messages.api";
 import { useEffect, useState } from "react";
 import { fetchEngineerBalance } from "@/features/escrow/api/payments.api";
-import { EngineerFinancialOverview } from "./EngineerFinancialOverview";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
+import { EngineerDashboardAnalytics } from "./EngineerDashboardAnalytics";
 import type { EngineerBalanceSummary } from "@/features/escrow/types";
 
 export function EngineerDashboardPage() {
@@ -39,7 +40,7 @@ export function EngineerDashboardPage() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">
-            {t("ed.welcome").replace("Layla", me?.name?.split(" ")[0] ?? "…")}
+            {t("ed.welcomeNamed").replace("{name}", me?.name?.split(" ")[0] ?? "…")}
           </p>
           <h1 className="text-3xl font-bold tracking-tight">{t("ed.title")}</h1>
         </div>
@@ -51,28 +52,41 @@ export function EngineerDashboardPage() {
         </Button>
       </div>
 
-      <EngineerFinancialOverview balance={balance} loading={loading && !balance} />
-
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard
+          label={t("bal.available")}
+          value={formatMoney(balance?.availableBalance ?? 0)}
+          change={`${formatMoney(balance?.securedBalance ?? 0)} secured`}
+          accent="up"
+          icon={<IconBriefcase width={20} height={20} />}
+        />
         <StatCard
           label={t("ed.activeContracts")}
           value={String(activeCount)}
+          change={`${bids.length} total bids`}
+          accent="up"
           icon={<IconBriefcase width={20} height={20} />}
         />
         <StatCard
           label={t("side.myBids")}
           value={String(pendingBids)}
+          change="Awaiting client"
+          accent="up"
           icon={<IconBriefcase width={20} height={20} />}
         />
         <StatCard
           label={t("side.messages")}
           value={String(inboxCount)}
+          change="Conversations"
+          accent="up"
           icon={<IconMessage width={20} height={20} />}
         />
       </div>
 
+      <EngineerDashboardAnalytics bids={bids} />
+
       <Card className="p-6">
-        <h2 className="font-bold">{t("ed.findProj")}</h2>
+        <h2 className="font-bold">{t("ed.quickLinks")}</h2>
         <p className="text-sm text-slate-500 mt-2">{t("ed.completeMsg")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/projects">

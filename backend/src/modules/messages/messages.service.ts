@@ -230,6 +230,12 @@ export async function sendMessage(
     "New message",
     preview.slice(0, 120),
     `/messages?project=${conv.projectId}`,
+    {
+      email: {
+        senderName: message.sender.name,
+        projectTitle: project?.title ?? "a project",
+      },
+    },
   );
 
   return message;

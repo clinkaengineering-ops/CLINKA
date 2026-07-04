@@ -11,13 +11,13 @@ const ASSETS = {
 export type BrandLogoVariant = keyof typeof ASSETS;
 
 const SIZES: Record<BrandLogoVariant, { width: number; height: number }> = {
-  mark: { width: 48, height: 40 },
-  stacked: { width: 280, height: 280 },
-  horizontal: { width: 280, height: 120 },
+  mark: { width: 150, height: 120 },
+  stacked: { width: 320, height: 320 },
+  horizontal: { width: 360, height: 140 },
 };
 
 export function BrandLogo({
-  variant = "horizontal",
+  variant = "mark",
   className,
   priority,
 }: {
@@ -39,7 +39,7 @@ export function BrandLogo({
 }
 
 export function BrandLink({
-  variant = "horizontal",
+  variant = "mark",
   className,
   logoClassName,
   priority,

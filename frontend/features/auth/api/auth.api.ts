@@ -1,5 +1,5 @@
 import api from "@/lib/axios";
-import type { Me, User } from "@/types";
+import type { User } from "@/types";
 
 export type RegistrationStatus =
   | { status: "available" }
@@ -33,11 +33,8 @@ export const authApi = {
   verifyOtp: (data: { userId: number; otp: string }) =>
     api.post("/auth/verify-otp", data),
 
-  completeOAuthSession: (session: string) =>
-    api.post<{ data: Me }>("/auth/oauth-session", { session }),
-
   verifyEmail: (token: string) =>
-    api.get<{ data: Me }>(`/auth/verify-email?token=${encodeURIComponent(token)}`),
+    api.get(`/auth/verify-email?token=${token}`),
 
   forgotPassword: (email: string) =>
     api.post("/auth/forgot-password", { email }),
@@ -46,6 +43,11 @@ export const authApi = {
     api.post("/auth/reset-password", data),
 
   logout: () => api.post("/auth/logout"),
+
+  applyAsEngineer: (data: FormData) =>
+    api.post<{ data: User }>("/auth/apply-engineer", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
     api.post("/auth/change-password", data),

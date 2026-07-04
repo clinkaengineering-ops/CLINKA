@@ -4,7 +4,10 @@ import http from "http";
 import app from "./app";
 import db from "./config/db";
 import transporter from "./config/mailer";
+import { validateProductionEnv } from "./config/env";
 import { initSocket } from "./socket";
+
+validateProductionEnv();
 
 const PORT = Number(process.env.PORT) || 5000;
 

@@ -37,7 +37,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-16 grid gap-8 sm:gap-10 sm:grid-cols-2 lg:grid-cols-5">
         <div className="sm:col-span-2">
           <div className="space-y-4">
-            <BrandLink logoClassName="h-9 w-auto max-w-[180px] sm:h-10" />
+            <BrandLink logoClassName="h-14 w-auto sm:h-16" />
             <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
               {t("foot.tagline")}
             </p>

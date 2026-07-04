@@ -7,8 +7,7 @@ import { Button, Card } from "@/components/UI";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
 import { useAdmin } from "../hooks/useAdmin";
-import { AdminHeader } from "../components/AdminHeader";
-import { AdminStatsGrid } from "../components/AdminStatsGrid";
+import { AdminOperationsOverview } from "../components/AdminOperationsOverview";
 import { AdminVerificationList } from "../components/AdminVerificationList";
 import { BanManagementPanel } from "../components/BanManagementPanel";
 import { AdminChatViewer } from "../components/AdminChatViewer";
@@ -18,10 +17,9 @@ import { AdminReviewsPanel } from "../components/AdminReviewsPanel";
 import { AdminFinancialsPanel } from "../components/AdminFinancialsPanel";
 import { AdminAnalytics } from "../components/AdminAnalytics";
 import { AdminSystemLogs } from "../components/AdminSystemLogs";
-
 import { AdminSupportTicketsPanel } from "../components/AdminSupportTicketsPanel";
 
-type AdminTab = "overview" | "users" | "projects" | "reviews" | "financials" | "bans" | "chats" | "analytics" | "logs" | "support";
+type AdminTab = "overview" | "verifications" | "users" | "projects" | "reviews" | "financials" | "bans" | "chats" | "analytics" | "logs" | "support";
 
 export function AdminPage() {
   const { t } = useI18n();
@@ -29,6 +27,9 @@ export function AdminPage() {
   const [tab, setTab] = useState<AdminTab>("overview");
   const {
     stats,
+    analytics,
+    escrow,
+    disputes,
     verifications,
     loading,
     error,
@@ -49,32 +50,9 @@ export function AdminPage() {
     );
   }
 
-  function handleExport() {
-    const rows = [
-      ["Name", "Email", "Specialty", "Document", "Submitted"],
-      ...verifications.map((v) => [
-        v.name,
-        v.email,
-        v.specialty,
-        v.documentType,
-        new Date(v.submittedAt).toISOString(),
-      ]),
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "pending-verifications.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <AdminHeader onExport={handleExport} exportDisabled={loading} />
-
-      {error && (
+      {error && tab !== "overview" && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-600 flex justify-between items-center">
           <span>{error}</span>
           <Button size="sm" variant="ghost" onClick={() => refetch()}>
@@ -87,6 +65,7 @@ export function AdminPage() {
         {(
           [
             ["overview", "Overview"],
+            ["verifications", "Verifications"],
             ["users", "Directory"],
             ["projects", "Projects"],
             ["reviews", "Reviews"],
@@ -114,35 +93,47 @@ export function AdminPage() {
         ))}
       </div>
 
+      {tab === "verifications" && (
+        <AdminVerificationList
+          verifications={verifications}
+          actionLoading={actionLoading}
+          onApprove={approve}
+          onReject={reject}
+        />
+      )}
       {tab === "users" && <AdminUserDirectory />}
-      
       {tab === "projects" && <AdminProjectsPanel />}
-
       {tab === "reviews" && <AdminReviewsPanel />}
-
       {tab === "financials" && <AdminFinancialsPanel />}
-
       {tab === "bans" && <BanManagementPanel />}
-
       {tab === "chats" && <AdminChatViewer />}
-
       {tab === "analytics" && <AdminAnalytics />}
-
       {tab === "logs" && <AdminSystemLogs />}
-
       {tab === "support" && <AdminSupportTicketsPanel />}
 
       {tab === "overview" &&
         (loading ? (
           <Card className="p-12 text-center text-slate-500">{t("common.loading")}</Card>
-        ) : stats ? (
+        ) : stats && analytics && escrow ? (
           <>
-            <AdminStatsGrid stats={stats} />
-            <AdminVerificationList
+            {error && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-600 flex justify-between items-center">
+                <span>{error}</span>
+                <Button size="sm" variant="ghost" onClick={() => refetch()}>
+                  {t("common.retry")}
+                </Button>
+              </div>
+            )}
+            <AdminOperationsOverview
+              stats={stats}
+              analytics={analytics}
+              escrow={escrow}
+              disputes={disputes}
               verifications={verifications}
               actionLoading={actionLoading}
               onApprove={approve}
               onReject={reject}
+              onViewAllVerifications={() => setTab("verifications")}
             />
           </>
         ) : null)}

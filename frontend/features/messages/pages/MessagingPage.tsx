@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Avatar, Badge, Card } from "@/components/UI";
 import {
   IconSearch,
@@ -119,6 +120,7 @@ export function MessagingPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [banAlert, setBanAlert] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -194,7 +196,13 @@ export function MessagingPage() {
     sendViaSocket,
     emitTypingStart,
     emitTypingStop,
-  } = useMessageSocket(activeId, handleNewSocketMessage);
+  } = useMessageSocket(activeId, handleNewSocketMessage, (err) => {
+    if (err.message.toLowerCase().includes("suspended")) {
+      setBanAlert(err.message);
+    } else {
+      setSendError(err.message);
+    }
+  });
 
   const inboxGroups = useMemo(
     () => groupConversationsByParticipant(conversations),
@@ -409,7 +417,11 @@ export function MessagingPage() {
       }
     } catch (e: unknown) {
       const { message } = parseApiValidation(e);
-      setSendError(message);
+      if (message.toLowerCase().includes("suspended")) {
+        setBanAlert(message);
+      } else {
+        setSendError(message);
+      }
       setDraft(content);
       if (fileToSend) setPendingFile(fileToSend);
     } finally {
@@ -681,6 +693,29 @@ export function MessagingPage() {
           />
         </div>
       </Card>
+
+      {banAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 text-center space-y-4 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 mb-2">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold">Account Suspended</h2>
+            <p className="text-sm text-slate-500 whitespace-pre-wrap">{banAlert}</p>
+            <p className="text-sm text-slate-500">If you believe this is a mistake or that you did not do anything wrong, please contact our support team to appeal this decision.</p>
+            <div className="pt-4 flex flex-col gap-2">
+              <Link href="/help" className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-electric-500 hover:bg-electric-400 text-white font-semibold transition">
+                Contact Support
+              </Link>
+              <button onClick={() => setBanAlert(null)} className="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

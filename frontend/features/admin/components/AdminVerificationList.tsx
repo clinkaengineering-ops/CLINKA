@@ -74,6 +74,30 @@ export function AdminVerificationList({
                     </a>
                   )}
                 </div>
+                {v.portfolios && v.portfolios.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
+                      {t("auth.portfolioStep") || "Portfolios"}
+                    </p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 max-w-[300px] sm:max-w-md">
+                      {v.portfolios.map((url, idx) => (
+                        <a
+                          key={idx}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 w-16 h-16 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden hover:opacity-80 transition"
+                        >
+                          <img
+                            src={url}
+                            alt={`Portfolio ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button

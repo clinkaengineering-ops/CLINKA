@@ -4,16 +4,18 @@ import jwt from "jsonwebtoken";
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 import { getGoogleClientConfig, getGoogleRedirectUri } from "../../config/google";
-import { getClientUrl, resolveOAuthClientOrigin } from "../../config/clientUrl";
 import generateToken from "../../utils/generateToken";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+const GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v2/userinfo";
 
-type GoogleTokenResponse = {
-  access_token?: string;
-  id_token?: string;
+type GoogleState = {
+  nonce: string;
+  next?: string;
+  role?: "CLIENT" | "ENGINEER";
+  redirectUri: string;
+  clientOrigin?: string;
 };
 
 type GoogleProfile = {
@@ -24,85 +26,14 @@ type GoogleProfile = {
   picture?: string;
 };
 
-type GoogleState = {
-  nonce: string;
-  next?: string;
-  role?: "CLIENT" | "ENGINEER";
-  redirectUri: string;
-  clientOrigin?: string;
-};
-
-function profileFromIdToken(idToken: string): GoogleProfile {
-  const payload = jwt.decode(idToken) as {
-    sub?: string;
-    email?: string;
-    email_verified?: boolean;
-    name?: string;
-    picture?: string;
-  } | null;
-
-  if (!payload?.sub || !payload.email) {
-    throw new ApiError(400, "Google account is missing required profile data");
-  }
-
-  return {
-    id: payload.sub,
-    email: payload.email,
-    verified_email: payload.email_verified,
-    name: payload.name,
-    picture: payload.picture,
-  };
-}
-
-function normalizeGoogleProfile(raw: Record<string, unknown>): GoogleProfile {
-  const id = String(raw.sub ?? raw.id ?? "");
-  const email = String(raw.email ?? "");
-  if (!id || !email) {
-    throw new ApiError(400, "Google account is missing required profile data");
-  }
-
-  return {
-    id,
-    email,
-    verified_email:
-      typeof raw.email_verified === "boolean"
-        ? raw.email_verified
-        : typeof raw.verified_email === "boolean"
-          ? raw.verified_email
-          : undefined,
-    name: typeof raw.name === "string" ? raw.name : undefined,
-    picture: typeof raw.picture === "string" ? raw.picture : undefined,
-  };
-}
-
-function assertVerifiedEmail(profile: GoogleProfile): GoogleProfile {
-  if (profile.verified_email === false) {
-    throw new ApiError(400, "Please use a Google account with a verified email");
-  }
-  return profile;
-}
-
-async function fetchGoogleProfile(accessToken: string): Promise<GoogleProfile> {
-  const profileRes = await fetch(GOOGLE_USERINFO_URL, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!profileRes.ok) {
-    const errText = await profileRes.text();
-    console.warn("Google profile fetch failed:", errText);
-    throw new ApiError(400, "Could not load your Google profile");
-  }
-
-  const raw = (await profileRes.json()) as Record<string, unknown>;
-  return normalizeGoogleProfile(raw);
-}
-
 function normalizeOrigin(origin: string): string {
   return origin.replace(/\/$/, "");
 }
 
 function clientUrl(path: string, origin?: string): string {
-  const base = resolveOAuthClientOrigin(origin) ?? getClientUrl();
+  const base = normalizeOrigin(
+    origin ?? process.env.CLIENT_URL ?? "http://localhost:3000",
+  );
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
@@ -144,7 +75,7 @@ export function getGoogleAuthRedirectUrl(options?: {
     role: options?.role ?? "CLIENT",
     redirectUri,
     clientOrigin: options?.clientOrigin
-      ? resolveOAuthClientOrigin(normalizeOrigin(options.clientOrigin))
+      ? normalizeOrigin(options.clientOrigin)
       : undefined,
   });
 
@@ -186,17 +117,29 @@ async function exchangeCodeForProfile(
     throw new ApiError(400, "Google sign-in failed. Please try again.");
   }
 
-  const tokens = (await tokenRes.json()) as GoogleTokenResponse;
-
-  if (tokens.id_token) {
-    return assertVerifiedEmail(profileFromIdToken(tokens.id_token));
-  }
-
+  const tokens = (await tokenRes.json()) as { access_token?: string };
   if (!tokens.access_token) {
     throw new ApiError(400, "Google did not return an access token");
   }
 
-  return assertVerifiedEmail(await fetchGoogleProfile(tokens.access_token));
+  const profileRes = await fetch(GOOGLE_USERINFO_URL, {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+
+  if (!profileRes.ok) {
+    throw new ApiError(400, "Could not load your Google profile");
+  }
+
+  const profile = (await profileRes.json()) as GoogleProfile;
+  if (!profile.id || !profile.email) {
+    throw new ApiError(400, "Google account is missing required profile data");
+  }
+
+  if (profile.verified_email === false) {
+    throw new ApiError(400, "Please use a Google account with a verified email");
+  }
+
+  return profile;
 }
 
 async function randomPasswordHash(): Promise<string> {
@@ -285,16 +228,29 @@ async function findOrCreateGoogleUser(
   return safe;
 }
 
+function parseClientOriginFromState(stateParam?: string): string | undefined {
+  if (!stateParam) return undefined;
+  try {
+    return verifyState(stateParam).clientOrigin;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function handleGoogleCallback(
   code: string | undefined,
   stateParam: string | undefined,
   oauthError: string | undefined,
 ): Promise<{ redirectUrl: string; token?: string; clientOrigin?: string }> {
+  const fallbackClientOrigin = parseClientOriginFromState(stateParam);
+
   if (oauthError) {
     return {
       redirectUrl: clientUrl(
         `/auth/callback?error=${encodeURIComponent(oauthError)}`,
+        fallbackClientOrigin,
       ),
+      clientOrigin: fallbackClientOrigin,
     };
   }
 
@@ -302,7 +258,9 @@ export async function handleGoogleCallback(
     return {
       redirectUrl: clientUrl(
         `/auth/callback?error=${encodeURIComponent("Missing Google authorization")}`,
+        fallbackClientOrigin,
       ),
+      clientOrigin: fallbackClientOrigin,
     };
   }
 
@@ -328,7 +286,7 @@ export async function handleGoogleCallback(
     }
 
     const redirectUrl = clientUrl(
-      `/auth/callback?success=1&next=${encodeURIComponent(nextPath)}&session=${encodeURIComponent(token)}`,
+      `/auth/callback?success=1&next=${encodeURIComponent(nextPath)}`,
       state.clientOrigin,
     );
     return { redirectUrl, token, clientOrigin: state.clientOrigin };
@@ -340,7 +298,11 @@ export async function handleGoogleCallback(
           ? error.message
           : "Google sign-in failed";
     return {
-      redirectUrl: clientUrl(`/auth/callback?error=${encodeURIComponent(message)}`),
+      redirectUrl: clientUrl(
+        `/auth/callback?error=${encodeURIComponent(message)}`,
+        fallbackClientOrigin,
+      ),
+      clientOrigin: fallbackClientOrigin,
     };
   }
 }

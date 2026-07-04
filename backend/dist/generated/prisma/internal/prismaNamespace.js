@@ -164,6 +164,7 @@ exports.EngineerProfileScalarFieldEnum = {
     bio: 'bio',
     coverImageUrl: 'coverImageUrl',
     verificationStatus: 'verificationStatus',
+    nationalId: 'nationalId',
     collegeIdUrl: 'collegeIdUrl',
     certificateUrl: 'certificateUrl',
     syndicateCardUrl: 'syndicateCardUrl',
@@ -325,6 +326,10 @@ exports.WithdrawalRequestScalarFieldEnum = {
     accountNumber: 'accountNumber',
     status: 'status',
     adminNotes: 'adminNotes',
+    paymobTransactionId: 'paymobTransactionId',
+    paymobDisbursementStatus: 'paymobDisbursementStatus',
+    paymobStatusDescription: 'paymobStatusDescription',
+    paymobClientReference: 'paymobClientReference',
     processedAt: 'processedAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'

@@ -15,6 +15,10 @@ router.post("/register/engineer", upload_middleware_1.default.fields([
     { name: "portfolio", maxCount: 10 },
 ]), auth_controller_1.registerEngineerController);
 router.post("/register/engineer/resume", upload_middleware_1.default.array("portfolio", 10), auth_controller_1.resumeEngineerRegistrationController);
+router.post("/apply-engineer", auth_middleware_1.authenticate, upload_middleware_1.default.fields([
+    { name: "document", maxCount: 1 },
+    { name: "portfolio", maxCount: 10 },
+]), auth_controller_1.applyClientAsEngineerController);
 router.post("/login", auth_controller_1.loginController);
 router.post("/logout", auth_middleware_1.authenticate, auth_controller_1.logoutController);
 router.get("/verify-email", auth_controller_1.verifyEmailController);
@@ -25,7 +29,6 @@ router.post("/change-password", auth_middleware_1.authenticate, auth_controller_
 router.post("/request-email-change", auth_middleware_1.authenticate, auth_controller_1.requestEmailChangeController);
 router.post("/confirm-email-change", auth_middleware_1.authenticate, auth_controller_1.confirmEmailChangeController);
 router.post("/verify-otp", auth_controller_1.verifyOtpController);
-router.post("/oauth-session", auth_controller_1.oauthSessionController);
 router.get("/google/status", auth_controller_1.googleAuthStatusController);
 router.get("/google", auth_controller_1.googleAuthStartController);
 router.get("/google/callback", auth_controller_1.googleAuthCallbackController);

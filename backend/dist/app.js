@@ -12,6 +12,9 @@ const errorHandler_middleware_1 = require("./middlewares/errorHandler.middleware
 const index_1 = __importDefault(require("./routes/index"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+}
 app.use((0, cors_1.default)({
     origin(origin, callback) {
         if ((0, cors_2.isAllowedOrigin)(origin)) {

@@ -4,25 +4,44 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BrandLink } from "@/components/BrandLogo";
-import {
-  fetchCheckoutSession,
-  fetchEscrowPaymentById,
-  fetchProjectPayment,
-  verifyPayment,
-} from "../api/payments.api";
+import { fetchCheckoutSession, verifyCheckoutReturn } from "../api/payments.api";
 import { formatMoney } from "../utils/formatMoney";
 import { parseCheckoutReturn } from "../utils/parseCheckoutReturn";
+import {
+  clearCheckoutReturnStorage,
+  readCheckoutReturnStorage,
+  writeCheckoutReturnStorage,
+} from "../utils/checkoutReturnStorage";
 import { useI18n } from "@/i18n";
+import { cn } from "@/utils/cn";
 
 type Status = "form" | "loading" | "ready" | "error";
+
+function isFundedStatus(status?: string) {
+  return (
+    status === "FUNDED" ||
+    status === "RELEASED" ||
+    status === "In escrow" ||
+    status === "Released"
+  );
+}
 
 export default function CheckoutClient() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
   const parsedReturn = parseCheckoutReturn(searchParams);
+  const [storedReturn] = useState(() => readCheckoutReturnStorage());
 
-  if (parsedReturn.isReturn) {
-    if (!parsedReturn.status && !parsedReturn.projectId && !parsedReturn.paymentId) {
+  if (parsedReturn.isReturn || storedReturn) {
+    if (
+      !parsedReturn.status &&
+      !parsedReturn.paymentId &&
+      !parsedReturn.orderId &&
+      !parsedReturn.transactionId &&
+      !parsedReturn.specialReference &&
+      !parsedReturn.merchantOrderId &&
+      !storedReturn
+    ) {
       return (
         <div className="min-h-screen flex items-center justify-center">
           <p className="text-slate-400 text-sm">{t("checkout.invalidProject")}</p>
@@ -32,8 +51,12 @@ export default function CheckoutClient() {
 
     return (
       <CheckoutReturnStatus
-        projectId={parsedReturn.projectId}
-        paymentId={parsedReturn.paymentId}
+        projectId={parsedReturn.projectId ?? storedReturn?.projectId}
+        paymentId={parsedReturn.paymentId ?? storedReturn?.paymentId}
+        orderId={parsedReturn.orderId}
+        transactionId={parsedReturn.transactionId}
+        specialReference={parsedReturn.specialReference}
+        merchantOrderId={parsedReturn.merchantOrderId}
         status={parsedReturn.status ?? "success"}
       />
     );
@@ -55,10 +78,18 @@ export default function CheckoutClient() {
 function CheckoutReturnStatus({
   projectId: initialProjectId,
   paymentId: initialPaymentId,
+  orderId,
+  transactionId,
+  specialReference,
+  merchantOrderId,
   status,
 }: {
   projectId?: number;
   paymentId?: number;
+  orderId?: number;
+  transactionId?: number;
+  specialReference?: string;
+  merchantOrderId?: string;
   status: "success" | "fail" | "pending";
 }) {
   const [title, setTitle] = useState("");
@@ -112,42 +143,33 @@ function CheckoutReturnStatus({
 
     void (async () => {
       try {
-        let resolvedPaymentId = initialPaymentId;
-        let projectId = initialProjectId;
+        const stored = readCheckoutReturnStorage();
+        const payment = await verifyCheckoutReturn({
+          projectId: initialProjectId ?? stored?.projectId,
+          paymentId: initialPaymentId ?? stored?.paymentId,
+          orderId,
+          transactionId,
+          specialReference,
+          merchantOrderId,
+          returnQuery:
+            typeof window !== "undefined" ? window.location.search : undefined,
+        });
 
-        if (!projectId && resolvedPaymentId) {
-          const payment = await fetchEscrowPaymentById(resolvedPaymentId);
-          projectId = payment.projectId;
-          if (alive) setResolvedProjectId(projectId);
+        if (alive && payment.projectId) {
+          setResolvedProjectId(payment.projectId);
         }
 
-        if (!projectId) {
-          throw new Error("Could not determine which project this payment belongs to.");
+        clearCheckoutReturnStorage();
+
+        if (isFundedStatus(payment.status)) {
+          setIfAlive({
+            title: "Payment successful",
+            message: "Escrow is now funded and the engineer can start working.",
+            variant: "success",
+          });
+          return;
         }
 
-        if (!resolvedPaymentId) {
-          const payment = (await fetchProjectPayment(projectId)) as {
-            id?: number;
-            status?: string;
-          } | null;
-
-          if (payment?.status === "In escrow" || payment?.status === "Released") {
-            setIfAlive({
-              title: "Payment confirmed",
-              message: "Escrow is already funded for this project.",
-              variant: "success",
-            });
-            return;
-          }
-
-          resolvedPaymentId = payment?.id;
-        }
-
-        if (!resolvedPaymentId) {
-          throw new Error("Could not determine which payment to verify.");
-        }
-
-        await verifyPayment(resolvedPaymentId);
         setIfAlive({
           title: "Payment successful",
           message: "Escrow is now funded and the engineer can start working.",
@@ -172,7 +194,22 @@ function CheckoutReturnStatus({
     return () => {
       alive = false;
     };
-  }, [initialPaymentId, initialProjectId, status]);
+  }, [
+    initialPaymentId,
+    initialProjectId,
+    merchantOrderId,
+    orderId,
+    specialReference,
+    status,
+    transactionId,
+  ]);
+
+  const retryHref =
+    resolvedProjectId != null
+      ? `/checkout?projectId=${resolvedProjectId}`
+      : initialProjectId != null
+        ? `/checkout?projectId=${initialProjectId}`
+        : null;
 
   const badgeClass =
     variant === "success"
@@ -185,7 +222,7 @@ function CheckoutReturnStatus({
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950">
       <div className="w-full max-w-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/80 dark:border-slate-700">
         <div className="flex items-center justify-between px-5 py-4 bg-brand-teal text-white">
-          <BrandLink logoClassName="h-8 w-auto max-w-[140px] brightness-0 invert" />
+          <BrandLink logoClassName="h-10 w-auto max-w-[180px] brightness-0 invert" />
           <span className={`text-xs font-semibold px-2 py-1 rounded-full ${badgeClass}`}>
             {variant === "success"
               ? "Confirmed"
@@ -197,16 +234,31 @@ function CheckoutReturnStatus({
         <div className="px-5 py-8 text-center">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
           <p className="text-sm text-slate-500 mt-2">{message}</p>
-          <Link
-            href={
-              resolvedProjectId
-                ? `/projects?id=${resolvedProjectId}`
-                : "/projects"
-            }
-            className="inline-flex mt-5 px-4 py-2 rounded-lg bg-electric-500 text-white text-sm font-semibold hover:bg-electric-600"
-          >
-            Go to project
-          </Link>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            {variant === "error" && retryHref ? (
+              <Link
+                href={retryHref}
+                className="inline-flex px-4 py-2 rounded-lg bg-electric-500 text-white text-sm font-semibold hover:bg-electric-600"
+              >
+                Try payment again
+              </Link>
+            ) : null}
+            <Link
+              href={
+                resolvedProjectId
+                  ? `/projects?id=${resolvedProjectId}`
+                  : "/projects"
+              }
+              className={cn(
+                "inline-flex px-4 py-2 rounded-lg text-sm font-semibold",
+                variant === "error" && retryHref
+                  ? "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  : "bg-electric-500 text-white hover:bg-electric-600",
+              )}
+            >
+              Go to project
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -223,7 +275,6 @@ function CheckoutForm({ projectId }: { projectId: number }) {
   const [amount, setAmount] = useState(0);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [paymentId, setPaymentId] = useState<number | null>(null);
 
   const handleProceed = useCallback(async () => {
     if (!phone.trim() || !address.trim()) return;
@@ -239,7 +290,13 @@ function CheckoutForm({ projectId }: { projectId: number }) {
 
       setTitle(session.projectTitle);
       setAmount(session.amount);
-      setPaymentId(session.paymentId);
+
+      if (session.paymentId) {
+        writeCheckoutReturnStorage({
+          projectId,
+          paymentId: session.paymentId,
+        });
+      }
 
       if (!session.checkoutUrl) {
         throw new Error("Missing checkout URL from server.");
@@ -262,7 +319,7 @@ function CheckoutForm({ projectId }: { projectId: number }) {
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950">
       <div className="w-full max-w-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/80 dark:border-slate-700">
         <div className="flex items-center justify-between px-5 py-4 bg-brand-teal text-white">
-          <BrandLink logoClassName="h-8 w-auto max-w-[140px] brightness-0 invert" />
+          <BrandLink logoClassName="h-10 w-auto max-w-[180px] brightness-0 invert" />
           <div className="text-end">
             <p className="text-[10px] uppercase tracking-wider text-white/50">
               {t("checkout.secure")}
@@ -337,8 +394,6 @@ function CheckoutForm({ projectId }: { projectId: number }) {
             </button>
           </div>
         )}
-
-
 
         <div className="px-5 py-3 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-slate-800">
           {t("checkout.securedBy")}

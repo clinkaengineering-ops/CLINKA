@@ -44,7 +44,7 @@ export function EngineerFinancialOverview({
       {/* Financial Grid */}
       <div className="grid sm:grid-cols-3 gap-4">
         <StatCard
-          label="Pending Balance"
+          label={t("bal.pendingBalance")}
           value={formatMoney(balance.pendingBalance)}
           icon={<IconClock width={20} height={20} className="text-purple-500" />}
         />

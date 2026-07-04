@@ -1,5 +1,7 @@
 import { getPublicClientUrl } from "../config/clientUrl";
 
+export const EMAIL_LOGO_CID = "clinka-logo";
+
 const BRAND = {
   teal: "#196481",
   tealDark: "#145268",
@@ -11,8 +13,6 @@ const BRAND = {
   border: "#e2e8f0",
 } as const;
 
-export const EMAIL_LOGO_CID = "clinka-logo@clinka";
-
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -23,7 +23,8 @@ function escapeHtml(value: string): string {
 }
 
 export function getLogoUrl(): string {
-  return "https://res.cloudinary.com/dczhvcc0v/image/upload/v1782741323/brand/logo-09.png";
+  const base = getPublicClientUrl();
+  return `${base}/brand/logo/PNG/logo-09.png`;
 }
 
 export function getEmailFrom(): string {
@@ -72,7 +73,7 @@ export function buildEmailHtml(options: BuildEmailOptions): string {
   const { title, preheader, contentHtml, cta } = options;
   const safeTitle = escapeHtml(title);
   const safePreheader = preheader ? escapeHtml(preheader) : safeTitle;
-  const siteUrl = escapeHtml(getPublicClientUrl());
+  const logoUrl = escapeHtml(getLogoUrl());
   const year = new Date().getFullYear();
   const ctaHtml = cta ? emailButton(cta.label, cta.href) : "";
 
@@ -113,8 +114,8 @@ export function buildEmailHtml(options: BuildEmailOptions): string {
           </tr>
           <tr>
             <td class="email-header" align="center" style="padding:28px 32px 20px;background-color:${BRAND.white};border-bottom:1px solid ${BRAND.border};">
-              <a href="${siteUrl}" target="_blank" style="text-decoration:none;">
-                <img src="cid:${EMAIL_LOGO_CID}" alt="CLINKA — Civil Link Architecture" width="200" style="display:block;margin:0 auto;max-width:200px;height:auto;border:0;" />
+              <a href="${escapeHtml(getPublicClientUrl())}" target="_blank" style="text-decoration:none;">
+                <img src="${logoUrl}" alt="CLINKA — Civil Link Architecture" width="200" style="display:block;margin:0 auto;max-width:200px;height:auto;border:0;" />
               </a>
             </td>
           </tr>
@@ -234,5 +235,47 @@ export function withdrawalNotificationEmailHtml(input: {
         ${row("Account number", input.accountNumber)}
         ${row("Request date", input.requestDate)}
       </table>`,
+  });
+}
+
+export function newMessageEmailHtml(input: {
+  senderName: string;
+  projectTitle: string;
+  messageUrl: string;
+}): string {
+  return buildEmailHtml({
+    title: "You have a new message",
+    preheader: `New message from ${input.senderName}`,
+    contentHtml: `
+      <p style="margin:0 0 16px;color:${BRAND.text};">
+        You have received a new message from <strong>${escapeHtml(input.senderName)}</strong> regarding the project <strong>${escapeHtml(input.projectTitle)}</strong>.
+      </p>
+      <p style="margin:0 0 20px;color:${BRAND.muted};font-size:14px;">
+        Click the button below to view the message and reply.
+      </p>`,
+    cta: { label: "View Message", href: input.messageUrl },
+  });
+}
+
+export function notificationEmailHtml(input: {
+  title: string;
+  body?: string;
+  actionUrl?: string;
+  actionLabel?: string;
+}): string {
+  const bodyHtml = input.body
+    ? `<p style="margin:0 0 20px;color:${BRAND.text};white-space:pre-wrap;">${escapeHtml(input.body)}</p>`
+    : "";
+
+  return buildEmailHtml({
+    title: input.title,
+    preheader: input.body?.slice(0, 120) ?? input.title,
+    contentHtml: bodyHtml,
+    cta: input.actionUrl
+      ? {
+          label: input.actionLabel ?? "Open CLINKA",
+          href: input.actionUrl,
+        }
+      : undefined,
   });
 }

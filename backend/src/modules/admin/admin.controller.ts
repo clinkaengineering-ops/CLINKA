@@ -22,6 +22,9 @@ import {
   getAllPayments,
   overridePaymentStatus,
   getAnalyticsData,
+  getEscrowOverview,
+  getActiveDisputes,
+  getSystemHealth,
   getSystemLogs,
   getSupportTickets,
   updateSupportTicket,
@@ -344,13 +347,54 @@ export async function getAnalyticsController(
 }
 
 export async function getSystemLogsController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const limit = Number(req.query.limit) || 50;
+    const logs = await getSystemLogs(limit);
+    res.status(200).json(ApiResponse(200, "System logs fetched", logs));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getEscrowOverviewController(
   _req: unknown,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const logs = await getSystemLogs();
-    res.status(200).json(ApiResponse(200, "System logs fetched", logs));
+    const data = await getEscrowOverview();
+    res.status(200).json(ApiResponse(200, "Escrow overview fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getActiveDisputesController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const limit = Number(req.query.limit) || 10;
+    const data = await getActiveDisputes(limit);
+    res.status(200).json(ApiResponse(200, "Active disputes fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getSystemHealthController(
+  _req: unknown,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const data = await getSystemHealth();
+    res.status(200).json(ApiResponse(200, "System health fetched", data));
   } catch (error) {
     next(error);
   }

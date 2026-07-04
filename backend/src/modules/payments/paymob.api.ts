@@ -105,14 +105,51 @@ export function listConfiguredPaymobMethods(): PaymobPaymentMethod[] {
   }));
 }
 
+function extractPaymobCheckoutSecret(
+  payload: Record<string, unknown>,
+): string | undefined {
+  const directSecret = payload.client_secret ?? payload.clientSecret;
+  if (typeof directSecret === "string" && directSecret.trim()) {
+    return directSecret.trim();
+  }
+
+  const paymentKeys = Array.isArray(payload.payment_keys)
+    ? payload.payment_keys
+    : [];
+
+  for (const paymentKey of paymentKeys) {
+    if (!paymentKey || typeof paymentKey !== "object") continue;
+
+    const candidate = paymentKey as Record<string, unknown>;
+    const nestedSecret = candidate.client_secret ?? candidate.clientSecret;
+    if (typeof nestedSecret === "string" && nestedSecret.trim()) {
+      return nestedSecret.trim();
+    }
+
+    const keyValue = candidate.key;
+    if (typeof keyValue === "string" && keyValue.trim()) {
+      return keyValue.trim();
+    }
+  }
+
+  return undefined;
+}
+
 export async function createPaymobIntention(
   input: PaymobCreateIntentionInput,
 ): Promise<PaymobIntentionData> {
   const data = await paymobRequest<{
-    id: string;
-    client_secret: string;
+    id?: string;
+    client_secret?: string;
+    clientSecret?: string;
     intention_order_id?: number;
-    payment_keys?: Array<{ order_id?: number }>;
+    payment_keys?: Array<{
+      order_id?: number;
+      key?: string;
+      client_secret?: string;
+      clientSecret?: string;
+    }>;
+    merchant_order_id?: string;
   }>("v1/intention/", {
     method: "POST",
     body: JSON.stringify({
@@ -147,14 +184,15 @@ export async function createPaymobIntention(
     data.intention_order_id ??
     data.payment_keys?.[0]?.order_id ??
     0;
+  const clientSecret = extractPaymobCheckoutSecret(data as Record<string, unknown>);
 
-  if (!data.client_secret || !data.id) {
-    throw new ApiError(502, "Paymob intention response missing client secret");
+  if (!clientSecret) {
+    throw new ApiError(502, "Paymob intention response missing checkout secret");
   }
 
   return {
-    id: data.id,
-    clientSecret: data.client_secret,
+    id: data.id ?? input.specialReference,
+    clientSecret,
     orderId,
   };
 }
