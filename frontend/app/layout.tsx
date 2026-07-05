@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   title: "CLINKA",
   description: "CLINKA — Civil Link Architecture",
   icons: {
-    icon: "/brand/logo/SVG/logo-01.svg",
-    apple: "/brand/logo/PNG/logo-01.png",
+    icon: "/brand/mark.svg",
+    apple: "/brand/mark.png",
   },
 };
 

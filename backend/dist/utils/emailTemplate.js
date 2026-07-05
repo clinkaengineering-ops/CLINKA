@@ -33,7 +33,7 @@ function escapeHtml(value) {
 }
 function getLogoUrl() {
     const base = (0, clientUrl_1.getPublicClientUrl)();
-    return `${base}/brand/logo/PNG/logo-09.png`;
+    return `${base}/brand/horizontal.png`;
 }
 function getEmailFrom() {
     const address = process.env.EMAIL_USER?.trim();

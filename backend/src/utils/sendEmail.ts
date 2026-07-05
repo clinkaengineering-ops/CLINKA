@@ -8,11 +8,8 @@ let logoBuffer: Buffer | null = null;
 function resolveLogoPath(): string | null {
   const candidates = [
     process.env.EMAIL_LOGO_PATH,
-    path.resolve(process.cwd(), "assets/clinka-logo.png"),
-    path.resolve(process.cwd(), "../frontend/public/brand/logo/PNG/logo-09.png"),
-    path.resolve(process.cwd(), "frontend/public/brand/logo/PNG/logo-09.png"),
-    path.resolve(__dirname, "../../assets/clinka-logo.png"),
-    path.resolve(__dirname, "../../../frontend/public/brand/logo/PNG/logo-09.png"),
+    path.resolve(process.cwd(), "assets/email-logo.png"),
+    path.resolve(__dirname, "../../assets/email-logo.png"),
   ].filter((value): value is string => Boolean(value));
 
   for (const candidate of candidates) {

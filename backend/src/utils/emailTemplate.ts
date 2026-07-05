@@ -24,7 +24,7 @@ function escapeHtml(value: string): string {
 
 export function getLogoUrl(): string {
   const base = getPublicClientUrl();
-  return `${base}/brand/logo/PNG/logo-09.png`;
+  return `${base}/brand/horizontal.png`;
 }
 
 export function getEmailFrom(): string {

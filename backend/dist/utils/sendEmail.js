@@ -12,11 +12,8 @@ let logoBuffer = null;
 function resolveLogoPath() {
     const candidates = [
         process.env.EMAIL_LOGO_PATH,
-        path_1.default.resolve(process.cwd(), "assets/clinka-logo.png"),
-        path_1.default.resolve(process.cwd(), "../frontend/public/brand/logo/PNG/logo-09.png"),
-        path_1.default.resolve(process.cwd(), "frontend/public/brand/logo/PNG/logo-09.png"),
-        path_1.default.resolve(__dirname, "../../assets/clinka-logo.png"),
-        path_1.default.resolve(__dirname, "../../../frontend/public/brand/logo/PNG/logo-09.png"),
+        path_1.default.resolve(process.cwd(), "assets/email-logo.png"),
+        path_1.default.resolve(__dirname, "../../assets/email-logo.png"),
     ].filter((value) => Boolean(value));
     for (const candidate of candidates) {
         if (fs_1.default.existsSync(candidate))

@@ -11,7 +11,7 @@ export default function GlobalError({
     <html lang="en">
       <body className="min-h-screen flex flex-col items-center justify-center gap-4 bg-brand-ice p-6 text-slate-900">
         <img
-          src="/brand/logo/SVG/logo-09.svg"
+          src="/brand/horizontal.svg"
           alt="CLINKA"
           className="h-10 w-auto"
         />

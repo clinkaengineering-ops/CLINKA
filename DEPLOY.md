@@ -2,14 +2,14 @@
 
 CLINKA is a monorepo: **Next.js frontend** + **Express/Socket.IO backend** + **PostgreSQL**.
 
-Recommended split:
+Recommended stack:
 
 | Component | Platform | Why |
 |-----------|----------|-----|
-| Frontend | [Vercel](https://vercel.com) | Native Next.js hosting |
-| API + WebSockets | [Render](https://render.com) (Docker) | Persistent WebSocket connections |
-| Database | Neon, Supabase, or Render Postgres | Managed PostgreSQL |
-| Redis (optional) | Upstash or Render Redis | OAuth state + payout token cache |
+| Frontend | [Vercel](https://vercel.com) or Coolify/Dokploy | Native Next.js hosting |
+| API + WebSockets | [Coolify](https://coolify.io) or [Dokploy](https://dokploy.com) on your VPS | Full control, WebSocket support |
+| Database | Coolify/Dokploy Postgres, Neon, or Supabase | Managed PostgreSQL |
+| Redis (optional) | Coolify/Dokploy Redis or Upstash | OAuth state + payout token cache |
 | Files | Cloudinary | Already integrated |
 
 ## 1. Database
@@ -22,93 +22,81 @@ cd backend
 DATABASE_URL="postgresql://..." npm run db:migrate
 ```
 
-## 2. Backend API
+## 2. Backend API (Coolify or Dokploy)
 
-### Option A — Render (recommended)
+Both platforms deploy Node.js apps on your VPS **without you writing a Dockerfile**. They handle builds internally (Nixpacks/buildpacks).
 
-1. Push this repo to GitHub.
-2. In Render: **New → Blueprint** and select `render.yaml`, or create a **Web Service** with:
-   - **Root directory:** `backend`
-   - **Runtime:** Docker (uses `backend/Dockerfile`)
-   - **Health check path:** `/api/health`
-3. Set environment variables from `backend/.env.example`.
-4. Set `API_URL` to your Render service URL (e.g. `https://clinka-api.onrender.com`).
-5. Set `CLIENT_URL` to your frontend URL (e.g. `https://clinka.vercel.app`).
+### Coolify
 
-### Option B — Docker (any VPS)
+1. Add your Git repo as a new **Application**.
+2. Set **Base directory** to `backend`.
+3. Set **Build command:** `npm ci && npm run build`
+4. Set **Start command:** `npm run start:prod`
+5. Set **Port:** `5000`
+6. Add env vars from `backend/.env.example` (`NODE_ENV=production`, etc.).
+7. Set `API_URL` to your API domain (e.g. `https://api.clinka.com`).
+8. Set `CLIENT_URL` to your frontend domain.
+9. Enable **WebSocket** support in the proxy settings (required for messaging).
 
-```bash
-cd backend
-docker build -t clinka-api .
-docker run -p 5000:5000 --env-file .env clinka-api
-```
+### Dokploy
 
-## 3. Frontend (Vercel)
+1. Create a new **Application** from your Git repo.
+2. Set **Root path** to `backend`.
+3. **Build:** `npm ci && npm run build`
+4. **Start:** `npm run start:prod`
+5. **Port:** `5000`
+6. Add the same environment variables as above.
+7. Ensure the reverse proxy forwards WebSocket upgrades.
 
-1. Import the repo in Vercel.
-2. Set **Root Directory** to `frontend`.
-3. Add environment variables from `frontend/.env.example`:
+### Health check
+
+Point your platform health check to `/api/health`.
+
+## 3. Frontend
+
+### Vercel (simplest for Next.js)
+
+1. Import the repo; set **Root Directory** to `frontend`.
+2. Add env vars from `frontend/.env.example`:
    - `NEXT_PUBLIC_API_URL` = `https://YOUR-API-URL/api`
-   - `NEXT_PUBLIC_PAYMENT_CURRENCY` = `EGP` (or your currency)
-4. Deploy.
+   - `NEXT_PUBLIC_PAYMENT_CURRENCY` = `EGP`
 
-## 4. Third-party setup checklist
+### Coolify / Dokploy
+
+1. New application, **Base directory:** `frontend`.
+2. **Build:** `npm ci && npm run build`
+3. **Start:** `npm run start`
+4. **Port:** `3000` (or whatever `PORT` is set to)
+5. Set `NEXT_PUBLIC_API_URL` at build time.
+
+## 4. Third-party setup
 
 ### Google OAuth
 - Authorized JavaScript origins: `CLIENT_URL`
 - Authorized redirect URI: `{API_URL}/api/auth/google/callback`
-- Set `GOOGLE_REDIRECT_URI` to match exactly.
 
 ### Paymob
-In the Paymob dashboard (per integration):
 - **Redirect URL:** `{CLIENT_URL}/checkout`
 - **Webhook URL:** `{API_URL}/api/payments/webhook/paymob`
 - Set `PAYMOB_DEV_FALLBACK=false` in production.
 
-### Cloudinary
-- Create an upload preset if needed; credentials go in backend env vars.
-
 ### Email (SMTP)
-- Configure `EMAIL_HOST`, `EMAIL_USER`, `EMAIL_PASS`.
-- Commit or mount `backend/assets/clinka-logo.png` for branded emails.
+- `backend/assets/email-logo.png` is bundled with the API for branded emails.
 
-## 5. Production env summary
-
-**Backend (`backend/.env`):**
-
-```
-NODE_ENV=production
-DATABASE_URL=...
-JWT_SECRET=...
-CLIENT_URL=https://your-frontend.com
-API_URL=https://your-api.com
-... (see backend/.env.example)
-```
-
-**Frontend (Vercel env vars):**
-
-```
-NEXT_PUBLIC_API_URL=https://your-api.com/api
-NEXT_PUBLIC_PAYMENT_CURRENCY=EGP
-```
-
-## 6. Verify
+## 5. Verify
 
 ```bash
-# Health check
 curl https://your-api.com/api/health
-
-# Build locally
 npm run build
 ```
-
-Open the frontend, sign in, send a message (WebSocket), and run a test checkout in Paymob sandbox before going live.
 
 ## Local development
 
 ```bash
-npm run dev              # both services
-cd backend && npm run db:setup   # Postgres via Docker + migrations
+npm run dev
+cd backend && npm run db:setup   # Postgres via Docker Compose + migrations
 ```
 
 Copy `backend/.env.example` → `backend/.env` and `frontend/.env.example` → `frontend/.env.local`.
+
+**Note:** `backend/docker-compose.yml` is only for local Postgres — not used in production deployment.

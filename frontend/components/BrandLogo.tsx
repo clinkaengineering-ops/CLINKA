@@ -3,9 +3,9 @@ import Link from "next/link";
 import { cn } from "@/utils/cn";
 
 const ASSETS = {
-  mark: "/brand/logo/SVG/logo-01.svg",
-  stacked: "/brand/logo/SVG/logo-05.svg",
-  horizontal: "/brand/logo/SVG/logo-09.svg",
+  mark: "/brand/mark.svg",
+  stacked: "/brand/stacked.svg",
+  horizontal: "/brand/horizontal.svg",
 } as const;
 
 export type BrandLogoVariant = keyof typeof ASSETS;
