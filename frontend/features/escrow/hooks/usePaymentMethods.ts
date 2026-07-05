@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchPaymentMethods } from "../api/payments.api";
-import type { FawaterkPaymentMethod } from "../types";
+import type { PaymentMethodOption } from "../types";
 
 function axiosMessage(err: unknown): string {
   const e = err as {
@@ -13,7 +13,7 @@ function axiosMessage(err: unknown): string {
 }
 
 export function usePaymentMethods() {
-  const [methods, setMethods] = useState<FawaterkPaymentMethod[]>([]);
+  const [methods, setMethods] = useState<PaymentMethodOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

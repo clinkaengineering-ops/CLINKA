@@ -26,16 +26,4 @@ export function validateProductionEnv(): void {
       `Missing required production environment variables: ${missing.join(", ")}`,
     );
   }
-
-  if (process.env.PAYMOB_DEV_FALLBACK === "true") {
-    console.warn(
-      "⚠️  PAYMOB_DEV_FALLBACK is enabled — disable it in production.",
-    );
-  }
-
-  if (process.env.PAYMOB_PAYOUT_DEV_FALLBACK === "true") {
-    console.warn(
-      "⚠️  PAYMOB_PAYOUT_DEV_FALLBACK is enabled — disable it in production.",
-    );
-  }
 }

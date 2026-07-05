@@ -78,7 +78,7 @@ Point your platform health check to `/api/health`.
 ### Paymob
 - **Redirect URL:** `{CLIENT_URL}/checkout`
 - **Webhook URL:** `{API_URL}/api/payments/webhook/paymob`
-- Set `PAYMOB_DEV_FALLBACK=false` in production.
+- Set `PAYMOB_*` credentials from your Paymob dashboard.
 
 ### Email (SMTP)
 - `backend/assets/email-logo.png` is bundled with the API for branded emails.

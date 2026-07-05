@@ -281,10 +281,7 @@ export async function login(data: loginInput) {
   }
 
   // generate 6 digit OTP
-  // const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otp =
-    process.env.FIXED_OTP ??
-    Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   await cacheSet(`otp:${user.id}`, otp, 600);
   console.log(`OTP cached for user ${user.id} (10 min TTL)`);
@@ -299,12 +296,10 @@ export async function login(data: loginInput) {
     });
     console.log("OTP email sent:", info.messageId, info.accepted);
   } catch (error) {
-    // Log email error but don't fail the login
     console.warn(
       "Failed to send OTP email:",
       error instanceof Error ? error.message : "Unknown error",
     );
-    console.warn(`OTP for ${email}: ${otp}`);
   }
 
   return { message: "OTP sent to your email", userId: user.id };
@@ -400,9 +395,7 @@ export async function requestEmailChange(userId: number, newEmail: string) {
   const taken = await db.user.findUnique({ where: { email: newEmail } });
   if (taken) throw new ApiError(400, "Email already in use");
 
-  const otp =
-    process.env.FIXED_OTP ??
-    Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   await cacheSet(
     `email-change:${userId}`,

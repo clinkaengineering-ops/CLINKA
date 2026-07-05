@@ -3,7 +3,7 @@
 import { Badge, Card } from "@/components/UI";
 import { IconCard } from "@/components/Icons";
 import { useI18n } from "@/i18n";
-import type { FawaterkPaymentMethod } from "../types";
+import type { PaymentMethodOption } from "../types";
 
 export function PaymentMethodsPanel({
   methods,
@@ -12,7 +12,7 @@ export function PaymentMethodsPanel({
   onSelectMethod,
   selectedMethodId,
 }: {
-  methods: FawaterkPaymentMethod[];
+  methods: PaymentMethodOption[];
   loading: boolean;
   error: string | null;
   onSelectMethod?: (id: number) => void;

@@ -77,9 +77,6 @@ export interface PaymentMethodOption {
   logo?: string;
 }
 
-/** @deprecated Use PaymentMethodOption */
-export type FawaterkPaymentMethod = PaymentMethodOption;
-
 export interface CheckoutPaymentData {
   checkoutUrl?: string;
   redirectTo?: string;

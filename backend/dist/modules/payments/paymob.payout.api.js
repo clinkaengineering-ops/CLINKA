@@ -151,18 +151,6 @@ async function createPaymobInstantCashin(input) {
     if (!(0, paymob_1.isPaymobPayoutConfigured)()) {
         throw new ApiError_1.default(503, "Paymob payout is not configured (missing PAYMOB_PAYOUT_* credentials)");
     }
-    if (process.env.PAYMOB_PAYOUT_DEV_FALLBACK === "true" &&
-        process.env.NODE_ENV !== "production") {
-        return {
-            transactionId: (0, crypto_1.randomUUID)(),
-            disbursementStatus: "success",
-            statusCode: "200",
-            statusDescription: "Simulated payout success (PAYMOB_PAYOUT_DEV_FALLBACK)",
-            issuer: input.issuer,
-            amount: input.amount,
-            raw: { simulated: true },
-        };
-    }
     const config = (0, paymob_1.getPaymobPayoutConfig)();
     const accessToken = await getPaymobPayoutAccessToken();
     const response = await fetch(`${config.baseUrl}/disburse/`, {

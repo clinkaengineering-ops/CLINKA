@@ -207,21 +207,6 @@ export async function createPaymobInstantCashin(
     );
   }
 
-  if (
-    process.env.PAYMOB_PAYOUT_DEV_FALLBACK === "true" &&
-    process.env.NODE_ENV !== "production"
-  ) {
-    return {
-      transactionId: randomUUID(),
-      disbursementStatus: "success",
-      statusCode: "200",
-      statusDescription: "Simulated payout success (PAYMOB_PAYOUT_DEV_FALLBACK)",
-      issuer: input.issuer,
-      amount: input.amount,
-      raw: { simulated: true },
-    };
-  }
-
   const config = getPaymobPayoutConfig();
   const accessToken = await getPaymobPayoutAccessToken();
   const response = await fetch(`${config.baseUrl}/disburse/`, {

@@ -8,7 +8,7 @@ import {
   validateForm,
   type FieldErrors,
 } from "@/lib/validation";
-import type { FawaterkPaymentMethod } from "../types";
+import type { PaymentMethodOption } from "../types";
 import { formatMoney } from "../utils/formatMoney";
 
 export function FundPaymentModal({
@@ -25,7 +25,7 @@ export function FundPaymentModal({
   onClose: () => void;
   projectTitle: string;
   amount: number;
-  methods: FawaterkPaymentMethod[];
+  methods: PaymentMethodOption[];
   methodsLoading: boolean;
   loading: boolean;
   onConfirm: (
