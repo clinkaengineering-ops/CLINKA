@@ -4,6 +4,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
+
 RUN npm ci
 
 COPY . .
@@ -18,17 +21,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+# --ignore-scripts: skip postinstall's `prisma generate` here —
+# we already generated the client in the builder stage and copy it below
+RUN npm ci --omit=dev --ignore-scripts
 
-# Compiled JS output
 COPY --from=builder /app/dist ./dist
-
-# Prisma schema + migrations (needed for `prisma migrate deploy` at runtime)
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-
-# Generated Prisma client — copy both the compiled JS (in dist) and any
-# non-compiled runtime assets Prisma emits alongside it (engine files, etc.)
 COPY --from=builder /app/src/generated ./src/generated
 
 EXPOSE 5000
