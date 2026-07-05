@@ -3,6 +3,7 @@ import { Barlow, Montserrat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { I18nProvider } from "@/i18n";
+import { AuthProvider } from "@/features/auth/components/AuthProvider";
 
 const brandLatin = Barlow({
   subsets: ["latin"],
@@ -41,7 +42,11 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <I18nProvider>{children}</I18nProvider>
+          <I18nProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>

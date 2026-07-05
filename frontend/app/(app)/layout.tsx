@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { NavbarActions } from "@/components/NavbarActions";
 import { LangToggle } from "@/components/LangToggle";
 import { ThemeToggle } from "@/components/theme";
-import { AuthProvider } from "@/features/auth/components/AuthProvider";
 import { cn } from "@/utils/cn";
 import {
   IconHome, IconUsers, IconBriefcase, IconChart, IconWallet, IconMessage, IconStar,
@@ -41,9 +40,7 @@ const sections = ["side.discover", "side.workspace", "side.operations"];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <AppShell>{children}</AppShell>
-    </AuthProvider>
+    <AppShell>{children}</AppShell>
   );
 }
 
