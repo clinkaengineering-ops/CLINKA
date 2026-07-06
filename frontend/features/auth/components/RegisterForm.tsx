@@ -308,11 +308,11 @@ export function RegisterForm() {
                 className={cn(
                   "w-full p-4 rounded-xl border text-start transition flex items-center gap-3 group",
                   role === o.role
-                    ? "border-electric-500 bg-electric-500/5"
-                    : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60 hover:bg-electric-500/5",
+                    ? "border-brand-copper bg-brand-copper/5"
+                    : "border-slate-200 dark:border-slate-800 hover:border-brand-copper/60 hover:bg-brand-copper/5",
                 )}
               >
-                <span className="h-10 w-10 rounded-lg bg-electric-500/10 text-electric-600 flex items-center justify-center group-hover:scale-110 transition">
+                <span className="h-10 w-10 rounded-lg bg-brand-copper/10 text-brand-copper flex items-center justify-center group-hover:scale-110 transition">
                   {o.icon}
                 </span>
                 <div className="flex-1">
@@ -320,7 +320,7 @@ export function RegisterForm() {
                   <p className="text-xs text-slate-500">{o.desc}</p>
                 </div>
                 {role === o.role ? (
-                  <IconCheck width={18} height={18} className="text-electric-500" />
+                  <IconCheck width={18} height={18} className="text-brand-copper" />
                 ) : (
                   <IconArrow width={16} height={16} className="text-slate-400 rtl:rotate-180" />
                 )}

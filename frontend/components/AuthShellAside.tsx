@@ -36,7 +36,7 @@ export function AuthShellAside() {
               key={key}
               className="flex items-center gap-3 p-3 rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-white/5"
             >
-              <span className="h-7 w-7 rounded-lg bg-brand-teal/15 text-brand-teal dark:bg-electric-500/30 dark:text-electric-300 flex items-center justify-center">
+              <span className="h-7 w-7 rounded-lg bg-brand-copper/15 text-brand-copper dark:bg-brand-copper/30 dark:text-brand-copper flex items-center justify-center">
                 ✓
               </span>
               <p className="text-sm text-slate-700 dark:text-slate-100">{t(key)}</p>
