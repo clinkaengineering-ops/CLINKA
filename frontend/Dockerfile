@@ -1,35 +1,29 @@
 # ---- Stage 1: Build ----
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
-WORKDIR /app
+WORKDIR /app/frontend
 
-COPY package*.json ./
-COPY prisma ./prisma
-COPY prisma.config.ts ./prisma.config.ts
-
-RUN npm ci
+# Minimal stand-in for the repo-root package.json, just to satisfy
+# the "clinka": "file:.." dependency resolution — it has no real code.
+RUN mkdir -p /app && printf '{"name":"clinka","private":true}' > /app/package.json
 
 COPY . .
-
-# Runs: prisma generate && tsc
+RUN npm install
 RUN npm run build
 
 # ---- Stage 2: Production ----
-FROM node:20-alpine
+FROM node:20-slim
 
-WORKDIR /app
+WORKDIR /app/frontend
 ENV NODE_ENV=production
 
-COPY package*.json ./
-# --ignore-scripts: skip postinstall's `prisma generate` here —
-# we already generated the client in the builder stage and copy it below
-RUN npm ci --omit=dev --ignore-scripts
+RUN mkdir -p /app && printf '{"name":"clinka","private":true}' > /app/package.json
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/src/generated ./src/generated
+COPY --from=builder /app/frontend/.next ./.next
+COPY --from=builder /app/frontend/public ./public
+COPY --from=builder /app/frontend/package*.json ./
+COPY --from=builder /app/frontend/node_modules ./node_modules
 
-EXPOSE 5000
+EXPOSE 3000
 
-CMD ["npm", "run", "start:prod"]
+CMD ["npm", "run", "start"]
