@@ -5,6 +5,7 @@ const auth_middleware_1 = require("../../middlewares/auth.middleware");
 const payments_controller_1 = require("./payments.controller");
 const router = (0, express_1.Router)();
 router.post("/webhook/paymob", payments_controller_1.paymobWebhookController);
+router.post("/webhook/paymob/payout", payments_controller_1.paymobPayoutWebhookController);
 router.get("/gateway/:gatewayId", auth_middleware_1.authenticate, payments_controller_1.getPaymentByGatewayController);
 router.get("/methods", auth_middleware_1.authenticate, payments_controller_1.getPaymentMethodsController);
 router.get("/escrow", auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)("CLIENT"), payments_controller_1.listEscrowController);
@@ -19,7 +20,8 @@ router.post(
 );
 OLD_WITHDRAWAL_END */
 router.get("/engineer/withdrawals", auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)("ENGINEER"), payments_controller_1.listEngineerWithdrawalsController);
-router.post("/engineer/withdrawals/auto", auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)("ENGINEER"), payments_controller_1.createEngineerAutoWithdrawalController);
+const payoutRateLimit_1 = require("../../middlewares/payoutRateLimit");
+router.post("/engineer/withdrawals/auto", auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)("ENGINEER"), payoutRateLimit_1.payoutRateLimit, payments_controller_1.createEngineerAutoWithdrawalController);
 router.get("/escrow/:paymentId", auth_middleware_1.authenticate, payments_controller_1.getEscrowByIdController);
 router.get("/projects/:projectId", auth_middleware_1.authenticate, payments_controller_1.getProjectPaymentController);
 router.get("/projects/:projectId/checkout-session", auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)("CLIENT"), payments_controller_1.getCheckoutSessionController);

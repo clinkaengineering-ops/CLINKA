@@ -1,10 +1,14 @@
 import { z } from "zod";
 import {
   emailField,
+  loginPasswordField,
   nameField,
+  nationalityField,
   otpField,
   optionalBioField,
   passwordField,
+  subjectField,
+  supportMessageField,
 } from "../../utils/fields";
 
 export const clientRegisterSchema = z.object({
@@ -18,7 +22,7 @@ export const engineerRegisterSchema = clientRegisterSchema.extend({
     error: "Select civil or architectural specialty",
   }),
   bio: optionalBioField,
-  nationality: z.string().min(1, "Nationality is required"),
+  nationality: nationalityField,
   documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
     error: "Select a document type to upload",
   }),
@@ -26,7 +30,7 @@ export const engineerRegisterSchema = clientRegisterSchema.extend({
 
 export const loginSchema = z.object({
   email: emailField,
-  password: passwordField,
+  password: loginPasswordField,
 });
 
 export const verifyOtpSchema = z.object({
@@ -77,7 +81,7 @@ export const clientApplyEngineerSchema = z.object({
     error: "Select civil or architectural specialty",
   }),
   bio: optionalBioField,
-  nationality: z.string().min(1, "Nationality is required"),
+  nationality: nationalityField,
   documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
     error: "Select a document type to upload",
   }),

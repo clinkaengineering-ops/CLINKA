@@ -1,11 +1,12 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import { loadEnv } from "./config/loadEnv";
 import { isAllowedOrigin } from "./config/cors";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 import registerRoutes from "./routes/index";
-dotenv.config();
+
+loadEnv();
 const app = express();
 
 if (process.env.NODE_ENV === "production") {

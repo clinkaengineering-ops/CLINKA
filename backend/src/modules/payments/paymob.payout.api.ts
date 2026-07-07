@@ -32,7 +32,24 @@ export interface PaymobInstantCashinResult {
   statusDescription: string;
   issuer: string;
   amount: number;
+  clientReference: string;
   raw: Record<string, unknown>;
+}
+
+export interface PaymobInquiryTransaction {
+  transactionId: string;
+  issuer: string;
+  amount: number;
+  disbursementStatus: string;
+  statusCode: string;
+  statusDescription: string;
+  clientReference?: string;
+  raw: Record<string, unknown>;
+}
+
+export interface PaymobBulkInquiryResult {
+  count: number;
+  results: PaymobInquiryTransaction[];
 }
 
 interface PaymobTokenResponse {
@@ -178,11 +195,12 @@ export function normalizeNationalId(nationalId: string): string {
 }
 
 function buildInstantCashinBody(input: PaymobInstantCashinInput) {
+  const clientReference = input.clientReference ?? randomUUID();
   const body: Record<string, unknown> = {
     issuer: input.issuer,
     amount: input.amount,
     national_id: input.nationalId,
-    client_reference: input.clientReference ?? randomUUID(),
+    client_reference: clientReference,
     customer_bears_fees: input.customerBearsFees ?? false,
   };
 
@@ -194,7 +212,66 @@ function buildInstantCashinBody(input: PaymobInstantCashinInput) {
     body.bank_transaction_type = input.bankTransactionType;
   }
 
-  return body;
+  return { body, clientReference };
+}
+
+function normalizeInquiryTransaction(
+  raw: Record<string, unknown>,
+): PaymobInquiryTransaction | null {
+  const transactionId = raw.transaction_id;
+  if (typeof transactionId !== "string" || !transactionId.trim()) return null;
+
+  return {
+    transactionId: transactionId.trim(),
+    issuer: String(raw.issuer ?? ""),
+    amount: Number(raw.amount ?? 0),
+    disbursementStatus: String(
+      raw.disbursement_status ?? raw.transaction_status ?? "failed",
+    ),
+    statusCode: String(raw.status_code ?? ""),
+    statusDescription: String(raw.status_description ?? ""),
+    clientReference:
+      typeof raw.client_reference === "string"
+        ? raw.client_reference
+        : typeof raw.reference === "string"
+          ? raw.reference
+          : undefined,
+    raw,
+  };
+}
+
+async function payoutAuthorizedRequest(
+  path: string,
+  options: RequestInit = {},
+  retryOnUnauthorized = true,
+): Promise<Response> {
+  const config = getPaymobPayoutConfig();
+  const accessToken = await getPaymobPayoutAccessToken();
+  const url = `${config.baseUrl}/${path.replace(/^\//, "")}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+    },
+  });
+
+  if (response.status === 401 && retryOnUnauthorized) {
+    await cacheSet(ACCESS_TOKEN_KEY, "", 1);
+    const freshToken = await getPaymobPayoutAccessToken();
+    return fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${freshToken}`,
+        "Content-Type": "application/json",
+        ...(options.headers as Record<string, string>),
+      },
+    });
+  }
+
+  return response;
 }
 
 export async function createPaymobInstantCashin(
@@ -208,14 +285,10 @@ export async function createPaymobInstantCashin(
   }
 
   const config = getPaymobPayoutConfig();
-  const accessToken = await getPaymobPayoutAccessToken();
-  const response = await fetch(`${config.baseUrl}/disburse/`, {
+  const { body, clientReference } = buildInstantCashinBody(input);
+  const response = await payoutAuthorizedRequest("disburse/", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(buildInstantCashinBody(input)),
+    body: JSON.stringify(body),
   });
 
   const text = await response.text();
@@ -258,6 +331,60 @@ export async function createPaymobInstantCashin(
     statusDescription,
     issuer: String(payload.issuer ?? input.issuer),
     amount: Number(payload.amount ?? input.amount),
+    clientReference,
     raw: payload,
+  };
+}
+
+/** Bulk inquiry by transaction IDs and/or client references (max 50 per request). */
+export async function inquirePaymobPayoutTransactions(
+  ids: string[],
+  options?: { bankTransactions?: boolean },
+): Promise<PaymobBulkInquiryResult> {
+  if (!isPaymobPayoutConfigured()) {
+    throw new ApiError(503, "Paymob payout is not configured");
+  }
+  if (ids.length === 0) {
+    return { count: 0, results: [] };
+  }
+
+  const response = await payoutAuthorizedRequest("transaction/inquire/", {
+    method: "POST",
+    body: JSON.stringify({
+      transactions_ids_list: ids.slice(0, 50),
+      ...(options?.bankTransactions ? { bank_transactions: true } : {}),
+    }),
+  });
+
+  const text = await response.text();
+  let payload: Record<string, unknown>;
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError(502, "Paymob payout inquiry response was invalid JSON");
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      502,
+      formatPaymobPayoutError(
+        payload.status_description ?? payload.detail ?? payload,
+        response.status,
+      ),
+    );
+  }
+
+  const resultsRaw = Array.isArray(payload.results) ? payload.results : [];
+  const results = resultsRaw
+    .map((item) =>
+      item && typeof item === "object"
+        ? normalizeInquiryTransaction(item as Record<string, unknown>)
+        : null,
+    )
+    .filter((item): item is PaymobInquiryTransaction => item !== null);
+
+  return {
+    count: Number(payload.count ?? results.length),
+    results,
   };
 }

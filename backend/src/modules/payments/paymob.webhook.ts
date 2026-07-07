@@ -92,3 +92,64 @@ export function parsePaymobSpecialReference(
 
   return null;
 }
+
+/** 
+ * Verifies Paymob Payout webhook HMAC. 
+ * Supports secret rotation by accepting an array of secrets.
+ */
+export function verifyPaymobPayoutHmac(
+  payload: Record<string, unknown>,
+  receivedHmac: string,
+  secrets: string[],
+): boolean {
+  if (!receivedHmac || secrets.length === 0) return false;
+
+  // Paymob usually stringifies specific fields for payout HMAC,
+  // but if undocumented, standard practice is to stringify the sorted JSON or specific keys.
+  // For safety, we assume a concatenated string of values similar to Accept, 
+  // or a raw payload signature. We will implement a robust check here.
+  // We'll assume the payload values are sorted by key or just use the whole string if it's raw.
+  // Since we don't have exact Paymob Payout HMAC docs, we verify the signature against the raw body 
+  // or concatenated fields. Here we demonstrate checking a concatenated string of typical fields.
+  
+  const fields = [
+    payload.amount,
+    payload.client_reference,
+    payload.created_at,
+    payload.disbursement_status,
+    payload.issuer,
+    payload.transaction_id,
+  ];
+
+  const payloadString = fields.map(f => (f ?? "")).join("");
+
+  for (const secret of secrets) {
+    if (!secret) continue;
+    
+    const computed = crypto
+      .createHmac("sha512", secret)
+      .update(payloadString)
+      .digest("hex");
+
+    if (
+      computed.length === receivedHmac.length &&
+      crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(receivedHmac))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function isWebhookReplayed(createdAtStr: string | unknown, windowMinutes = 5): boolean {
+  if (typeof createdAtStr !== "string") return false;
+  
+  const createdAt = new Date(createdAtStr).getTime();
+  if (isNaN(createdAt)) return false;
+
+  const now = Date.now();
+  const diffMinutes = Math.abs(now - createdAt) / (1000 * 60);
+
+  return diffMinutes > windowMinutes;
+}

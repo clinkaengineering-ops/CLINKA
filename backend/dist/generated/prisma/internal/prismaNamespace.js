@@ -48,7 +48,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.defineExtension = exports.NullsOrder = exports.JsonNullValueFilter = exports.QueryMode = exports.NullableJsonNullValueInput = exports.SortOrder = exports.WithdrawalRequestScalarFieldEnum = exports.WalletTransactionScalarFieldEnum = exports.WalletScalarFieldEnum = exports.SupportTicketScalarFieldEnum = exports.PlatformSettingsScalarFieldEnum = exports.ReviewScalarFieldEnum = exports.MessageScalarFieldEnum = exports.ConversationScalarFieldEnum = exports.NotificationScalarFieldEnum = exports.ProjectDeliverableScalarFieldEnum = exports.ProjectSubmissionScalarFieldEnum = exports.PaymentLedgerEntryScalarFieldEnum = exports.PaymentScalarFieldEnum = exports.BidScalarFieldEnum = exports.ProjectScalarFieldEnum = exports.PortfolioItemScalarFieldEnum = exports.EngineerProfileScalarFieldEnum = exports.BanScalarFieldEnum = exports.UserScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.prismaVersion = exports.getExtensionContext = exports.Decimal = exports.Sql = exports.raw = exports.join = exports.empty = exports.sql = exports.PrismaClientValidationError = exports.PrismaClientInitializationError = exports.PrismaClientRustPanicError = exports.PrismaClientUnknownRequestError = exports.PrismaClientKnownRequestError = void 0;
+exports.defineExtension = exports.NullsOrder = exports.JsonNullValueFilter = exports.QueryMode = exports.NullableJsonNullValueInput = exports.SortOrder = exports.PayoutAuditLogScalarFieldEnum = exports.WithdrawalRequestScalarFieldEnum = exports.WalletTransactionScalarFieldEnum = exports.WalletScalarFieldEnum = exports.SupportTicketScalarFieldEnum = exports.PlatformSettingsScalarFieldEnum = exports.ReviewScalarFieldEnum = exports.MessageScalarFieldEnum = exports.ConversationScalarFieldEnum = exports.NotificationScalarFieldEnum = exports.ProjectDeliverableScalarFieldEnum = exports.ProjectSubmissionScalarFieldEnum = exports.PaymentLedgerEntryScalarFieldEnum = exports.PaymentScalarFieldEnum = exports.BidScalarFieldEnum = exports.ProjectScalarFieldEnum = exports.PortfolioItemScalarFieldEnum = exports.EngineerProfileScalarFieldEnum = exports.BanScalarFieldEnum = exports.UserScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.prismaVersion = exports.getExtensionContext = exports.Decimal = exports.Sql = exports.raw = exports.join = exports.empty = exports.sql = exports.PrismaClientValidationError = exports.PrismaClientInitializationError = exports.PrismaClientRustPanicError = exports.PrismaClientUnknownRequestError = exports.PrismaClientKnownRequestError = void 0;
 const runtime = __importStar(require("@prisma/client/runtime/client"));
 /**
  * Prisma Errors
@@ -121,7 +121,8 @@ exports.ModelName = {
     SupportTicket: 'SupportTicket',
     Wallet: 'Wallet',
     WalletTransaction: 'WalletTransaction',
-    WithdrawalRequest: 'WithdrawalRequest'
+    WithdrawalRequest: 'WithdrawalRequest',
+    PayoutAuditLog: 'PayoutAuditLog'
 };
 /**
  * Enums
@@ -330,9 +331,30 @@ exports.WithdrawalRequestScalarFieldEnum = {
     paymobDisbursementStatus: 'paymobDisbursementStatus',
     paymobStatusDescription: 'paymobStatusDescription',
     paymobClientReference: 'paymobClientReference',
+    idempotencyKey: 'idempotencyKey',
+    retryCount: 'retryCount',
+    failureReason: 'failureReason',
+    balanceHeldAt: 'balanceHeldAt',
+    submittedAt: 'submittedAt',
+    lastInquiryAt: 'lastInquiryAt',
     processedAt: 'processedAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
+};
+exports.PayoutAuditLogScalarFieldEnum = {
+    id: 'id',
+    withdrawalId: 'withdrawalId',
+    event: 'event',
+    statusBefore: 'statusBefore',
+    statusAfter: 'statusAfter',
+    message: 'message',
+    metadata: 'metadata',
+    previousHash: 'previousHash',
+    hash: 'hash',
+    actorId: 'actorId',
+    actorIp: 'actorIp',
+    actorUserAgent: 'actorUserAgent',
+    createdAt: 'createdAt'
 };
 exports.SortOrder = {
     asc: 'asc',

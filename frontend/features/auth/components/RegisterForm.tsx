@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRegister } from "@/features/auth/hooks/useRegister";
 import { startGoogleSignIn } from "@/features/auth/lib/googleAuth";
+import { getMe } from "@/features/engineers/api/engineer.api";
+import useAuthStore from "@/store/authStore";
 import {
   clientRegisterFormSchema,
   engineerRegisterStep2Schema,
@@ -51,12 +53,14 @@ const NATIONALITIES = [
 export function RegisterForm() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
-  const { registerClient, registerEngineer, resumeEngineer, checkEmail, loading, error } =
+  const setUser = useAuthStore((s) => s.setUser);
+  const { registerClient, registerEngineer, resumeEngineer, completeGoogleEngineer, checkEmail, loading, error } =
     useRegister();
 
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<Role | null>(null);
   const [resumeMode, setResumeMode] = useState(false);
+  const [googleMode, setGoogleMode] = useState(false);
   const [existingPortfolioCount, setExistingPortfolioCount] = useState(0);
   const [form, setForm] = useState({
     name: "",
@@ -73,18 +77,64 @@ export function RegisterForm() {
 
   useEffect(() => {
     const preset = searchParams.get("role");
+    const stepParam = searchParams.get("step");
+    const google = searchParams.get("google");
+
     if (preset === "engineer") {
       setRole("ENGINEER");
-      setStep(2);
+      if (stepParam === "3") {
+        setStep(3);
+      } else {
+        setStep(2);
+      }
+      if (google === "1") {
+        setGoogleMode(true);
+      }
     }
   }, [searchParams]);
 
-  const totalSteps = resumeMode ? 2 : role === "CLIENT" ? 2 : 3;
+  useEffect(() => {
+    if (!googleMode || step !== 3) return;
+
+    let cancelled = false;
+
+    async function hydrateGoogleSession() {
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        setUser(me);
+        setForm((prev) => ({
+          ...prev,
+          name: me.name ?? prev.name,
+          email: me.email ?? prev.email,
+          specialty: (me.profile?.specialty as Specialty) ?? prev.specialty,
+          bio: me.profile?.bio ?? prev.bio,
+          nationality: me.profile?.nationality ?? prev.nationality,
+        }));
+      } catch {
+        if (!cancelled) {
+          setGoogleMode(false);
+          setStep(2);
+        }
+      }
+    }
+
+    void hydrateGoogleSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [googleMode, step, setUser]);
+
+  const totalSteps = resumeMode ? 2 : googleMode ? 1 : role === "CLIENT" ? 2 : 3;
   const stepLabels = resumeMode
     ? [t("auth.s1"), t("auth.portfolioResumeTitle")]
-    : role === "CLIENT"
-      ? [t("auth.s1"), t("auth.s2details")]
-      : [t("auth.s1"), t("auth.s2details"), t("auth.portfolioStep")];
+    : googleMode
+      ? [t("auth.portfolioStep")]
+      : role === "CLIENT"
+        ? [t("auth.s1"), t("auth.s2details")]
+        : [t("auth.s1"), t("auth.s2details"), t("auth.portfolioStep")];
+  const displayStep = googleMode ? 1 : step;
+  const displayStepLabel = googleMode ? stepLabels[0] : stepLabels[step - 1];
 
   const documentOptions = [
     { type: "collegeIdUrl" as DocumentType, label: t("auth.doc.collegeId") },
@@ -192,6 +242,24 @@ export function RegisterForm() {
         setFieldErrors(result.errors);
         return false;
       }
+      if (googleMode) {
+        const profileResult = validateForm(
+          engineerRegisterStep2Schema.pick({
+            specialty: true,
+            nationality: true,
+            bio: true,
+          }),
+          {
+            specialty: form.specialty || undefined,
+            nationality: form.nationality || undefined,
+            bio: form.bio || undefined,
+          },
+        );
+        if (!profileResult.success) {
+          setFieldErrors(profileResult.errors);
+          return false;
+        }
+      }
       setFieldErrors({});
       return true;
     }
@@ -208,8 +276,54 @@ export function RegisterForm() {
     setStep(step + 1);
   }
 
+  function handleGoogleSignIn() {
+    if (!role) return;
+
+    if (role === "ENGINEER") {
+      const result = validateForm(
+        engineerRegisterStep2Schema.pick({
+          specialty: true,
+          nationality: true,
+          bio: true,
+        }),
+        {
+          specialty: form.specialty || undefined,
+          nationality: form.nationality || undefined,
+          bio: form.bio || undefined,
+        },
+      );
+      if (!result.success) {
+        setFieldErrors(result.errors);
+        return;
+      }
+
+      startGoogleSignIn({
+        role: "ENGINEER",
+        next: "/register?role=engineer&step=3&google=1",
+        specialty: form.specialty,
+        nationality: form.nationality,
+        ...(form.bio.trim() ? { bio: form.bio.trim() } : {}),
+      });
+      return;
+    }
+
+    startGoogleSignIn({ role: "CLIENT" });
+  }
+
   async function handleDone() {
     if (!validateCurrentStep()) return;
+
+    if (googleMode) {
+      await completeGoogleEngineer({
+        specialty: form.specialty,
+        bio: form.bio,
+        nationality: form.nationality,
+        documentType: form.documentType,
+        file: form.file!,
+        portfolioFiles: form.portfolioFiles,
+      });
+      return;
+    }
 
     if (resumeMode) {
       await resumeEngineer({
@@ -260,9 +374,9 @@ export function RegisterForm() {
   return (
     <Card className="p-6 sm:p-8">
       <p className="text-xs uppercase tracking-wider text-electric-600 font-bold">
-        {t("auth.step")} {step} {t("auth.of")} {totalSteps}
+        {t("auth.step")} {displayStep} {t("auth.of")} {totalSteps}
       </p>
-      <h1 className="mt-1 text-2xl font-bold">{stepLabels[step - 1]}</h1>
+      <h1 className="mt-1 text-2xl font-bold">{displayStepLabel}</h1>
 
       <div className="mt-3 flex gap-2">
         {Array.from({ length: totalSteps }).map((_, i) => (
@@ -270,7 +384,7 @@ export function RegisterForm() {
             key={i}
             className={cn(
               "h-1 flex-1 rounded-full transition",
-              i + 1 <= step ? "bg-electric-500" : "bg-slate-200 dark:bg-slate-800",
+              i + 1 <= displayStep ? "bg-electric-500" : "bg-slate-200 dark:bg-slate-800",
             )}
           />
         ))}
@@ -337,7 +451,7 @@ export function RegisterForm() {
                   type="button"
                   variant="secondary"
                   className="w-full !h-11"
-                  onClick={() => startGoogleSignIn({ role: role ?? "CLIENT" })}
+                  onClick={handleGoogleSignIn}
                 >
                   {t("auth.google")}
                 </Button>
@@ -476,7 +590,54 @@ export function RegisterForm() {
 
         {step === 3 && role === "ENGINEER" && !resumeMode && (
           <div className="space-y-4">
+            {googleMode && (
+              <p className="text-sm text-slate-500">{t("auth.googleDocsHint")}</p>
+            )}
             <p className="text-sm text-slate-500">{t("auth.uploadDocHint")}</p>
+            {googleMode && (!form.specialty || !form.nationality) && (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t("auth.specialty")}
+                  </label>
+                  {fieldErrors.specialty && (
+                    <p className="mt-1 text-xs text-rose-500">{fieldErrors.specialty}</p>
+                  )}
+                  <div className="mt-1.5 grid grid-cols-2 gap-3">
+                    {(["CIVIL", "ARCHITECTURAL"] as Specialty[]).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setForm({ ...form, specialty: s })}
+                        className={cn(
+                          "p-3 rounded-xl border text-sm font-semibold text-center transition",
+                          form.specialty === s
+                            ? "border-electric-500 bg-electric-500/5 text-electric-600"
+                            : "border-slate-200 dark:border-slate-800 hover:border-electric-500/60",
+                        )}
+                      >
+                        {s === "CIVIL" ? t("auth.civil") : t("auth.architectural")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Field label={t("em.nationality")} error={fieldErrors.nationality}>
+                  <select
+                    value={form.nationality}
+                    onChange={(e) => setForm({ ...form, nationality: e.target.value })}
+                    className="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-electric-500/30"
+                  >
+                    <option value="">{t("auth.nationalityPh")}</option>
+                    {NATIONALITIES.map((nationality) => (
+                      <option key={nationality} value={nationality}>
+                        {nationality}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </>
+            )}
             {(fieldErrors.documentType || fieldErrors.file) && (
               <p className="text-xs text-rose-500">
                 {fieldErrors.documentType ?? fieldErrors.file}
@@ -533,13 +694,13 @@ export function RegisterForm() {
         <button
           type="button"
           onClick={() => setStep(Math.max(1, step - 1))}
-          disabled={step === 1}
+          disabled={step === 1 || googleMode}
           className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30"
         >
           {t("auth.back")}
         </button>
 
-        {step < totalSteps ? (
+        {step < totalSteps && !googleMode ? (
           <Button onClick={goNext} icon={<IconArrow width={14} height={14} />}>
             {t("auth.continue")}
           </Button>

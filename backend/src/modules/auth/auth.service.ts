@@ -23,13 +23,6 @@ function stripPassword<T extends { password: string }>({ password: _, ...safe }:
   return safe;
 }
 
-function issueRegistrationSession<T extends { id: number; role: string; password: string }>(
-  user: T,
-) {
-  const token = generateToken(user.id, user.role);
-  return { user: stripPassword(user), token };
-}
-
 export async function checkRegistrationEmail(email: string) {
   const normalized = email.toLowerCase().trim();
   const user = await db.user.findUnique({
@@ -73,12 +66,16 @@ export async function registerClient(data: clientRegisterInput) {
       email,
       password: hashedPassword,
       role: "CLIENT",
-      isVerified: true,
+      isVerified: false,
     },
   });
 
-  void sendVerificationEmail(user.id, user.email).catch(() => undefined);
-  return issueRegistrationSession(user);
+  try {
+    await sendVerificationEmail(user.id, user.email);
+  } catch {
+    // Account is created; user can request a new link from support or login error flow
+  }
+  return stripPassword(user);
 }
 
 export async function registerEngineer(
@@ -106,7 +103,7 @@ export async function registerEngineer(
       email,
       password: hashedPassword,
       role: "ENGINEER",
-      isVerified: true,
+      isVerified: false,
       profile: {
         create: {
           specialty,
@@ -125,8 +122,12 @@ export async function registerEngineer(
     include: { profile: true },
   });
 
-  void sendVerificationEmail(user.id, user.email).catch(() => undefined);
-  return issueRegistrationSession(user);
+  try {
+    await sendVerificationEmail(user.id, user.email);
+  } catch {
+    // Account is created; verification email can be resent later
+  }
+  return stripPassword(user);
 }
 
 export async function resumeEngineerRegistration(
@@ -176,13 +177,21 @@ export async function resumeEngineerRegistration(
     })),
   });
 
-  const refreshed = await db.user.update({
+  const refreshed = await db.user.findUnique({
     where: { id: user.id },
-    data: { isVerified: true },
     include: { profile: true },
   });
+  if (!refreshed) throw new ApiError(404, "User not found");
 
-  return issueRegistrationSession(refreshed);
+  if (!refreshed.isVerified) {
+    try {
+      await sendVerificationEmail(refreshed.id, refreshed.email);
+    } catch {
+      // Portfolio saved; verification email can be resent later
+    }
+  }
+
+  return stripPassword(refreshed);
 }
 
 export async function applyClientAsEngineer(
@@ -267,6 +276,85 @@ export async function applyClientAsEngineer(
   return stripPassword(refreshed!);
 }
 
+export async function completeGoogleEngineerRegistration(
+  userId: number,
+  data: import("./auth.validation").ClientApplyEngineerInput,
+  fileUrl: string,
+  documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl",
+  portfolioUrls: string[] = [],
+) {
+  const { specialty, bio, nationality } = data;
+
+  if (portfolioUrls.length < 3) {
+    throw new ApiError(400, "Upload at least 3 portfolio work samples");
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { profile: { include: { portfolio: true } } },
+  });
+  if (!user) throw new ApiError(404, "User not found");
+  if (user.role !== "ENGINEER") {
+    throw new ApiError(400, "Only engineer accounts can complete this registration");
+  }
+  if (!user.googleId) {
+    throw new ApiError(400, "This flow is only available for Google sign-up accounts");
+  }
+  if (!user.profile) {
+    throw new ApiError(400, "Engineer profile not found");
+  }
+  if (user.profile.verificationStatus !== "PENDING") {
+    throw new ApiError(400, "Your engineer profile is already complete");
+  }
+
+  const hasDoc = !!(
+    user.profile.collegeIdUrl ||
+    user.profile.certificateUrl ||
+    user.profile.syndicateCardUrl
+  );
+  if (hasDoc && user.profile.portfolio.length >= 3) {
+    throw new ApiError(400, "Your engineer registration is already complete");
+  }
+
+  await db.portfolioItem.deleteMany({ where: { engineerId: user.profile.id } });
+  await db.engineerProfile.update({
+    where: { id: user.profile.id },
+    data: {
+      specialty,
+      bio,
+      nationality,
+      verificationStatus: "PENDING",
+      collegeIdUrl: null,
+      certificateUrl: null,
+      syndicateCardUrl: null,
+      [documentType]: fileUrl,
+      portfolio: {
+        create: portfolioUrls.map((imageUrl, index) => ({
+          imageUrl,
+          description: `Portfolio work ${index + 1}`,
+        })),
+      },
+    },
+  });
+
+  const { createNotification } = await import("../../utils/notifications");
+  await createNotification(
+    userId,
+    "ENGINEER_APPLICATION_RECEIVED",
+    "Engineer application received",
+    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
+    "/settings",
+    { force: true },
+  );
+
+  const refreshed = await db.user.findUnique({
+    where: { id: userId },
+    include: { profile: { include: { portfolio: true } } },
+  });
+
+  return stripPassword(refreshed!);
+}
+
 // Step 1 — validate credentials, send OTP
 export async function login(data: loginInput) {
   const { email, password } = data;
@@ -328,10 +416,15 @@ export async function verifyEmail(token: string) {
     userId: number;
   };
 
-  await db.user.update({
+  const user = await db.user.update({
     where: { id: payload.userId },
     data: { isVerified: true },
   });
+
+  const authToken = generateToken(user.id, user.role);
+  const { password: _, ...userWithoutPassword } = user;
+
+  return { token: authToken, user: userWithoutPassword };
 }
 
 export async function forgotPassword(email: string) {

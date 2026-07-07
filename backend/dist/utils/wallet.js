@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.walletHoldReleaseDate = walletHoldReleaseDate;
 exports.ensureWallet = ensureWallet;
 exports.settleMaturedWalletTransactions = settleMaturedWalletTransactions;
+exports.lockWalletForUpdate = lockWalletForUpdate;
+exports.roundMoney = roundMoney;
 const HOLD_DAYS = 14;
 const DAY_MS = 24 * 60 * 60 * 1000;
 function walletHoldReleaseDate(from = new Date()) {
@@ -54,4 +56,13 @@ async function settleMaturedWalletTransactions(tx, userId, now = new Date()) {
         maturedCount: matured.length,
         maturedAmount,
     };
+}
+/** Row-level lock to serialize concurrent withdrawals for the same engineer. */
+async function lockWalletForUpdate(tx, userId) {
+    await ensureWallet(tx, userId);
+    await tx.$executeRaw `SELECT id FROM "Wallet" WHERE "userId" = ${userId} FOR UPDATE`;
+    return tx.wallet.findUniqueOrThrow({ where: { userId } });
+}
+function roundMoney(amount) {
+    return Math.round(amount * 100) / 100;
 }

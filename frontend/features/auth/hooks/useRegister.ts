@@ -5,11 +5,17 @@ import { authApi } from "../api/auth.api";
 import { getMe } from "@/features/engineers/api/engineer.api";
 import { parseApiValidation } from "@/lib/validation";
 import useAuthStore from "@/store/authStore";
-import type { User } from "@/types";
 
-async function finishRegistration(
+function redirectToCheckEmail(
   router: ReturnType<typeof useRouter>,
-  setUser: (user: User | null) => void,
+  email: string,
+) {
+  router.push(`/register/check-email?email=${encodeURIComponent(email)}`);
+}
+
+async function finishGoogleRegistration(
+  router: ReturnType<typeof useRouter>,
+  setUser: ReturnType<typeof useAuthStore.getState>["setUser"],
 ) {
   const me = await getMe();
   setUser(me);
@@ -31,7 +37,7 @@ export function useRegister() {
     setError("");
     try {
       await authApi.registerClient(data);
-      await finishRegistration(router, setUser);
+      redirectToCheckEmail(router, data.email);
     } catch (err) {
       setError(parseApiValidation(err).message);
     } finally {
@@ -66,7 +72,7 @@ export function useRegister() {
         formData.append("portfolio", file);
       }
       await authApi.registerEngineer(formData);
-      await finishRegistration(router, setUser);
+      redirectToCheckEmail(router, data.email);
     } catch (err) {
       setError(parseApiValidation(err).message);
     } finally {
@@ -89,7 +95,36 @@ export function useRegister() {
         formData.append("portfolio", file);
       }
       await authApi.resumeEngineerRegistration(formData);
-      await finishRegistration(router, setUser);
+      redirectToCheckEmail(router, data.email);
+    } catch (err) {
+      setError(parseApiValidation(err).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function completeGoogleEngineer(data: {
+    specialty: "CIVIL" | "ARCHITECTURAL";
+    bio?: string;
+    nationality: string;
+    documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl";
+    file: File;
+    portfolioFiles: File[];
+  }) {
+    setLoading(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("specialty", data.specialty);
+      formData.append("nationality", data.nationality);
+      formData.append("documentType", data.documentType);
+      if (data.bio) formData.append("bio", data.bio);
+      formData.append("document", data.file);
+      for (const file of data.portfolioFiles) {
+        formData.append("portfolio", file);
+      }
+      await authApi.completeGoogleEngineer(formData);
+      await finishGoogleRegistration(router, setUser);
     } catch (err) {
       setError(parseApiValidation(err).message);
     } finally {
@@ -101,5 +136,5 @@ export function useRegister() {
     return authApi.checkRegistrationEmail(email);
   }
 
-  return { registerClient, registerEngineer, resumeEngineer, checkEmail, loading, error };
+  return { registerClient, registerEngineer, resumeEngineer, completeGoogleEngineer, checkEmail, loading, error };
 }

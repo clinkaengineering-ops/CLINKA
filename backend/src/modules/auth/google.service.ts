@@ -8,9 +8,16 @@ import generateToken from "../../utils/generateToken";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v2/userinfo";
+const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+export const ENGINEER_GOOGLE_DOCS_PATH = "/register?role=engineer&step=3&google=1";
 
-type GoogleState = {
+type EngineerSignupMeta = {
+  specialty?: "CIVIL" | "ARCHITECTURAL";
+  bio?: string;
+  nationality?: string;
+};
+
+type GoogleState = EngineerSignupMeta & {
   nonce: string;
   next?: string;
   role?: "CLIENT" | "ENGINEER";
@@ -19,9 +26,11 @@ type GoogleState = {
 };
 
 type GoogleProfile = {
-  id: string;
+  id?: string;
+  sub?: string;
   email: string;
   verified_email?: boolean;
+  email_verified?: boolean;
   name?: string;
   picture?: string;
 };
@@ -61,6 +70,9 @@ export function getGoogleAuthRedirectUrl(options?: {
   role?: "CLIENT" | "ENGINEER";
   apiOrigin?: string;
   clientOrigin?: string;
+  specialty?: "CIVIL" | "ARCHITECTURAL";
+  bio?: string;
+  nationality?: string;
 }): string {
   const config = getGoogleClientConfig();
   if (!config) {
@@ -77,6 +89,9 @@ export function getGoogleAuthRedirectUrl(options?: {
     clientOrigin: options?.clientOrigin
       ? normalizeOrigin(options.clientOrigin)
       : undefined,
+    specialty: options?.specialty,
+    bio: options?.bio?.trim() || undefined,
+    nationality: options?.nationality?.trim() || undefined,
   });
 
   const params = new URLSearchParams({
@@ -131,11 +146,13 @@ async function exchangeCodeForProfile(
   }
 
   const profile = (await profileRes.json()) as GoogleProfile;
-  if (!profile.id || !profile.email) {
+  const profileId = profile.id || profile.sub;
+  if (!profileId || !profile.email) {
     throw new ApiError(400, "Google account is missing required profile data");
   }
 
-  if (profile.verified_email === false) {
+  const isVerified = profile.verified_email ?? profile.email_verified;
+  if (isVerified === false) {
     throw new ApiError(400, "Please use a Google account with a verified email");
   }
 
@@ -146,16 +163,64 @@ async function randomPasswordHash(): Promise<string> {
   return bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
 }
 
+function engineerProfileUpdate(meta?: EngineerSignupMeta) {
+  if (!meta?.specialty && !meta?.bio && !meta?.nationality) return undefined;
+  return {
+    ...(meta.specialty ? { specialty: meta.specialty } : {}),
+    ...(meta.bio ? { bio: meta.bio } : {}),
+    ...(meta.nationality ? { nationality: meta.nationality } : {}),
+  };
+}
+
+async function engineerNeedsDocumentUpload(userId: number): Promise<boolean> {
+  const full = await db.user.findUnique({
+    where: { id: userId },
+    include: {
+      profile: { include: { portfolio: { select: { id: true } } } },
+    },
+  });
+  if (!full || full.role !== "ENGINEER" || !full.profile) return false;
+  if (full.profile.verificationStatus !== "PENDING") return false;
+
+  const hasDoc = !!(
+    full.profile.collegeIdUrl ||
+    full.profile.certificateUrl ||
+    full.profile.syndicateCardUrl
+  );
+  const portfolioCount = full.profile.portfolio.length;
+  return !hasDoc || portfolioCount < 3;
+}
+
 async function findOrCreateGoogleUser(
   profile: GoogleProfile,
   role: "CLIENT" | "ENGINEER",
+  meta?: EngineerSignupMeta,
 ) {
   const email = profile.email.toLowerCase().trim();
   const name = profile.name?.trim() || email.split("@")[0];
   const avatarUrl = profile.picture ?? null;
+  const googleId = profile.id || profile.sub || "";
+  const profilePatch = engineerProfileUpdate(meta);
 
-  const byGoogle = await db.user.findUnique({ where: { googleId: profile.id } });
+  const byGoogle = await db.user.findUnique({
+    where: { googleId },
+    include: { profile: true },
+  });
   if (byGoogle) {
+    if (role === "ENGINEER" && byGoogle.role === "CLIENT") {
+      throw new ApiError(
+        400,
+        "This email is registered as a client. Sign in and apply to become an engineer from your account.",
+      );
+    }
+
+    if (profilePatch && byGoogle.profile) {
+      await db.engineerProfile.update({
+        where: { id: byGoogle.profile.id },
+        data: profilePatch,
+      });
+    }
+
     const updated = await db.user.update({
       where: { id: byGoogle.id },
       data: {
@@ -167,19 +232,36 @@ async function findOrCreateGoogleUser(
     return safe;
   }
 
-  const byEmail = await db.user.findUnique({ where: { email } });
+  const byEmail = await db.user.findUnique({
+    where: { email },
+    include: { profile: true },
+  });
   if (byEmail) {
-    if (byEmail.googleId && byEmail.googleId !== profile.id) {
+    if (byEmail.googleId && byEmail.googleId !== googleId) {
       throw new ApiError(
         400,
         "This email is linked to a different Google account. Sign in with email instead.",
       );
     }
 
+    if (role === "ENGINEER" && byEmail.role === "CLIENT") {
+      throw new ApiError(
+        400,
+        "This email is registered as a client. Sign in and apply to become an engineer from your account.",
+      );
+    }
+
+    if (profilePatch && byEmail.profile) {
+      await db.engineerProfile.update({
+        where: { id: byEmail.profile.id },
+        data: profilePatch,
+      });
+    }
+
     const updated = await db.user.update({
       where: { id: byEmail.id },
       data: {
-        googleId: profile.id,
+        googleId,
         isVerified: true,
         ...(avatarUrl && !byEmail.avatarUrl ? { avatarUrl } : {}),
       },
@@ -191,18 +273,27 @@ async function findOrCreateGoogleUser(
   const password = await randomPasswordHash();
 
   if (role === "ENGINEER") {
+    if (!meta?.specialty || !meta?.nationality) {
+      throw new ApiError(
+        400,
+        "Select your specialty and nationality before continuing with Google.",
+      );
+    }
+
     const user = await db.user.create({
       data: {
         name,
         email,
         password,
-        googleId: profile.id,
+        googleId,
         role: "ENGINEER",
         isVerified: true,
         avatarUrl,
         profile: {
           create: {
-            specialty: "CIVIL",
+            specialty: meta.specialty,
+            bio: meta.bio,
+            nationality: meta.nationality,
             verificationStatus: "PENDING",
           },
         },
@@ -218,7 +309,7 @@ async function findOrCreateGoogleUser(
       name,
       email,
       password,
-      googleId: profile.id,
+      googleId,
       role: "CLIENT",
       isVerified: true,
       avatarUrl,
@@ -268,21 +359,19 @@ export async function handleGoogleCallback(
     const state = verifyState(stateParam);
     const profile = await exchangeCodeForProfile(code, state.redirectUri);
     const role = state.role === "ENGINEER" ? "ENGINEER" : "CLIENT";
-    const user = await findOrCreateGoogleUser(profile, role);
+    const user = await findOrCreateGoogleUser(profile, role, {
+      specialty: state.specialty,
+      bio: state.bio,
+      nationality: state.nationality,
+    });
     const token = generateToken(user.id, user.role);
 
     let nextPath = state.next?.trim() || "";
     if (!nextPath.startsWith("/") || nextPath.startsWith("//")) {
       nextPath = user.role === "ADMIN" ? "/admin" : "/dashboard";
     }
-    if (role === "ENGINEER") {
-      const full = await db.user.findUnique({
-        where: { id: user.id },
-        include: { profile: true },
-      });
-      if (full?.profile?.verificationStatus === "PENDING") {
-        nextPath = "/settings";
-      }
+    if (await engineerNeedsDocumentUpload(user.id)) {
+      nextPath = ENGINEER_GOOGLE_DOCS_PATH;
     }
 
     const redirectUrl = clientUrl(

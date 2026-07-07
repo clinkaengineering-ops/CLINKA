@@ -2,6 +2,7 @@ export interface PaymobConfig {
   baseUrl: string;
   secretKey: string;
   publicKey: string;
+  apiKey: string;
   hmacSecret: string;
   currency: string;
   commissionRate: number;
@@ -33,6 +34,7 @@ export function getPaymobConfig(): PaymobConfig {
       "",
     ),
     secretKey,
+    apiKey: process.env.PAYMOB_API_KEY ?? "",
     publicKey: process.env.PAYMOB_PUBLIC_KEY ?? "",
     hmacSecret: process.env.PAYMOB_HMAC_SECRET ?? "",
     currency: process.env.PAYMOB_CURRENCY ?? "EGP",
@@ -64,6 +66,9 @@ export interface PaymobPayoutConfig {
   password: string;
   currency: string;
   instantBankMinAmount: number;
+  maxWithdrawalAmount: number;
+  hmacSecret: string;
+  hmacSecretPrev?: string;
 }
 
 /**
@@ -95,6 +100,11 @@ export function getPaymobPayoutConfig(): PaymobPayoutConfig {
     instantBankMinAmount: Number(
       process.env.PAYMOB_PAYOUT_INSTANT_BANK_MIN ?? "112",
     ),
+    maxWithdrawalAmount: Number(
+      process.env.PAYMOB_PAYOUT_MAX_AMOUNT ?? "50000",
+    ),
+    hmacSecret: process.env.PAYMOB_PAYOUT_HMAC_SECRET ?? "",
+    hmacSecretPrev: process.env.PAYMOB_PAYOUT_HMAC_SECRET_PREV,
   };
 }
 

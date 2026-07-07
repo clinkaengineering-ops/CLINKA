@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 
 type ShapeType = "circle" | "triangle" | "square" | "cross";
@@ -24,8 +24,18 @@ export function LiveBackground({ className }: { className?: string }) {
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
   const particlesRef = useRef<Particle[]>([]);
   const sizeRef = useRef({ width: 0, height: 0 });
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const onChange = (event: MediaQueryListEvent) => setReducedMotion(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (reducedMotion) return;
     const canvas = canvasRef.current;
     if (!canvas || !canvas.parentElement) return;
     const ctx = canvas.getContext("2d", { alpha: true });
@@ -181,7 +191,19 @@ export function LiveBackground({ className }: { className?: string }) {
       resizeObserver.disconnect();
       cancelAnimationFrame(requestRef.current);
     };
-  }, []);
+  }, [reducedMotion]);
+
+  if (reducedMotion) {
+    return (
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-teal/10 via-transparent to-brand-copper/5",
+          className,
+        )}
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <canvas

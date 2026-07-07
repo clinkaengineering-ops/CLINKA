@@ -10,12 +10,7 @@ exports.initiateCheckoutSchema = zod_1.z.object({
         .positive("Select a payment method")
         .optional(),
     phone: fields_1.phoneField.optional(),
-    address: zod_1.z
-        .string()
-        .trim()
-        .min(3, "Address must be at least 3 characters")
-        .max(200, "Address must be at most 200 characters")
-        .optional(),
+    address: fields_1.addressField.optional(),
 });
 exports.verifyCheckoutReturnSchema = zod_1.z.object({
     projectId: zod_1.z.coerce.number().int().positive().optional(),

@@ -19,6 +19,10 @@ router.post("/apply-engineer", auth_middleware_1.authenticate, upload_middleware
     { name: "document", maxCount: 1 },
     { name: "portfolio", maxCount: 10 },
 ]), auth_controller_1.applyClientAsEngineerController);
+router.post("/register/engineer/google-complete", auth_middleware_1.authenticate, upload_middleware_1.default.fields([
+    { name: "document", maxCount: 1 },
+    { name: "portfolio", maxCount: 10 },
+]), auth_controller_1.completeGoogleEngineerController);
 router.post("/login", auth_controller_1.loginController);
 router.post("/logout", auth_middleware_1.authenticate, auth_controller_1.logoutController);
 router.get("/verify-email", auth_controller_1.verifyEmailController);

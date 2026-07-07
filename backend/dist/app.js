@@ -5,12 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const dotenv_1 = __importDefault(require("dotenv"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const loadEnv_1 = require("./config/loadEnv");
 const cors_2 = require("./config/cors");
 const errorHandler_middleware_1 = require("./middlewares/errorHandler.middleware");
 const index_1 = __importDefault(require("./routes/index"));
-dotenv_1.default.config();
+(0, loadEnv_1.loadEnv)();
 const app = (0, express_1.default)();
 if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);

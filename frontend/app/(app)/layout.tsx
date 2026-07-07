@@ -109,7 +109,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen overflow-x-hidden bg-brand-ice dark:bg-slate-950 text-slate-900 dark:text-slate-100">
         {/* Mobile top bar */}
         <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between gap-2 px-4 h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
-          <button type="button" aria-label="Open menu" onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0">
+          <button type="button" aria-label="Open menu" onClick={() => setMobileOpen(true)} className="p-2.5 min-h-11 min-w-11 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 transition-smooth">
             <IconMenu />
           </button>
           <Brand />
@@ -122,8 +122,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex">
           {/* Sidebar — fixed on desktop so main content scrolls independently */}
           <aside className={cn(
-            "fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-900 flex flex-col transition-transform h-screen",
-            mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+            "fixed inset-y-0 start-0 z-50 w-72 bg-white dark:bg-slate-950 border-e border-slate-200 dark:border-slate-900 flex flex-col transition-transform h-screen motion-safe:duration-300",
+            mobileOpen ? "translate-x-0" : "-translate-x-full rtl:translate-x-full lg:translate-x-0 rtl:lg:translate-x-0"
           )}>
             {/* Logo */}
             <div className="flex items-center justify-between px-5 h-16 border-b border-slate-200 dark:border-slate-900">
@@ -150,7 +150,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                           href={item.href}
                           onClick={() => setMobileOpen(false)}
                           className={cn(
-                            "w-full flex items-center gap-3 px-3 h-10 rounded-lg text-sm font-medium transition group",
+                            "w-full flex items-center gap-3 px-3 min-h-11 rounded-lg text-sm font-medium transition-smooth group",
                             active
                               ? "bg-electric-500/10 text-electric-700 dark:text-electric-300 ring-1 ring-electric-500/30"
                               : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-slate-100"

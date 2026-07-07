@@ -24,6 +24,7 @@ function getPaymobConfig() {
     return {
         baseUrl: (process.env.PAYMOB_BASE_URL ?? "https://accept.paymob.com").replace(/\/$/, ""),
         secretKey,
+        apiKey: process.env.PAYMOB_API_KEY ?? "",
         publicKey: process.env.PAYMOB_PUBLIC_KEY ?? "",
         hmacSecret: process.env.PAYMOB_HMAC_SECRET ?? "",
         currency: process.env.PAYMOB_CURRENCY ?? "EGP",
@@ -58,6 +59,9 @@ function getPaymobPayoutConfig() {
         password,
         currency: process.env.PAYMOB_CURRENCY ?? "EGP",
         instantBankMinAmount: Number(process.env.PAYMOB_PAYOUT_INSTANT_BANK_MIN ?? "112"),
+        maxWithdrawalAmount: Number(process.env.PAYMOB_PAYOUT_MAX_AMOUNT ?? "50000"),
+        hmacSecret: process.env.PAYMOB_PAYOUT_HMAC_SECRET ?? "",
+        hmacSecretPrev: process.env.PAYMOB_PAYOUT_HMAC_SECRET_PREV,
     };
 }
 /** Returns true when payout OAuth env vars are configured. */

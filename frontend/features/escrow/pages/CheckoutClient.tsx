@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BrandLink } from "@/components/BrandLogo";
+import { Button, Field, Input, Spinner } from "@/components/UI";
+import { IconCheck, IconClose } from "@/components/Icons";
 import { fetchCheckoutSession, verifyCheckoutReturn } from "../api/payments.api";
 import { formatMoney } from "../utils/formatMoney";
 import { parseCheckoutReturn } from "../utils/parseCheckoutReturn";
@@ -13,17 +15,24 @@ import {
   writeCheckoutReturnStorage,
 } from "../utils/checkoutReturnStorage";
 import { useI18n } from "@/i18n";
+import { useAuthHydration } from "@/hooks/useAuthHydration";
 import { cn } from "@/utils/cn";
 
-type Status = "form" | "loading" | "ready" | "error";
+type Status = "form" | "loading" | "error";
+type ReturnStatus = "success" | "fail" | "pending" | "verifying";
 
 function isFundedStatus(status?: string) {
-  return (
-    status === "FUNDED" ||
-    status === "RELEASED" ||
-    status === "In escrow" ||
-    status === "Released"
-  );
+  return status === "FUNDED" || status === "RELEASED";
+}
+
+function resolveReturnStatus(
+  parsed: ReturnType<typeof parseCheckoutReturn>,
+): ReturnStatus {
+  if (parsed.status === "fail") return "fail";
+  if (parsed.status === "pending") return "pending";
+  if (parsed.status === "success") return "verifying";
+  // Paymob return without explicit status — verify with backend, never assume success
+  return "verifying";
 }
 
 export default function CheckoutClient() {
@@ -43,9 +52,11 @@ export default function CheckoutClient() {
       !storedReturn
     ) {
       return (
-        <div className="min-h-screen flex items-center justify-center">
-          <p className="text-slate-400 text-sm">{t("checkout.invalidProject")}</p>
-        </div>
+        <CheckoutShell>
+          <p className="text-slate-400 text-sm text-center animate-fade-in">
+            {t("checkout.invalidProject")}
+          </p>
+        </CheckoutShell>
       );
     }
 
@@ -57,7 +68,7 @@ export default function CheckoutClient() {
         transactionId={parsedReturn.transactionId}
         specialReference={parsedReturn.specialReference}
         merchantOrderId={parsedReturn.merchantOrderId}
-        status={parsedReturn.status ?? "success"}
+        status={resolveReturnStatus(parsedReturn)}
       />
     );
   }
@@ -66,13 +77,73 @@ export default function CheckoutClient() {
 
   if (!projectId || Number.isNaN(projectId)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-slate-400 text-sm">{t("checkout.invalidProject")}</p>
-      </div>
+      <CheckoutShell>
+        <p className="text-slate-400 text-sm text-center animate-fade-in">
+          {t("checkout.invalidProject")}
+        </p>
+      </CheckoutShell>
     );
   }
 
   return <CheckoutForm projectId={projectId} />;
+}
+
+function CheckoutShell({
+  children,
+  badge,
+  amount,
+}: {
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+  amount?: number;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950">
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/80 dark:border-slate-700 animate-scale-in">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 bg-brand-teal text-white">
+          <BrandLink logoClassName="h-9 sm:h-10 w-auto max-w-[160px] sm:max-w-[180px] brightness-0 invert" />
+          <div className="text-end">
+            {badge ?? (
+              <p className="text-[10px] uppercase tracking-wider text-white/50">
+                {t("checkout.secure")}
+              </p>
+            )}
+            {amount != null && amount > 0 ? (
+              <p className="text-base sm:text-lg font-bold">{formatMoney(amount)}</p>
+            ) : null}
+          </div>
+        </div>
+        {children}
+        <div className="px-4 sm:px-5 py-3 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          {t("checkout.securedBy")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusIcon({ variant }: { variant: "success" | "error" | "pending" }) {
+  if (variant === "success") {
+    return (
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 animate-scale-in">
+        <IconCheck width={28} height={28} />
+      </div>
+    );
+  }
+  if (variant === "error") {
+    return (
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 animate-scale-in">
+        <IconClose width={28} height={28} />
+      </div>
+    );
+  }
+  return (
+    <div className="mx-auto flex h-14 w-14 items-center justify-center">
+      <Spinner size="lg" />
+    </div>
+  );
 }
 
 function CheckoutReturnStatus({
@@ -90,14 +161,17 @@ function CheckoutReturnStatus({
   transactionId?: number;
   specialReference?: string;
   merchantOrderId?: string;
-  status: "success" | "fail" | "pending";
+  status: ReturnStatus;
 }) {
+  const { t } = useI18n();
+  const { authResolved, user } = useAuthHydration();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [variant, setVariant] = useState<"success" | "error" | "pending">(
-    status === "success" ? "pending" : status === "pending" ? "pending" : "error",
+    status === "fail" ? "error" : "pending",
   );
   const [resolvedProjectId, setResolvedProjectId] = useState(initialProjectId);
+  const [verifying, setVerifying] = useState(status === "verifying");
 
   useEffect(() => {
     let alive = true;
@@ -106,18 +180,21 @@ function CheckoutReturnStatus({
       title: string;
       message: string;
       variant: "success" | "error" | "pending";
+      verifying?: boolean;
     }) => {
       if (!alive) return;
       setTitle(next.title);
       setMessage(next.message);
       setVariant(next.variant);
+      if (next.verifying !== undefined) setVerifying(next.verifying);
     };
 
     if (status === "fail") {
       setIfAlive({
-        title: "Payment was not completed",
-        message: "No charge was confirmed. You can retry payment from your project page.",
+        title: t("checkout.return.failed"),
+        message: t("checkout.return.failedMessage"),
         variant: "error",
+        verifying: false,
       });
       return () => {
         alive = false;
@@ -126,9 +203,28 @@ function CheckoutReturnStatus({
 
     if (status === "pending") {
       setIfAlive({
-        title: "Payment is pending",
-        message: "Your payment method is still confirming. Check back shortly in your project.",
+        title: t("checkout.return.pending"),
+        message: t("checkout.return.pendingMessage"),
         variant: "pending",
+        verifying: false,
+      });
+      return () => {
+        alive = false;
+      };
+    }
+
+    if (!authResolved) {
+      return () => {
+        alive = false;
+      };
+    }
+
+    if (!user) {
+      setIfAlive({
+        title: t("checkout.return.verifyFailed"),
+        message: t("checkout.return.signInRequired"),
+        variant: "error",
+        verifying: false,
       });
       return () => {
         alive = false;
@@ -136,9 +232,10 @@ function CheckoutReturnStatus({
     }
 
     setIfAlive({
-      title: "Verifying payment",
-      message: "Please wait while we confirm escrow funding.",
+      title: t("checkout.return.verifying"),
+      message: t("checkout.return.verifyingMessage"),
       variant: "pending",
+      verifying: true,
     });
 
     void (async () => {
@@ -159,21 +256,22 @@ function CheckoutReturnStatus({
           setResolvedProjectId(payment.projectId);
         }
 
-        clearCheckoutReturnStorage();
-
         if (isFundedStatus(payment.status)) {
+          clearCheckoutReturnStorage();
           setIfAlive({
-            title: "Payment successful",
-            message: "Escrow is now funded and the engineer can start working.",
+            title: t("checkout.return.success"),
+            message: t("checkout.return.successMessage"),
             variant: "success",
+            verifying: false,
           });
           return;
         }
 
         setIfAlive({
-          title: "Payment successful",
-          message: "Escrow is now funded and the engineer can start working.",
-          variant: "success",
+          title: t("checkout.return.stillPending"),
+          message: t("checkout.return.stillPendingMessage"),
+          variant: "pending",
+          verifying: false,
         });
       } catch (err) {
         const e = err as {
@@ -181,12 +279,13 @@ function CheckoutReturnStatus({
           message?: string;
         };
         setIfAlive({
-          title: "Payment verification failed",
+          title: t("checkout.return.verifyFailed"),
           message:
             e?.response?.data?.message ??
             e?.message ??
-            "We could not confirm your payment yet. Please contact support if this persists.",
+            t("checkout.return.verifyFailedMessage"),
           variant: "error",
+          verifying: false,
         });
       }
     })();
@@ -195,13 +294,16 @@ function CheckoutReturnStatus({
       alive = false;
     };
   }, [
+    authResolved,
     initialPaymentId,
     initialProjectId,
     merchantOrderId,
     orderId,
     specialReference,
     status,
+    t,
     transactionId,
+    user,
   ]);
 
   const retryHref =
@@ -211,57 +313,68 @@ function CheckoutReturnStatus({
         ? `/checkout?projectId=${initialProjectId}`
         : null;
 
+  const badgeLabel =
+    variant === "success"
+      ? t("checkout.return.confirmed")
+      : variant === "error"
+        ? t("checkout.return.needsAction")
+        : t("checkout.return.pendingBadge");
+
   const badgeClass =
     variant === "success"
-      ? "bg-emerald-100 text-emerald-700"
+      ? "bg-emerald-500/20 text-emerald-100 border border-emerald-400/30"
       : variant === "error"
-        ? "bg-rose-100 text-rose-700"
-        : "bg-amber-100 text-amber-700";
+        ? "bg-rose-500/20 text-rose-100 border border-rose-400/30"
+        : "bg-amber-500/20 text-amber-100 border border-amber-400/30";
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950">
-      <div className="w-full max-w-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/80 dark:border-slate-700">
-        <div className="flex items-center justify-between px-5 py-4 bg-brand-teal text-white">
-          <BrandLink logoClassName="h-10 w-auto max-w-[180px] brightness-0 invert" />
-          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${badgeClass}`}>
-            {variant === "success"
-              ? "Confirmed"
-              : variant === "error"
-                ? "Needs action"
-                : "Pending"}
-          </span>
-        </div>
-        <div className="px-5 py-8 text-center">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
-          <p className="text-sm text-slate-500 mt-2">{message}</p>
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            {variant === "error" && retryHref ? (
-              <Link
-                href={retryHref}
-                className="inline-flex px-4 py-2 rounded-lg bg-electric-500 text-white text-sm font-semibold hover:bg-electric-600"
-              >
-                Try payment again
-              </Link>
-            ) : null}
+    <CheckoutShell
+      badge={
+        <span
+          className={cn(
+            "text-xs font-semibold px-2.5 py-1 rounded-full",
+            badgeClass,
+          )}
+        >
+          {badgeLabel}
+        </span>
+      }
+    >
+      <div className="px-4 sm:px-5 py-8 sm:py-10 text-center animate-fade-up">
+        <StatusIcon variant={verifying ? "pending" : variant} />
+        <h2 className="mt-5 text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">
+          {title}
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-sm mx-auto leading-relaxed">
+          {message}
+        </p>
+        <div className="mt-6 flex flex-col sm:flex-row flex-wrap justify-center gap-3">
+          {variant === "error" && retryHref ? (
             <Link
-              href={
-                resolvedProjectId
-                  ? `/projects?id=${resolvedProjectId}`
-                  : "/projects"
-              }
-              className={cn(
-                "inline-flex px-4 py-2 rounded-lg text-sm font-semibold",
-                variant === "error" && retryHref
-                  ? "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  : "bg-electric-500 text-white hover:bg-electric-600",
-              )}
+              href={retryHref}
+              className="inline-flex items-center justify-center min-h-11 w-full sm:w-auto px-6 rounded-lg bg-brand-teal hover:bg-electric-400 text-white text-sm font-semibold transition-smooth motion-safe:active:scale-[0.98]"
             >
-              Go to project
+              {t("checkout.return.tryAgain")}
             </Link>
-          </div>
+          ) : null}
+          <Link
+            href={
+              resolvedProjectId
+                ? `/projects?id=${resolvedProjectId}`
+                : "/projects"
+            }
+            className={cn(
+              "inline-flex items-center justify-center min-h-11 w-full sm:w-auto px-6 rounded-lg text-sm font-semibold transition-smooth motion-safe:active:scale-[0.98]",
+              variant === "error" && retryHref
+                ? "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                : "bg-brand-teal hover:bg-electric-400 text-white",
+            )}
+          >
+            {t("checkout.return.goToProject")}
+          </Link>
         </div>
       </div>
-    </div>
+    </CheckoutShell>
   );
 }
 
@@ -316,89 +429,72 @@ function CheckoutForm({ projectId }: { projectId: number }) {
   }, [projectId, phone, address, t]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-brand-teal via-[#145268] to-slate-950">
-      <div className="w-full max-w-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/80 dark:border-slate-700">
-        <div className="flex items-center justify-between px-5 py-4 bg-brand-teal text-white">
-          <BrandLink logoClassName="h-10 w-auto max-w-[180px] brightness-0 invert" />
-          <div className="text-end">
-            <p className="text-[10px] uppercase tracking-wider text-white/50">
-              {t("checkout.secure")}
-            </p>
-            {amount > 0 && (
-              <p className="text-lg font-bold">{formatMoney(amount)}</p>
-            )}
-          </div>
-        </div>
+    <CheckoutShell amount={amount > 0 ? amount : undefined}>
+      {title ? (
+        <p className="px-4 sm:px-5 py-3 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 animate-fade-in">
+          {title}
+        </p>
+      ) : null}
 
-        {title && (
-          <p className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
-            {title}
+      {status === "form" && (
+        <div className="flex flex-col gap-4 px-4 sm:px-5 py-6 animate-stagger">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {t("checkout.contactDetails")}
           </p>
-        )}
-
-        {status === "form" && (
-          <div className="flex flex-col gap-4 px-5 py-6">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              {t("checkout.contactDetails")}
-            </p>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500">{t("checkout.phone")}</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="01xxxxxxxxx"
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500">{t("checkout.address")}</label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder={t("checkout.addressPh")}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleProceed}
-              disabled={!phone.trim() || !address.trim()}
-              className="mt-1 w-full py-2.5 rounded-lg bg-electric-500 text-white text-sm font-semibold hover:bg-electric-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {t("checkout.continue")}
-            </button>
-          </div>
-        )}
-
-        {status === "loading" && (
-          <div className="flex flex-col items-center gap-3 py-16 px-6">
-            <div className="h-10 w-10 rounded-full border-2 border-electric-500 border-t-transparent animate-spin" />
-            <p className="text-sm text-slate-500">{t("checkout.loading")}</p>
-          </div>
-        )}
-
-        {status === "error" && (
-          <div className="flex flex-col items-center gap-3 py-12 px-6 text-center">
-            <p className="text-base font-semibold text-slate-900 dark:text-white">
-              {t("checkout.unavailable")}
-            </p>
-            <p className="text-sm text-slate-500">{errorMsg}</p>
-            <button
-              type="button"
-              onClick={() => router.push("/projects")}
-              className="mt-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              {t("side.findProjects")}
-            </button>
-          </div>
-        )}
-
-        <div className="px-5 py-3 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-slate-800">
-          {t("checkout.securedBy")}
+          <Field label={t("checkout.phone")}>
+            <Input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="01xxxxxxxxx"
+              className="min-h-11"
+            />
+          </Field>
+          <Field label={t("checkout.address")}>
+            <Input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder={t("checkout.addressPh")}
+              className="min-h-11"
+            />
+          </Field>
+          <Button
+            type="button"
+            onClick={handleProceed}
+            disabled={!phone.trim() || !address.trim()}
+            className="mt-1 w-full min-h-11"
+            size="lg"
+          >
+            {t("checkout.continue")}
+          </Button>
         </div>
-      </div>
-    </div>
+      )}
+
+      {status === "loading" && (
+        <div className="flex flex-col items-center gap-4 py-16 px-6 animate-fade-in">
+          <Spinner size="lg" />
+          <p className="text-sm text-slate-500">{t("checkout.loading")}</p>
+        </div>
+      )}
+
+      {status === "error" && (
+        <div className="flex flex-col items-center gap-3 py-12 px-6 text-center animate-fade-up">
+          <StatusIcon variant="error" />
+          <p className="text-base font-semibold text-slate-900 dark:text-white">
+            {t("checkout.unavailable")}
+          </p>
+          <p className="text-sm text-slate-500">{errorMsg}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.push("/projects")}
+            className="mt-2 min-h-11"
+          >
+            {t("side.findProjects")}
+          </Button>
+        </div>
+      )}
+    </CheckoutShell>
   );
 }

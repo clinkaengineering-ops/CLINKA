@@ -1,6 +1,12 @@
 // next.config.ts
 import type { NextConfig } from "next";
 
+const backendOrigin = (
+  process.env.BACKEND_URL ??
+  process.env.NEXT_PUBLIC_BACKEND_URL ??
+  "http://localhost:5000"
+).replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -9,6 +15,16 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
       },
     ],
+  },
+  async rewrites() {
+    if (process.env.NODE_ENV !== "development") return [];
+
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendOrigin}/api/:path*`,
+      },
+    ];
   },
   async headers() {
     return [

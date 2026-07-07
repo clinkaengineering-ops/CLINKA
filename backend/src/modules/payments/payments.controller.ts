@@ -1,6 +1,7 @@
 import { Response, NextFunction, Request } from "express";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import ApiResponse from "../../utils/ApiResponse";
+import ApiError from "../../utils/ApiError";
 import {
   // createWithdrawalRequestSchema, // OLD_WITHDRAWAL: commented out for auto-withdrawal
   autoWithdrawalSchema,
@@ -86,6 +87,11 @@ export async function initiateCheckoutController(
       req.user!.userId,
       projectId,
       input,
+    );
+    setCheckoutReturnCookie(
+      res,
+      { projectId, paymentId: result.payment.id },
+      req.headers.origin,
     );
     res
       .status(200)
@@ -285,6 +291,37 @@ export async function paymobWebhookController(
   }
 }
 
+export async function paymobPayoutWebhookController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const hmac = typeof req.query.hmac === "string" ? req.query.hmac : undefined;
+    const { verifyPaymobPayoutHmac, isWebhookReplayed } = await import("./paymob.webhook");
+    const { getPaymobPayoutConfig } = await import("../../config/paymob");
+    const { metrics } = await import("../../utils/metrics");
+    
+    const config = getPaymobPayoutConfig();
+    const secrets = [config.hmacSecret, config.hmacSecretPrev].filter(Boolean) as string[];
+    
+    if (secrets.length > 0 && !verifyPaymobPayoutHmac(req.body, hmac ?? "", secrets)) {
+      throw new ApiError(403, "Invalid payout webhook signature");
+    }
+
+    if (isWebhookReplayed(req.body.created_at, 5)) {
+      metrics.increment("webhook_replay_blocked");
+      throw new ApiError(403, "Webhook timestamp outside acceptable window (replay protection)");
+    }
+
+    const { handlePaymobPayoutWebhook } = await import("../payouts/payout.service");
+    const result = await handlePaymobPayoutWebhook(req.body);
+    res.status(200).json(ApiResponse(200, "Payout webhook processed", result));
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getPaymentByGatewayController(
   req: AuthRequest,
   res: Response,
@@ -330,11 +367,11 @@ export async function verifyPaymentController(
 ) {
   try {
     const paymentId = Number(req.params.paymentId);
-    const { verifyOrSimulatePaymentSuccess } = await import("./payments.service");
-    const payment = await verifyOrSimulatePaymentSuccess(req.user!.userId, paymentId);
+    const { pollPaymentConfirmation } = await import("./payments.service");
+    const payment = await pollPaymentConfirmation(req.user!.userId, paymentId);
     res
       .status(200)
-      .json(ApiResponse(200, "Payment verified successfully", payment));
+      .json(ApiResponse(200, "Payment status retrieved", payment));
   } catch (error) {
     next(error);
   }

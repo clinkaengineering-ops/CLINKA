@@ -6,6 +6,6 @@ const fields_1 = require("../../utils/fields");
 exports.createSupportTicketSchema = zod_1.z.object({
     name: fields_1.nameField,
     email: fields_1.emailField,
-    subject: zod_1.z.string().trim().min(3).max(200),
-    message: zod_1.z.string().trim().min(10).max(5000),
+    subject: fields_1.subjectField,
+    message: fields_1.supportMessageField,
 });

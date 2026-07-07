@@ -8,6 +8,7 @@ exports.detectWalletIssuerFromMsisdn = detectWalletIssuerFromMsisdn;
 exports.normalizeEgyptianMsisdn = normalizeEgyptianMsisdn;
 exports.normalizeNationalId = normalizeNationalId;
 exports.createPaymobInstantCashin = createPaymobInstantCashin;
+exports.inquirePaymobPayoutTransactions = inquirePaymobPayoutTransactions;
 const crypto_1 = require("crypto");
 const redis_1 = require("../../config/redis");
 const paymob_1 = require("../../config/paymob");
@@ -127,11 +128,12 @@ function normalizeNationalId(nationalId) {
     return digits;
 }
 function buildInstantCashinBody(input) {
+    const clientReference = input.clientReference ?? (0, crypto_1.randomUUID)();
     const body = {
         issuer: input.issuer,
         amount: input.amount,
         national_id: input.nationalId,
-        client_reference: input.clientReference ?? (0, crypto_1.randomUUID)(),
+        client_reference: clientReference,
         customer_bears_fees: input.customerBearsFees ?? false,
     };
     if (input.msisdn)
@@ -145,21 +147,62 @@ function buildInstantCashinBody(input) {
     if (input.bankTransactionType) {
         body.bank_transaction_type = input.bankTransactionType;
     }
-    return body;
+    return { body, clientReference };
+}
+function normalizeInquiryTransaction(raw) {
+    const transactionId = raw.transaction_id;
+    if (typeof transactionId !== "string" || !transactionId.trim())
+        return null;
+    return {
+        transactionId: transactionId.trim(),
+        issuer: String(raw.issuer ?? ""),
+        amount: Number(raw.amount ?? 0),
+        disbursementStatus: String(raw.disbursement_status ?? raw.transaction_status ?? "failed"),
+        statusCode: String(raw.status_code ?? ""),
+        statusDescription: String(raw.status_description ?? ""),
+        clientReference: typeof raw.client_reference === "string"
+            ? raw.client_reference
+            : typeof raw.reference === "string"
+                ? raw.reference
+                : undefined,
+        raw,
+    };
+}
+async function payoutAuthorizedRequest(path, options = {}, retryOnUnauthorized = true) {
+    const config = (0, paymob_1.getPaymobPayoutConfig)();
+    const accessToken = await getPaymobPayoutAccessToken();
+    const url = `${config.baseUrl}/${path.replace(/^\//, "")}`;
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            ...options.headers,
+        },
+    });
+    if (response.status === 401 && retryOnUnauthorized) {
+        await (0, redis_1.cacheSet)(ACCESS_TOKEN_KEY, "", 1);
+        const freshToken = await getPaymobPayoutAccessToken();
+        return fetch(url, {
+            ...options,
+            headers: {
+                Authorization: `Bearer ${freshToken}`,
+                "Content-Type": "application/json",
+                ...options.headers,
+            },
+        });
+    }
+    return response;
 }
 async function createPaymobInstantCashin(input) {
     if (!(0, paymob_1.isPaymobPayoutConfigured)()) {
         throw new ApiError_1.default(503, "Paymob payout is not configured (missing PAYMOB_PAYOUT_* credentials)");
     }
     const config = (0, paymob_1.getPaymobPayoutConfig)();
-    const accessToken = await getPaymobPayoutAccessToken();
-    const response = await fetch(`${config.baseUrl}/disburse/`, {
+    const { body, clientReference } = buildInstantCashinBody(input);
+    const response = await payoutAuthorizedRequest("disburse/", {
         method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(buildInstantCashinBody(input)),
+        body: JSON.stringify(body),
     });
     const text = await response.text();
     let payload;
@@ -189,6 +232,44 @@ async function createPaymobInstantCashin(input) {
         statusDescription,
         issuer: String(payload.issuer ?? input.issuer),
         amount: Number(payload.amount ?? input.amount),
+        clientReference,
         raw: payload,
+    };
+}
+/** Bulk inquiry by transaction IDs and/or client references (max 50 per request). */
+async function inquirePaymobPayoutTransactions(ids, options) {
+    if (!(0, paymob_1.isPaymobPayoutConfigured)()) {
+        throw new ApiError_1.default(503, "Paymob payout is not configured");
+    }
+    if (ids.length === 0) {
+        return { count: 0, results: [] };
+    }
+    const response = await payoutAuthorizedRequest("transaction/inquire/", {
+        method: "POST",
+        body: JSON.stringify({
+            transactions_ids_list: ids.slice(0, 50),
+            ...(options?.bankTransactions ? { bank_transactions: true } : {}),
+        }),
+    });
+    const text = await response.text();
+    let payload;
+    try {
+        payload = text ? JSON.parse(text) : {};
+    }
+    catch {
+        throw new ApiError_1.default(502, "Paymob payout inquiry response was invalid JSON");
+    }
+    if (!response.ok) {
+        throw new ApiError_1.default(502, formatPaymobPayoutError(payload.status_description ?? payload.detail ?? payload, response.status));
+    }
+    const resultsRaw = Array.isArray(payload.results) ? payload.results : [];
+    const results = resultsRaw
+        .map((item) => item && typeof item === "object"
+        ? normalizeInquiryTransaction(item)
+        : null)
+        .filter((item) => item !== null);
+    return {
+        count: Number(payload.count ?? results.length),
+        results,
     };
 }

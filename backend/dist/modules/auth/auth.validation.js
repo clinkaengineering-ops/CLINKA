@@ -13,14 +13,14 @@ exports.engineerRegisterSchema = exports.clientRegisterSchema.extend({
         error: "Select civil or architectural specialty",
     }),
     bio: fields_1.optionalBioField,
-    nationality: zod_1.z.string().min(1, "Nationality is required"),
+    nationality: fields_1.nationalityField,
     documentType: zod_1.z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
         error: "Select a document type to upload",
     }),
 });
 exports.loginSchema = zod_1.z.object({
     email: fields_1.emailField,
-    password: fields_1.passwordField,
+    password: fields_1.loginPasswordField,
 });
 exports.verifyOtpSchema = zod_1.z.object({
     userId: zod_1.z.coerce
@@ -56,7 +56,7 @@ exports.clientApplyEngineerSchema = zod_1.z.object({
         error: "Select civil or architectural specialty",
     }),
     bio: fields_1.optionalBioField,
-    nationality: zod_1.z.string().min(1, "Nationality is required"),
+    nationality: fields_1.nationalityField,
     documentType: zod_1.z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
         error: "Select a document type to upload",
     }),

@@ -3,6 +3,7 @@ import {
   registerClientController,
   registerEngineerController,
   applyClientAsEngineerController,
+  completeGoogleEngineerController,
   resumeEngineerRegistrationController,
   checkRegistrationEmailController,
   loginController,
@@ -47,6 +48,15 @@ router.post(
     { name: "portfolio", maxCount: 10 },
   ]),
   applyClientAsEngineerController,
+);
+router.post(
+  "/register/engineer/google-complete",
+  authenticate,
+  upload.fields([
+    { name: "document", maxCount: 1 },
+    { name: "portfolio", maxCount: 10 },
+  ]),
+  completeGoogleEngineerController,
 );
 router.post("/login", loginController);
 router.post("/logout", authenticate, logoutController);

@@ -6,6 +6,7 @@ import {
 import {
   createEngineerAutoWithdrawalController,
   paymobWebhookController,
+  paymobPayoutWebhookController,
   getPaymentByGatewayController,
   getCheckoutSessionController,
   getEscrowByIdController,
@@ -25,6 +26,7 @@ import {
 const router = Router();
 
 router.post("/webhook/paymob", paymobWebhookController);
+router.post("/webhook/paymob/payout", paymobPayoutWebhookController);
 
 router.get(
   "/gateway/:gatewayId",
@@ -60,10 +62,13 @@ router.get(
   authorize("ENGINEER"),
   listEngineerWithdrawalsController,
 );
+import { payoutRateLimit } from "../../middlewares/payoutRateLimit";
+
 router.post(
   "/engineer/withdrawals/auto",
   authenticate,
   authorize("ENGINEER"),
+  payoutRateLimit,
   createEngineerAutoWithdrawalController,
 );
 router.get(

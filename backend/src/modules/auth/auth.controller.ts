@@ -15,6 +15,7 @@ import {
   registerEngineer,
   applyClientAsEngineer,
   resumeEngineerRegistration,
+  completeGoogleEngineerRegistration,
   checkRegistrationEmail,
   login,
   verifyEmail,
@@ -62,9 +63,10 @@ export async function registerClientController(
 ) {
   try {
     const validatedData = clientRegisterSchema.parse(req.body);
-    const { user, token } = await registerClient(validatedData);
-    res.cookie("token", token, authCookieOptions(req.headers.origin));
-    res.status(201).json(ApiResponse(201, "Registered successfully", user));
+    const user = await registerClient(validatedData);
+    res
+      .status(201)
+      .json(ApiResponse(201, "Check your email to verify your account", user));
   } catch (error) {
     next(error);
   }
@@ -90,14 +92,15 @@ export async function registerEngineerController(
       | "certificateUrl"
       | "syndicateCardUrl";
     const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-    const { user, token } = await registerEngineer(
+    const user = await registerEngineer(
       validatedData,
       fileUrl,
       documentType,
       portfolioUrls,
     );
-    res.cookie("token", token, authCookieOptions(req.headers.origin));
-    res.status(201).json(ApiResponse(201, "Registered successfully", user));
+    res
+      .status(201)
+      .json(ApiResponse(201, "Check your email to verify your account", user));
   } catch (error) {
     next(error);
   }
@@ -112,12 +115,13 @@ export async function resumeEngineerRegistrationController(
     const validatedData = clientRegisterSchema.parse(req.body);
     const files = req.files as { portfolio?: { path: string }[] } | undefined;
     const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
-    const { user, token } = await resumeEngineerRegistration(
+    const user = await resumeEngineerRegistration(
       validatedData,
       portfolioUrls,
     );
-    res.cookie("token", token, authCookieOptions(req.headers.origin));
-    res.status(200).json(ApiResponse(200, "Portfolio submitted successfully", user));
+    res
+      .status(200)
+      .json(ApiResponse(200, "Check your email to verify your account", user));
   } catch (error) {
     next(error);
   }
@@ -161,6 +165,42 @@ export async function applyClientAsEngineerController(
   }
 }
 
+export async function completeGoogleEngineerController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const validatedData = clientApplyEngineerSchema.parse(req.body);
+    const files = req.files as
+      | {
+          document?: { path: string }[];
+          portfolio?: { path: string }[];
+        }
+      | undefined;
+    const documentFile = files?.document?.[0] ?? req.file;
+    const fileUrl = documentFile?.path ?? "";
+    if (!fileUrl) {
+      throw new ApiError(400, "Verification document is required");
+    }
+    const documentType = req.body.documentType as
+      | "collegeIdUrl"
+      | "certificateUrl"
+      | "syndicateCardUrl";
+    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const user = await completeGoogleEngineerRegistration(
+      req.user!.userId,
+      validatedData,
+      fileUrl,
+      documentType,
+      portfolioUrls,
+    );
+    res.status(200).json(ApiResponse(200, "Engineer registration completed", user));
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function loginController(req: Request, res: Response, next: NextFunction) {
   try {
     const validatedData = loginSchema.parse(req.body);
@@ -178,8 +218,9 @@ export async function verifyEmailController(
 ) {
   try {
     const { token } = req.query as { token: string };
-    await verifyEmail(token);
-    res.status(200).json(ApiResponse(200, "Email verified successfully"));
+    const result = await verifyEmail(token);
+    res.cookie("token", result.token, authCookieOptions(req.headers.origin));
+    res.status(200).json(ApiResponse(200, "Email verified successfully", result.user));
   } catch (error) {
     next(error);
   }
@@ -315,7 +356,22 @@ export async function googleAuthStartController(
       typeof req.query.client_origin === "string"
         ? req.query.client_origin
         : undefined;
-    const url = getGoogleAuthRedirectUrl({ next, role, apiOrigin, clientOrigin });
+    const specialty =
+      req.query.specialty === "CIVIL" || req.query.specialty === "ARCHITECTURAL"
+        ? req.query.specialty
+        : undefined;
+    const bio = typeof req.query.bio === "string" ? req.query.bio : undefined;
+    const nationality =
+      typeof req.query.nationality === "string" ? req.query.nationality : undefined;
+    const url = getGoogleAuthRedirectUrl({
+      next,
+      role,
+      apiOrigin,
+      clientOrigin,
+      specialty,
+      bio,
+      nationality,
+    });
     res.redirect(url);
   } catch (error) {
     next(error);

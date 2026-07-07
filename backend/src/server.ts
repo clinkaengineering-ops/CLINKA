@@ -1,11 +1,12 @@
-import dotenv from "dotenv";
-dotenv.config();
+import { loadEnv } from "./config/loadEnv";
+loadEnv();
 import http from "http";
 import app from "./app";
 import db from "./config/db";
 import transporter from "./config/mailer";
 import { validateProductionEnv } from "./config/env";
 import { initSocket } from "./socket";
+import { startPayoutReconciliationScheduler } from "./modules/payouts/payout.scheduler";
 
 validateProductionEnv();
 
@@ -19,6 +20,8 @@ httpServer.listen(PORT, async () => {
 
   await db.$connect();
   console.log("✅ Database connected successfully");
+
+  startPayoutReconciliationScheduler();
 
   try {
     await transporter.verify();

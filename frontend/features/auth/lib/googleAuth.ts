@@ -1,8 +1,8 @@
-import { resolveApiBaseUrl, resolveSocketBaseUrl } from "@/lib/apiBaseUrl";
+import { resolveBackendOrigin } from "@/lib/apiBaseUrl";
 
-/** API origin including `/api`. */
+/** API origin including `/api` — always the real backend (not the Next dev proxy). */
 export function getApiOrigin(): string {
-  return resolveApiBaseUrl().replace(/\/$/, "");
+  return `${resolveBackendOrigin()}/api`;
 }
 
 function getClientOrigin(): string | undefined {
@@ -13,11 +13,17 @@ function getClientOrigin(): string | undefined {
 export function startGoogleSignIn(options?: {
   next?: string;
   role?: "CLIENT" | "ENGINEER";
+  specialty?: "CIVIL" | "ARCHITECTURAL";
+  bio?: string;
+  nationality?: string;
 }) {
   const base = getApiOrigin();
   const params = new URLSearchParams();
   if (options?.next) params.set("next", options.next);
   if (options?.role) params.set("role", options.role);
+  if (options?.specialty) params.set("specialty", options.specialty);
+  if (options?.bio) params.set("bio", options.bio);
+  if (options?.nationality) params.set("nationality", options.nationality);
 
   const apiOrigin = base.replace(/\/api\/?$/, "");
   params.set("api_origin", apiOrigin);
@@ -29,4 +35,4 @@ export function startGoogleSignIn(options?: {
   window.location.href = `${base}/auth/google${qs ? `?${qs}` : ""}`;
 }
 
-export { resolveSocketBaseUrl };
+export { resolveSocketBaseUrl } from "@/lib/apiBaseUrl";

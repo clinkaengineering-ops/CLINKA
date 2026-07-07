@@ -47,7 +47,7 @@ export const Button = forwardRef<
         ref={ref}
         className={cn(
           "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200",
-          "active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/50",
+          "motion-safe:active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/50",
           "disabled:pointer-events-none disabled:opacity-50",
           variants[variant],
           sizes[size],
@@ -71,7 +71,7 @@ export const Card = ({
 }: HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/80 backdrop-blur shadow-sm dark:shadow-none",
+      "rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/80 backdrop-blur shadow-sm dark:shadow-none transition-smooth motion-safe:hover:shadow-md",
       className,
     )}
     {...props}
@@ -261,34 +261,48 @@ export const StatCard = ({
   value: string;
   change?: string;
   icon: ReactNode;
-  accent?: "up" | "down";
-}) => (
-  <Card className="p-5 hover:border-electric-500/40 transition group">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-          {label}
-        </p>
-        <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-          {value}
-        </p>
-        {change && (
-          <p
-            className={cn(
-              "mt-1 text-xs font-medium",
-              accent === "down" ? "text-rose-500" : "text-emerald-500",
-            )}
-          >
-            {accent === "down" ? "↓" : "↑"} {change}
+  accent?: "up" | "down" | "none";
+}) => {
+  const isValueZero = /^(EGP|\$|€|£)?\s*0(\.0+)?$/i.test(value.trim());
+  const isChangeZero = change === "—" || (change && /^(\+|-)?\s*(EGP|\$|€|£)?\s*0(\.0+)?(\s+|$|%)/i.test(change.trim()));
+  const isChangeTextOnly = change && !/^(\+|-)?\s*(EGP|\$|€|£)?\s*\d/i.test(change.trim());
+  
+  const isNeutral = isValueZero || isChangeZero || isChangeTextOnly;
+  const finalAccent = accent === "down" ? "down" : accent === "none" ? "none" : (isNeutral ? "none" : "up");
+
+  return (
+    <Card className="p-5 hover:border-electric-500/40 transition group">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+            {label}
           </p>
-        )}
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+            {value}
+          </p>
+          {change && (
+            <p
+              className={cn(
+                "mt-1 text-xs font-medium",
+                finalAccent === "down"
+                  ? "text-rose-500"
+                  : finalAccent === "none"
+                    ? "text-slate-400 dark:text-slate-500"
+                    : "text-emerald-500",
+              )}
+            >
+              {finalAccent === "down" ? "↓ " : finalAccent === "none" ? "" : "↑ "}
+              {change.replace(/^[+-]\s*/, "")}
+            </p>
+          )}
+        </div>
+        <div className="h-10 w-10 rounded-xl bg-electric-500/10 text-electric-600 dark:text-electric-400 flex items-center justify-center group-hover:scale-110 transition">
+          {icon}
+        </div>
       </div>
-      <div className="h-10 w-10 rounded-xl bg-electric-500/10 text-electric-600 dark:text-electric-400 flex items-center justify-center group-hover:scale-110 transition">
-        {icon}
-      </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
+};
 
 export const Field = ({
   label,
@@ -338,6 +352,48 @@ export function Shell({ children }: { children: ReactNode }) {
 
       <AuthShellAside />
     </div>
+  );
+}
+
+/* ---------- Spinner ---------- */
+export function Spinner({
+  className,
+  size = "md",
+}: {
+  className?: string;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sizes = {
+    sm: "h-4 w-4 border",
+    md: "h-8 w-8 border-2",
+    lg: "h-10 w-10 border-2",
+  };
+  return (
+    <div
+      role="status"
+      aria-label="Loading"
+      className={cn(
+        "rounded-full border-brand-teal/30 border-t-brand-teal dark:border-electric-400/30 dark:border-t-electric-400 motion-safe:animate-spin",
+        sizes[size],
+        className,
+      )}
+    />
+  );
+}
+
+/* ---------- Skeleton ---------- */
+export function Skeleton({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg bg-slate-200/80 dark:bg-slate-800/80 motion-safe:animate-pulse",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 

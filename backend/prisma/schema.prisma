@@ -98,9 +98,30 @@ enum WalletTransactionStatus {
 
 enum WithdrawalRequestStatus {
   PENDING
+  SUBMITTED
   PROCESSING
   COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
   REJECTED
+  FAILED_NEEDS_MANUAL_REVIEW
+}
+
+enum PayoutAuditEvent {
+  CREATED
+  BALANCE_HELD
+  SUBMITTED
+  PAYMOB_RESPONSE
+  CALLBACK_RECEIVED
+  INQUIRY_UPDATED
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+  BALANCE_RELEASED
+  ADMIN_OVERRIDE
+  RECONCILIATION
 }
 
 model User {
@@ -189,7 +210,7 @@ model Project {
   clientId    Int
   title       String
   description String
-  budget      Float
+  budget      Decimal       @db.Decimal(18, 2)
   serviceType ServiceType
   status      ProjectStatus @default(OPEN)
   progressNote String?
@@ -210,7 +231,7 @@ model Bid {
   id          Int       @id @default(autoincrement())
   projectId   Int
   engineerId  Int
-  price       Float
+  price       Decimal   @db.Decimal(18, 2)
   duration    String
   description String
   status      BidStatus @default(PENDING)
@@ -225,8 +246,8 @@ model Payment {
   projectId          Int           @unique
   clientId           Int
   engineerId         Int
-  amount             Float
-  commission         Float
+  amount             Decimal       @db.Decimal(18, 2)
+  commission         Decimal       @db.Decimal(18, 2)
   gatewayInvoiceId   String?
   gatewayInvoiceKey  String?
   status             PaymentStatus @default(PENDING)
@@ -243,7 +264,7 @@ model PaymentLedgerEntry {
   id        Int               @id @default(autoincrement())
   paymentId Int
   type      PaymentLedgerType
-  amount    Float
+  amount    Decimal           @db.Decimal(18, 2)
   note      String?
   createdAt DateTime          @default(now())
 
@@ -332,7 +353,7 @@ model Review {
 
 model PlatformSettings {
   id                 Int      @id @default(autoincrement())
-  platformFeePercent Float    @default(10.0)
+  platformFeePercent Decimal  @default(10.0) @db.Decimal(18, 2)
   updatedAt          DateTime @updatedAt
 }
 
@@ -357,8 +378,8 @@ model SupportTicket {
 model Wallet {
   id              Int      @id @default(autoincrement())
   userId          Int      @unique
-  availableBalance Float   @default(0)
-  pendingBalance   Float   @default(0)
+  availableBalance Decimal @default(0) @db.Decimal(18, 2)
+  pendingBalance   Decimal @default(0) @db.Decimal(18, 2)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -369,7 +390,7 @@ model Wallet {
 model WalletTransaction {
   id                  Int                     @id @default(autoincrement())
   walletId            Int
-  amount              Float
+  amount              Decimal                 @db.Decimal(18, 2)
   type                WalletTransactionType
   status              WalletTransactionStatus @default(PENDING)
   description         String?
@@ -384,7 +405,7 @@ model WalletTransaction {
 model WithdrawalRequest {
   id                      Int                     @id @default(autoincrement())
   userId                  Int
-  amount                  Float
+  amount                  Decimal                 @db.Decimal(18, 2)
   method                  String
   accountNumber           String
   status                  WithdrawalRequestStatus @default(PENDING)
@@ -392,10 +413,41 @@ model WithdrawalRequest {
   paymobTransactionId     String?
   paymobDisbursementStatus String?
   paymobStatusDescription String?
-  paymobClientReference   String?
+  paymobClientReference   String?                 @unique
+  idempotencyKey          String?
+  retryCount              Int                     @default(0)
+  failureReason           String?
+  balanceHeldAt           DateTime?
+  submittedAt             DateTime?
+  lastInquiryAt           DateTime?
   processedAt             DateTime?
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditLogs PayoutAuditLog[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, updatedAt])
+  @@index([paymobTransactionId])
+}
+
+model PayoutAuditLog {
+  id           Int              @id @default(autoincrement())
+  withdrawalId Int
+  event        PayoutAuditEvent
+  statusBefore WithdrawalRequestStatus?
+  statusAfter  WithdrawalRequestStatus?
+  message      String?
+  metadata     Json?
+  previousHash String?
+  hash         String?
+  actorId      Int?
+  actorIp      String?
+  actorUserAgent String?
+  createdAt    DateTime         @default(now())
+
+  withdrawal WithdrawalRequest @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+
+  @@index([withdrawalId, createdAt])
 }

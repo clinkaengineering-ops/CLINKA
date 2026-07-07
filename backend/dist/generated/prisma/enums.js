@@ -9,7 +9,7 @@
 * 🟢 You can import this file directly.
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WithdrawalRequestStatus = exports.WalletTransactionStatus = exports.WalletTransactionType = exports.SupportTicketStatus = exports.BanReason = exports.VerificationStatus = exports.PaymentStatus = exports.BidStatus = exports.PaymentLedgerType = exports.DeliverableType = exports.ProjectStatus = exports.ServiceType = exports.EngineerSpecialty = exports.Role = void 0;
+exports.PayoutAuditEvent = exports.WithdrawalRequestStatus = exports.WalletTransactionStatus = exports.WalletTransactionType = exports.SupportTicketStatus = exports.BanReason = exports.VerificationStatus = exports.PaymentStatus = exports.BidStatus = exports.PaymentLedgerType = exports.DeliverableType = exports.ProjectStatus = exports.ServiceType = exports.EngineerSpecialty = exports.Role = void 0;
 exports.Role = {
     CLIENT: 'CLIENT',
     ENGINEER: 'ENGINEER',
@@ -82,7 +82,27 @@ exports.WalletTransactionStatus = {
 };
 exports.WithdrawalRequestStatus = {
     PENDING: 'PENDING',
+    SUBMITTED: 'SUBMITTED',
     PROCESSING: 'PROCESSING',
     COMPLETED: 'COMPLETED',
-    REJECTED: 'REJECTED'
+    FAILED: 'FAILED',
+    CANCELLED: 'CANCELLED',
+    REVERSED: 'REVERSED',
+    REJECTED: 'REJECTED',
+    FAILED_NEEDS_MANUAL_REVIEW: 'FAILED_NEEDS_MANUAL_REVIEW'
+};
+exports.PayoutAuditEvent = {
+    CREATED: 'CREATED',
+    BALANCE_HELD: 'BALANCE_HELD',
+    SUBMITTED: 'SUBMITTED',
+    PAYMOB_RESPONSE: 'PAYMOB_RESPONSE',
+    CALLBACK_RECEIVED: 'CALLBACK_RECEIVED',
+    INQUIRY_UPDATED: 'INQUIRY_UPDATED',
+    COMPLETED: 'COMPLETED',
+    FAILED: 'FAILED',
+    CANCELLED: 'CANCELLED',
+    REVERSED: 'REVERSED',
+    BALANCE_RELEASED: 'BALANCE_RELEASED',
+    ADMIN_OVERRIDE: 'ADMIN_OVERRIDE',
+    RECONCILIATION: 'RECONCILIATION'
 };

@@ -67,3 +67,14 @@ export async function settleMaturedWalletTransactions(
     maturedAmount,
   };
 }
+
+/** Row-level lock to serialize concurrent withdrawals for the same engineer. */
+export async function lockWalletForUpdate(tx: TxLike, userId: number) {
+  await ensureWallet(tx, userId);
+  await tx.$executeRaw`SELECT id FROM "Wallet" WHERE "userId" = ${userId} FOR UPDATE`;
+  return tx.wallet.findUniqueOrThrow({ where: { userId } });
+}
+
+export function roundMoney(amount: number) {
+  return Math.round(amount * 100) / 100;
+}
