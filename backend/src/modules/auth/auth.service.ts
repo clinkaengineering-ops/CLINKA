@@ -416,10 +416,21 @@ export async function verifyEmail(token: string) {
     userId: number;
   };
 
-  const user = await db.user.update({
+  const existing = await db.user.findUnique({
     where: { id: payload.userId },
-    data: { isVerified: true },
   });
+
+  if (!existing) {
+    throw new ApiError(400, "Invalid or expired verification link");
+  }
+
+  const user =
+    existing.isVerified
+      ? existing
+      : await db.user.update({
+          where: { id: existing.id },
+          data: { isVerified: true },
+        });
 
   const authToken = generateToken(user.id, user.role);
   const { password: _, ...userWithoutPassword } = user;
