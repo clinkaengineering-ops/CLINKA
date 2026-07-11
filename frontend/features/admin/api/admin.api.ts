@@ -367,11 +367,50 @@ export interface AdminWithdrawalRequest {
   amount: number;
   method: string;
   accountNumber: string;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
+  status:
+    | "PENDING"
+    | "PENDING_REVIEW"
+    | "APPROVED"
+    | "TRANSFER_INITIATED"
+    | "SUBMITTED"
+    | "PROCESSING"
+    | "COMPLETED"
+    | "FAILED"
+    | "CANCELLED"
+    | "REVERSED"
+    | "REJECTED"
+    | "FAILED_NEEDS_MANUAL_REVIEW";
   adminNotes: string | null;
+  paymobTransactionId?: string | null;
+  paymobDisbursementStatus?: string | null;
+  paymobStatusDescription?: string | null;
+  paymobClientReference?: string | null;
+  failureReason?: string | null;
   processedAt: string | null;
   createdAt: string;
   user: { id: number; name: string; email: string };
+}
+
+export interface PayoutStats {
+  total: number;
+  completed: number;
+  failed: number;
+  processing: number;
+  manualReview: number;
+  volume24h: number;
+  volume30d: number;
+  successRate: number;
+}
+
+export interface PayoutAuditEntry {
+  id: number;
+  withdrawalId: number;
+  event: string;
+  statusBefore: string | null;
+  statusAfter: string | null;
+  message: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
 }
 
 export interface AdminWithdrawalRequestsPage {
@@ -385,23 +424,119 @@ export interface AdminWithdrawalRequestsPage {
 export const fetchAdminWithdrawalRequests = (
   page = 1,
   limit = 20,
+  status?: AdminWithdrawalRequest["status"],
 ): Promise<AdminWithdrawalRequestsPage> =>
   unwrap(
     api.get<ApiResponse<AdminWithdrawalRequestsPage>>("/admin/withdrawals", {
-      params: { page, limit },
+      params: { page, limit, status },
     }),
   ).then((d) => {
     if (!d) throw new Error("Failed to load withdrawal requests");
     return d;
   });
 
+export const fetchPayoutStats = (): Promise<PayoutStats> =>
+  unwrap(api.get<ApiResponse<PayoutStats>>("/admin/withdrawals/stats")).then(
+    (d) => {
+      if (!d) throw new Error("Failed to load payout stats");
+      return d;
+    },
+  );
+
+export const fetchWithdrawalAuditTrail = (
+  withdrawalId: number,
+): Promise<PayoutAuditEntry[]> =>
+  unwrap(
+    api.get<ApiResponse<PayoutAuditEntry[]>>(
+      `/admin/withdrawals/${withdrawalId}/audit`,
+    ),
+  ).then((d) => d ?? []);
+
+export const triggerPayoutReconciliation = (): Promise<{
+  checked: number;
+  updated: number;
+}> =>
+  unwrap(
+    api.post<ApiResponse<{ checked: number; updated: number }>>(
+      "/admin/payouts/reconcile",
+    ),
+  ).then((d) => {
+    if (!d) throw new Error("Reconciliation failed");
+    return d;
+  });
+
+export const cancelAdminWithdrawal = (
+  withdrawalId: number,
+  reason?: string,
+) =>
+  unwrap(
+    api.post<ApiResponse<AdminWithdrawalRequest>>(
+      `/admin/withdrawals/${withdrawalId}/cancel`,
+      { reason },
+    ),
+  );
+
+export const resolveAdminWithdrawal = (
+  withdrawalId: number,
+  action: "release_funds" | "mark_completed" | "cancel",
+  reason?: string,
+) =>
+  unwrap(
+    api.post<ApiResponse<AdminWithdrawalRequest>>(
+      `/admin/withdrawals/${withdrawalId}/resolve`,
+      { action, reason },
+    ),
+  );
+
 export const updateWithdrawalRequestStatus = (
   withdrawalId: number,
-  data: { status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED"; adminNotes?: string },
+  data: {
+    status: AdminWithdrawalRequest["status"];
+    adminNotes?: string;
+  },
 ) =>
   unwrap(
     api.patch<ApiResponse<AdminWithdrawalRequest>>(
       `/admin/withdrawals/${withdrawalId}`,
       data,
+    ),
+  );
+
+export const revealAdminWithdrawalBankDetails = (withdrawalId: number) =>
+  unwrap(
+    api.post<ApiResponse<any>>(
+      `/admin/withdrawals/${withdrawalId}/reveal-bank-details`,
+    ),
+  );
+
+export const approveAdminWithdrawal = (withdrawalId: number, notes?: string) =>
+  unwrap(
+    api.post<ApiResponse<AdminWithdrawalRequest>>(
+      `/admin/withdrawals/${withdrawalId}/approve`,
+      { notes },
+    ),
+  );
+
+export const rejectAdminWithdrawal = (withdrawalId: number, reason: string, notes?: string) =>
+  unwrap(
+    api.post<ApiResponse<AdminWithdrawalRequest>>(
+      `/admin/withdrawals/${withdrawalId}/reject`,
+      { reason, notes },
+    ),
+  );
+
+export const initiateAdminTransfer = (withdrawalId: number, externalReference: string, notes?: string) =>
+  unwrap(
+    api.post<ApiResponse<AdminWithdrawalRequest>>(
+      `/admin/withdrawals/${withdrawalId}/initiate-transfer`,
+      { externalReference, notes },
+    ),
+  );
+
+export const recordAdminCompletion = (withdrawalId: number, notes?: string) =>
+  unwrap(
+    api.post<ApiResponse<AdminWithdrawalRequest>>(
+      `/admin/withdrawals/${withdrawalId}/record-completion`,
+      { notes },
     ),
   );

@@ -5,6 +5,7 @@ import { Badge, Card } from "@/components/UI";
 import { IconStar } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import useAuthStore from "@/store/authStore";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import type { Project, ServiceType } from "../api/project.api";
 import { BidForm } from "@/features/bids/components/BidForm";
 import { ProjectBidsList } from "./ProjectBidsList";
@@ -55,7 +56,7 @@ export function ProjectDetailPanel({
         <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
           <div className="rounded-lg bg-white/10 p-2.5">
             <p className="text-white/60 text-[10px] uppercase">{t("common.budget")}</p>
-            <p className="font-bold mt-0.5">${project.budget.toLocaleString()}</p>
+            <p className="font-bold mt-0.5">{formatMoney(project.budget)}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-2.5">
             <p className="text-white/60 text-[10px] uppercase">Status</p>

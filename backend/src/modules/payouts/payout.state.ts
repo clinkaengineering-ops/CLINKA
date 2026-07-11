@@ -1,4 +1,5 @@
 import type { WithdrawalRequestStatus } from "../../generated/prisma/client";
+import ApiError from "../../utils/ApiError";
 
 /** Terminal states — no further automated transitions. */
 export const TERMINAL_PAYOUT_STATUSES: WithdrawalRequestStatus[] = [
@@ -13,6 +14,9 @@ export const TERMINAL_PAYOUT_STATUSES: WithdrawalRequestStatus[] = [
 /** Statuses where balance is held (deducted from available). */
 export const BALANCE_HELD_STATUSES: WithdrawalRequestStatus[] = [
   "PENDING",
+  "PENDING_REVIEW",
+  "APPROVED",
+  "TRANSFER_INITIATED",
   "SUBMITTED",
   "PROCESSING",
 ];
@@ -28,6 +32,9 @@ const ALLOWED_TRANSITIONS: Record<
   WithdrawalRequestStatus[]
 > = {
   PENDING: ["SUBMITTED", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED", "FAILED_NEEDS_MANUAL_REVIEW"],
+  PENDING_REVIEW: ["APPROVED", "REJECTED", "CANCELLED"],
+  APPROVED: ["TRANSFER_INITIATED", "COMPLETED", "CANCELLED", "FAILED"],
+  TRANSFER_INITIATED: ["PROCESSING", "COMPLETED", "FAILED", "CANCELLED"],
   SUBMITTED: ["PROCESSING", "COMPLETED", "FAILED", "CANCELLED", "FAILED_NEEDS_MANUAL_REVIEW"],
   PROCESSING: ["COMPLETED", "FAILED", "CANCELLED", "REVERSED", "FAILED_NEEDS_MANUAL_REVIEW"],
   COMPLETED: ["REVERSED"],
@@ -51,7 +58,10 @@ export function assertPayoutTransition(
   to: WithdrawalRequestStatus,
 ): void {
   if (!canTransitionPayoutStatus(from, to)) {
-    throw new Error(`Invalid payout status transition: ${from} → ${to}`);
+    throw new ApiError(
+      400,
+      `Invalid payout status transition: ${from} → ${to}`,
+    );
   }
 }
 

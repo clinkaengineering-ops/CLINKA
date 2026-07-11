@@ -15,7 +15,7 @@ import {
   CHECKOUT_RETURN_COOKIE,
 } from "../../config/checkoutCookie";
 import {
-  createEngineerAutoWithdrawal,
+  createWithdrawalRequest,
   // createEngineerWithdrawalRequest, // OLD_WITHDRAWAL: commented out for auto-withdrawal
   getEscrowPaymentById,
   getProjectPayment,
@@ -212,17 +212,38 @@ export async function listEngineerWithdrawalsController(
   }
 }
 
-export async function createEngineerAutoWithdrawalController(
+export async function createEngineerWithdrawalController(
   req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const input = autoWithdrawalSchema.parse(req.body);
-    const item = await createEngineerAutoWithdrawal(req.user!.userId, input);
+    const idempotencyKey =
+      typeof req.headers["idempotency-key"] === "string"
+        ? req.headers["idempotency-key"].trim()
+        : undefined;
+
+    if (!idempotencyKey) {
+      throw new ApiError(400, "Idempotency-Key header is required");
+    }
+
+    const { payoutMethod } = req.body;
+    let input;
+    
+    if (payoutMethod === "IBAN") {
+      const { internationalWithdrawalSchema } = await import("./payments.validation");
+      input = internationalWithdrawalSchema.parse(req.body);
+    } else if (payoutMethod === "PAYMOB") {
+      input = autoWithdrawalSchema.parse(req.body);
+    } else {
+      throw new ApiError(400, "Invalid or missing payoutMethod");
+    }
+
+    const item = await createWithdrawalRequest(req.user!.userId, payoutMethod as "PAYMOB" | "IBAN", input, idempotencyKey);
+    const { sanitizeWithdrawalForEngineer } = await import("../payouts/payout.presenter");
     res
       .status(201)
-      .json(ApiResponse(201, "Withdrawal processed via Paymob", item));
+      .json(ApiResponse(201, "Withdrawal request processed", sanitizeWithdrawalForEngineer(item)));
   } catch (error) {
     next(error);
   }

@@ -67,9 +67,9 @@ export function ProjectFilters({
             className={selectClass}
           >
             <option value="">{t("pm.anyBudget")}</option>
-            <option value="0-5000">$0 – $5k</option>
-            <option value="5000-15000">$5k – $15k</option>
-            <option value="15000-999999">$15k+</option>
+            <option value="0-5000">0 – 5,000 EGP</option>
+            <option value="5000-15000">5,000 – 15,000 EGP</option>
+            <option value="15000-999999">15,000+ EGP</option>
           </select>
 
           <select

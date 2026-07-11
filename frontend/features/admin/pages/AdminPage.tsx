@@ -15,11 +15,12 @@ import { AdminUserDirectory } from "../components/AdminUserDirectory";
 import { AdminProjectsPanel } from "../components/AdminProjectsPanel";
 import { AdminReviewsPanel } from "../components/AdminReviewsPanel";
 import { AdminFinancialsPanel } from "../components/AdminFinancialsPanel";
+import { AdminPayoutPanel } from "../components/AdminPayoutPanel";
 import { AdminAnalytics } from "../components/AdminAnalytics";
 import { AdminSystemLogs } from "../components/AdminSystemLogs";
 import { AdminSupportTicketsPanel } from "../components/AdminSupportTicketsPanel";
 
-type AdminTab = "overview" | "verifications" | "users" | "projects" | "reviews" | "financials" | "bans" | "chats" | "analytics" | "logs" | "support";
+type AdminTab = "overview" | "verifications" | "users" | "projects" | "reviews" | "financials" | "payouts" | "bans" | "chats" | "analytics" | "logs" | "support";
 
 export function AdminPage() {
   const { t } = useI18n();
@@ -70,6 +71,7 @@ export function AdminPage() {
             ["projects", "Projects"],
             ["reviews", "Reviews"],
             ["financials", "Financials"],
+            ["payouts", "Payouts"],
             ["bans", "Bans"],
             ["chats", "Chats"],
             ["analytics", "Analytics"],
@@ -105,6 +107,7 @@ export function AdminPage() {
       {tab === "projects" && <AdminProjectsPanel />}
       {tab === "reviews" && <AdminReviewsPanel />}
       {tab === "financials" && <AdminFinancialsPanel />}
+      {tab === "payouts" && <AdminPayoutPanel />}
       {tab === "bans" && <BanManagementPanel />}
       {tab === "chats" && <AdminChatViewer />}
       {tab === "analytics" && <AdminAnalytics />}

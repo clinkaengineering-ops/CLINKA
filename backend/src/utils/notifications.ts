@@ -11,6 +11,7 @@ export type NotificationType =
   | "ESCROW_REFUNDED"
   | "FUND_REMINDER"
   | "FUNDS_RELEASED"
+  | "FUNDS_HELD"
   | "NEW_MESSAGE"
   | "WORK_DELIVERED"
   | "WORK_SUBMITTED"
@@ -35,6 +36,7 @@ const EMAIL_NOTIFICATION_TYPES = new Set<NotificationType>([
   "ESCROW_REFUNDED",
   "FUND_REMINDER",
   "FUNDS_RELEASED",
+  "FUNDS_HELD",
   "WORK_SUBMITTED",
   "REVISION_REQUESTED",
   "WORK_APPROVED",
@@ -55,6 +57,7 @@ const EMAIL_ACTION_LABELS: Partial<Record<NotificationType, string>> = {
   ESCROW_REFUNDED: "View Balance",
   FUND_REMINDER: "Fund Escrow",
   FUNDS_RELEASED: "View Balance",
+  FUNDS_HELD: "View Balance",
   WORK_SUBMITTED: "Review Work",
   REVISION_REQUESTED: "View Project",
   WORK_APPROVED: "View Balance",
@@ -96,6 +99,7 @@ const PREF_KEY: Record<NotificationType, keyof NotificationPrefs> = {
   ESCROW_REFUNDED: "fundsReleased",
   FUND_REMINDER: "fundsReleased",
   FUNDS_RELEASED: "fundsReleased",
+  FUNDS_HELD: "fundsReleased",
   NEW_MESSAGE: "newMessage",
   WORK_DELIVERED: "newMessage",
   WORK_SUBMITTED: "newMessage",

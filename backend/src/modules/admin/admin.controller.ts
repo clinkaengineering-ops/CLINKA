@@ -30,6 +30,16 @@ import {
   updateSupportTicket,
   getWithdrawalRequests,
   updateWithdrawalRequestStatus,
+  getWithdrawalAuditTrail,
+  adminCancelWithdrawal,
+  adminResolveWithdrawal,
+  adminTriggerPayoutReconciliation,
+  getPayoutStats,
+  revealWithdrawalBankDetails,
+  approveInternationalWithdrawal,
+  rejectInternationalWithdrawal,
+  initiateTransfer,
+  recordCompletion,
 } from "./admin.service";
 import {
   banUserSchema,
@@ -40,6 +50,13 @@ import {
   updatePaymentOverrideSchema,
   updateSupportTicketSchema,
   updateWithdrawalRequestSchema,
+  resolveWithdrawalSchema,
+  cancelWithdrawalSchema,
+  withdrawalListQuerySchema,
+  approveWithdrawalSchema,
+  rejectWithdrawalSchema,
+  initiateTransferSchema,
+  recordCompletionSchema,
 } from "./admin.validation";
 
 export async function getAdminStatsController(
@@ -440,9 +457,11 @@ export async function getWithdrawalRequestsController(
   next: NextFunction,
 ) {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
-    const data = await getWithdrawalRequests(page, limit);
+    const query = withdrawalListQuerySchema.parse(req.query);
+    const data = await getWithdrawalRequests(query.page, query.limit, {
+      status: query.status,
+      payoutType: query.payoutType,
+    });
     res.status(200).json(ApiResponse(200, "Withdrawal requests fetched", data));
   } catch (error) {
     next(error);
@@ -467,3 +486,162 @@ export async function updateWithdrawalRequestStatusController(
     next(error);
   }
 }
+
+export async function getWithdrawalAuditTrailController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await getWithdrawalAuditTrail(withdrawalId);
+    res.status(200).json(ApiResponse(200, "Payout audit trail fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminCancelWithdrawalController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = cancelWithdrawalSchema.parse(req.body ?? {});
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await adminCancelWithdrawal(
+      withdrawalId,
+      req.user!.userId,
+      input.reason,
+    );
+    res.status(200).json(ApiResponse(200, "Withdrawal cancelled", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminResolveWithdrawalController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = resolveWithdrawalSchema.parse(req.body);
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await adminResolveWithdrawal(
+      withdrawalId,
+      req.user!.userId,
+      input.action,
+      input.reason,
+    );
+    res.status(200).json(ApiResponse(200, "Withdrawal resolved", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminReconcilePayoutsController(
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const data = await adminTriggerPayoutReconciliation();
+    res.status(200).json(ApiResponse(200, "Payout reconciliation triggered", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPayoutStatsController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const data = await getPayoutStats();
+    res.status(200).json(ApiResponse(200, "Payout stats fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminRevealBankDetailsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await revealWithdrawalBankDetails(
+      withdrawalId,
+      req.user!.userId,
+      req.ip,
+      req.headers["user-agent"],
+    );
+    res.status(200).json(ApiResponse(200, "Bank details revealed", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminApproveWithdrawalController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = approveWithdrawalSchema.parse(req.body ?? {});
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await approveInternationalWithdrawal(withdrawalId, req.user!.userId, input.notes);
+    res.status(200).json(ApiResponse(200, "Withdrawal approved", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminRejectWithdrawalController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = rejectWithdrawalSchema.parse(req.body);
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await rejectInternationalWithdrawal(withdrawalId, req.user!.userId, input.reason, input.notes);
+    res.status(200).json(ApiResponse(200, "Withdrawal rejected", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminInitiateTransferController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = initiateTransferSchema.parse(req.body);
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await initiateTransfer(withdrawalId, req.user!.userId, input.externalReference, input.notes);
+    res.status(200).json(ApiResponse(200, "Transfer initiated", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminRecordCompletionController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const input = recordCompletionSchema.parse(req.body ?? {});
+    const withdrawalId = Number(req.params.withdrawalId);
+    const data = await recordCompletion(withdrawalId, req.user!.userId, input.notes);
+    res.status(200).json(ApiResponse(200, "Transfer marked as completed", data));
+  } catch (error) {
+    next(error);
+  }
+}
+

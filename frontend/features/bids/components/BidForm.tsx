@@ -12,6 +12,7 @@ import {
   validateForm,
   type FieldErrors,
 } from "@/lib/validation";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { createBid } from "../api/bids.api";
 import useAuthStore from "@/store/authStore";
 import { useMe } from "@/features/auth/hooks/useMe";
@@ -36,7 +37,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
 
   const net = useMemo(() => {
     const p = parseFloat(price) || 0;
-    return (p * 0.92).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return p * 0.92;
   }, [price]);
 
   if (!user) {
@@ -201,7 +202,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
         <span>
           {t("pm.serviceFee")}{" "}
-          <span className="font-bold text-slate-900 dark:text-white">${net}</span>
+          <span className="font-bold text-slate-900 dark:text-white">{formatMoney(net)}</span>
         </span>
       </div>
       {error && <p className="mt-2 text-xs text-rose-500">{error}</p>}

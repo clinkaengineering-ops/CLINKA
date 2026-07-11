@@ -10,7 +10,15 @@ import {
   roundMoney,
   settleMaturedWalletTransactions,
 } from "../../utils/wallet";
-import type { AutoWithdrawalInput } from "../payments/payments.validation";
+import type {
+  AutoWithdrawalInput,
+  InternationalWithdrawalInput,
+} from "../payments/payments.validation";
+import {
+  encryptSensitiveField,
+  maskIban,
+  isPayoutFieldEncryptionConfigured,
+} from "../../utils/fieldEncryption";
 import {
   createPaymobInstantCashin,
   detectWalletIssuerFromMsisdn,
@@ -97,7 +105,10 @@ async function holdPayoutBalance(
 ) {
   await tx.wallet.update({
     where: { id: walletId },
-    data: { availableBalance: { decrement: amount } },
+    data: { 
+      availableBalance: { decrement: amount },
+      version: { increment: 1 }
+    },
   });
 }
 
@@ -108,7 +119,10 @@ async function releasePayoutBalance(
 ) {
   await tx.wallet.update({
     where: { id: walletId },
-    data: { availableBalance: { increment: amount } },
+    data: { 
+      availableBalance: { increment: amount },
+      version: { increment: 1 }
+    },
   });
 }
 
@@ -385,7 +399,7 @@ function buildPaymobInput(
   };
 }
 
-export async function createEngineerPayout(
+export async function createPaymobPayout(
   engineerUserId: number,
   input: AutoWithdrawalInput,
   options?: { idempotencyKey?: string },
@@ -480,6 +494,8 @@ export async function createEngineerPayout(
           amount,
           method: methodLabel,
           accountNumber,
+          payoutType: "PAYMOB",
+          currency: "EGP",
           status: "PENDING",
           paymobClientReference: clientReference,
           idempotencyKey,
@@ -590,6 +606,151 @@ export async function createEngineerPayout(
   return updated;
 }
 
+export async function createIbanPayout(
+  engineerUserId: number,
+  input: InternationalWithdrawalInput,
+  options?: { idempotencyKey?: string },
+) {
+  const engineer = await db.user.findUnique({
+    where: { id: engineerUserId },
+    select: { id: true, name: true, role: true },
+  });
+  if (!engineer || engineer.role !== "ENGINEER") {
+    throw new ApiError(403, "Only engineers can request withdrawals");
+  }
+
+  if (!isPayoutFieldEncryptionConfigured()) {
+    throw new ApiError(
+      503,
+      "International withdrawals are unavailable until PAYOUT_FIELD_ENCRYPTION_KEY is configured on the server.",
+    );
+  }
+
+  const idempotencyKey = options?.idempotencyKey?.trim() || null;
+  if (idempotencyKey) {
+    const existing = await db.withdrawalRequest.findFirst({
+      where: { userId: engineerUserId, idempotencyKey },
+    });
+    if (existing) return existing;
+  }
+
+  const amount = roundMoney(input.amount);
+  if (amount <= 0) {
+    throw new ApiError(400, "Withdrawal amount must be greater than zero");
+  }
+
+  const encryptedHolderName = encryptSensitiveField(input.accountHolderName);
+  const encryptedIban = encryptSensitiveField(input.iban);
+  const encryptedSwift = input.swiftBic ? encryptSensitiveField(input.swiftBic) : null;
+  const encryptedAddress = input.bankAddress ? encryptSensitiveField(input.bankAddress) : null;
+  
+  const maskedIban = maskIban(input.iban);
+  const maskedName = input.accountHolderName.length > 2
+    ? input.accountHolderName.substring(0, 1) + "***" + input.accountHolderName.substring(input.accountHolderName.length - 1)
+    : "***";
+
+  let txResult;
+  try {
+    txResult = await db.$transaction(async (tx) => {
+      await settleMaturedWalletTransactions(tx, engineerUserId);
+      const spendable = await getSpendableBalance(tx, engineerUserId);
+
+      if (amount > spendable) {
+        throw new ApiError(
+          400,
+          `Withdrawal exceeds available spendable balance (${formatEgp(spendable)})`,
+        );
+      }
+      
+      const activeIban = await tx.withdrawalRequest.findFirst({
+        where: {
+          userId: engineerUserId,
+          payoutType: "IBAN",
+          status: { in: ["PENDING_REVIEW", "APPROVED", "TRANSFER_INITIATED", "PROCESSING"] },
+        },
+      });
+      if (activeIban) {
+         throw new ApiError(400, "You already have an active international withdrawal request.");
+      }
+
+      const lockedWallet = await lockWalletForUpdate(tx, engineerUserId);
+      const now = new Date();
+      
+      const created = await tx.withdrawalRequest.create({
+        data: {
+          userId: engineerUserId,
+          amount,
+          method: "IBAN",
+          accountNumber: maskedIban,
+          payoutType: "IBAN",
+          currency: "EGP",
+          country: input.country,
+          bankName: input.bankName,
+          accountHolderName: maskedName,
+          accountHolderNameEncrypted: encryptedHolderName,
+          ibanEncrypted: encryptedIban,
+          swiftBicEncrypted: encryptedSwift,
+          bankAddressEncrypted: encryptedAddress,
+          status: "PENDING_REVIEW",
+          idempotencyKey,
+          balanceHeldAt: now,
+        },
+      });
+      
+      await holdPayoutBalance(tx, lockedWallet.id, amount);
+      
+      await tx.walletTransaction.create({
+        data: {
+          walletId: lockedWallet.id,
+          amount,
+          type: "WITHDRAWAL",
+          status: "PENDING",
+          description: `International withdrawal (IBAN)`,
+          relatedWithdrawalId: created.id,
+        },
+      });
+
+      await logPayoutEvent(tx, {
+        withdrawalId: created.id,
+        event: "CREATED",
+        statusAfter: "PENDING_REVIEW",
+        metadata: { method: "IBAN", amount },
+      });
+
+      await logPayoutEvent(tx, {
+        withdrawalId: created.id,
+        event: "BALANCE_HELD",
+        statusBefore: "PENDING_REVIEW",
+        statusAfter: "PENDING_REVIEW",
+        message: formatEgp(amount),
+      });
+
+      return { withdrawal: created, wallet: lockedWallet };
+    });
+  } catch (error: any) {
+    if (error.code === "P2002" && idempotencyKey) {
+      const { metrics } = await import("../../utils/metrics");
+      metrics.increment("payouts_duplicate_blocked");
+      const existing = await db.withdrawalRequest.findFirst({
+        where: { userId: engineerUserId, idempotencyKey },
+      });
+      if (existing) return existing;
+    }
+    throw error;
+  }
+  
+  const { createNotification } = await import("../../utils/notifications");
+  await createNotification(
+    engineerUserId,
+    "FUNDS_HELD",
+    "Withdrawal request received",
+    `Your ${formatEgp(amount)} international withdrawal request is pending review.`,
+    "/balance",
+  );
+
+  return txResult.withdrawal;
+}
+
 export async function reconcilePendingPayouts(limit = 50) {
   if (!isPaymobPayoutConfigured()) {
     return { checked: 0, updated: 0 };
@@ -610,10 +771,27 @@ export async function reconcilePendingPayouts(limit = 50) {
   let updated = 0;
 
   for (const row of orphanedPending) {
-    await db.withdrawalRequest.update({
-      where: { id: row.id },
-      data: { status: "FAILED_NEEDS_MANUAL_REVIEW", failureReason: "Orphaned PENDING payout" }
+    const wallet = await db.wallet.findUnique({
+      where: { userId: row.userId },
+      select: { id: true },
     });
+    if (wallet) {
+      await markPayoutSubmissionFailed(
+        row.id,
+        wallet.id,
+        Number(row.amount),
+        "Orphaned PENDING payout — Paymob was never called; funds released",
+      );
+    } else {
+      await db.withdrawalRequest.update({
+        where: { id: row.id },
+        data: {
+          status: "FAILED",
+          failureReason: "Orphaned PENDING payout",
+          processedAt: new Date(),
+        },
+      });
+    }
     updated += 1;
   }
 
@@ -681,10 +859,10 @@ export async function reconcilePendingPayouts(limit = 50) {
 
       if (!match) {
         if (row.retryCount >= 5) {
-          await db.withdrawalRequest.update({
-            where: { id: row.id },
-            data: { status: "FAILED_NEEDS_MANUAL_REVIEW", failureReason: "Max inquiry retries exceeded" }
-          });
+          await markPayoutNeedsManualReview(
+            row.id,
+            "Max inquiry retries exceeded",
+          );
           updated += 1;
         } else {
           const { metrics } = await import("../../utils/metrics");
@@ -780,6 +958,120 @@ export async function handlePaymobPayoutWebhook(payload: Record<string, unknown>
   );
 
   return { matched: true, withdrawalId: withdrawal.id, status: updated.status };
+}
+
+export async function markPayoutNeedsManualReview(
+  withdrawalId: number,
+  reason: string,
+) {
+  return db.$transaction(async (tx) => {
+    const withdrawal = await loadWithdrawalForUpdate(tx, withdrawalId);
+    if (withdrawal.status === "FAILED_NEEDS_MANUAL_REVIEW") {
+      return tx.withdrawalRequest.findUniqueOrThrow({
+        where: { id: withdrawalId },
+      });
+    }
+    assertPayoutTransition(withdrawal.status, "FAILED_NEEDS_MANUAL_REVIEW");
+
+    const updated = await tx.withdrawalRequest.update({
+      where: { id: withdrawalId },
+      data: {
+        status: "FAILED_NEEDS_MANUAL_REVIEW",
+        failureReason: reason,
+      },
+    });
+
+    await logPayoutEvent(tx, {
+      withdrawalId,
+      event: "RECONCILIATION",
+      statusBefore: withdrawal.status,
+      statusAfter: "FAILED_NEEDS_MANUAL_REVIEW",
+      message: reason,
+    });
+
+    return updated;
+  });
+}
+
+export async function markPayoutCompletedByAdmin(
+  withdrawalId: number,
+  adminId: number,
+  adminNotes?: string,
+) {
+  return db.$transaction(async (tx) => {
+    const withdrawal = await loadWithdrawalForUpdate(tx, withdrawalId);
+    assertPayoutTransition(withdrawal.status, "COMPLETED");
+
+    const wallet = await getWalletForUser(tx, withdrawal.userId);
+
+    await tx.walletTransaction.updateMany({
+      where: {
+        walletId: wallet.id,
+        relatedWithdrawalId: withdrawalId,
+        type: "WITHDRAWAL",
+      },
+      data: { status: "COMPLETED" },
+    });
+
+    const updated = await tx.withdrawalRequest.update({
+      where: { id: withdrawalId },
+      data: {
+        status: "COMPLETED",
+        processedAt: new Date(),
+        adminNotes: adminNotes ?? "Marked completed by admin",
+      },
+    });
+
+    await logPayoutEvent(tx, {
+      withdrawalId,
+      event: "ADMIN_OVERRIDE",
+      statusBefore: withdrawal.status,
+      statusAfter: "COMPLETED",
+      message: adminNotes,
+      metadata: { adminId },
+    });
+
+    await logPayoutEvent(tx, {
+      withdrawalId,
+      event: "COMPLETED",
+      statusBefore: withdrawal.status,
+      statusAfter: "COMPLETED",
+    });
+
+    return updated;
+  });
+}
+
+export async function resolvePayoutManualReview(
+  withdrawalId: number,
+  adminId: number,
+  action: "release_funds" | "mark_completed" | "cancel",
+  reason?: string,
+) {
+  const withdrawal = await db.withdrawalRequest.findUnique({
+    where: { id: withdrawalId },
+    select: { status: true },
+  });
+  if (!withdrawal) throw new ApiError(404, "Withdrawal request not found");
+  if (withdrawal.status !== "FAILED_NEEDS_MANUAL_REVIEW") {
+    throw new ApiError(
+      400,
+      "Only payouts in FAILED_NEEDS_MANUAL_REVIEW can be resolved through this action",
+    );
+  }
+
+  if (action === "mark_completed") {
+    return markPayoutCompletedByAdmin(withdrawalId, adminId, reason);
+  }
+
+  return cancelPayoutByAdmin(
+    withdrawalId,
+    adminId,
+    reason ??
+      (action === "release_funds"
+        ? "Manual review — funds released to engineer"
+        : "Cancelled by admin during manual review"),
+  );
 }
 
 export async function cancelPayoutByAdmin(

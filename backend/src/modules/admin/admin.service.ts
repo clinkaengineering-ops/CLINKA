@@ -16,6 +16,15 @@ import {
   settleMaturedWalletTransactions,
 } from "../../utils/wallet";
 import { cacheGet, cacheSet } from "../../config/redis";
+import {
+  cancelPayoutByAdmin,
+  getPayoutAuditTrail,
+  markPayoutCompletedByAdmin,
+  reconcilePendingPayouts,
+  resolvePayoutManualReview,
+} from "../payouts/payout.service";
+import type { PayoutType, WithdrawalRequestStatus } from "../../generated/prisma/client";
+import { assertPayoutTransition } from "../payouts/payout.state";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
@@ -496,10 +505,18 @@ export async function getAllPayments(page = 1, limit = 20) {
   };
 }
 
-export async function getWithdrawalRequests(page = 1, limit = 20) {
+export async function getWithdrawalRequests(
+  page = 1,
+  limit = 20,
+  filters?: { status?: WithdrawalRequestStatus; payoutType?: PayoutType },
+) {
   const skip = (page - 1) * limit;
+  const where: { status?: WithdrawalRequestStatus; payoutType?: PayoutType } = {};
+  if (filters?.status) where.status = filters.status;
+  if (filters?.payoutType) where.payoutType = filters.payoutType;
   const [items, total] = await Promise.all([
     db.withdrawalRequest.findMany({
+      where,
       skip,
       take: limit,
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
@@ -507,16 +524,43 @@ export async function getWithdrawalRequests(page = 1, limit = 20) {
         user: { select: { id: true, name: true, email: true } },
       },
     }),
-    db.withdrawalRequest.count(),
+    db.withdrawalRequest.count({ where }),
   ]);
 
+  const itemsList = items.map((item) => {
+    const { 
+      ibanEncrypted, 
+      swiftBicEncrypted, 
+      bankAddressEncrypted,
+      accountHolderNameEncrypted,
+      ...safeItem 
+    } = item;
+    return safeItem;
+  });
+
   return {
-    items,
+    items: itemsList,
     total,
     page,
     limit,
     totalPages: Math.ceil(total / limit),
   };
+}
+
+function appendInternalNotes(
+  existing: string | null | undefined,
+  note?: string | null,
+): string | undefined {
+  const trimmed = note?.trim();
+  if (!trimmed) return existing ?? undefined;
+  return existing?.trim() ? `${existing.trim()}\n${trimmed}` : trimmed;
+}
+
+function isPaymobAutoPayout(item: {
+  payoutType: PayoutType;
+  paymobClientReference: string | null;
+}) {
+  return item.payoutType === "PAYMOB" || Boolean(item.paymobClientReference);
 }
 
 export async function updateWithdrawalRequestStatus(
@@ -532,8 +576,59 @@ export async function updateWithdrawalRequestStatus(
   });
   if (!item) throw new ApiError(404, "Withdrawal request not found");
 
-  if (item.status === "COMPLETED" || item.status === "REJECTED") {
+  if (item.payoutType === "IBAN") {
+    throw new ApiError(
+      400,
+      "International IBAN withdrawals must be managed via the dedicated approve, reject, initiate-transfer, and record-completion endpoints",
+    );
+  }
+
+  if (
+    item.status === "COMPLETED" ||
+    item.status === "REJECTED" ||
+    item.status === "CANCELLED" ||
+    item.status === "FAILED"
+  ) {
     throw new ApiError(400, "This withdrawal request is already finalized");
+  }
+
+  if (isPaymobAutoPayout(item)) {
+    if (input.status === "REJECTED" || input.status === "CANCELLED") {
+      const updated = await cancelPayoutByAdmin(
+        withdrawalId,
+        adminId,
+        input.adminNotes ?? "Rejected by admin",
+      );
+      await createNotification(
+        item.user.id,
+        "FUNDS_RELEASED",
+        "Withdrawal cancelled",
+        `Your withdrawal of ${item.amount} EGP was cancelled.${input.adminNotes ? ` ${input.adminNotes}` : ""}`,
+        "/balance",
+      );
+      return { ...updated, user: item.user };
+    }
+
+    if (input.status === "COMPLETED") {
+      const updated = await markPayoutCompletedByAdmin(
+        withdrawalId,
+        adminId,
+        input.adminNotes,
+      );
+      await createNotification(
+        item.user.id,
+        "FUNDS_RELEASED",
+        "Withdrawal completed",
+        `Your withdrawal of ${item.amount} EGP has been confirmed.`,
+        "/balance",
+      );
+      return { ...updated, user: item.user };
+    }
+
+    throw new ApiError(
+      400,
+      "Paymob auto-payouts can only be completed, rejected, or cancelled by admin",
+    );
   }
 
   const shouldFinalize = input.status === "COMPLETED";
@@ -555,6 +650,15 @@ export async function updateWithdrawalRequestStatus(
         where: { id: wallet.id },
         data: {
           availableBalance: { decrement: item.amount },
+        },
+      });
+    }
+
+    if (shouldReject) {
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          availableBalance: { increment: item.amount },
         },
       });
     }
@@ -610,6 +714,153 @@ export async function updateWithdrawalRequestStatus(
   }
 
   return updated;
+}
+
+export async function getWithdrawalAuditTrail(withdrawalId: number) {
+  const item = await db.withdrawalRequest.findUnique({
+    where: { id: withdrawalId },
+    select: { id: true },
+  });
+  if (!item) throw new ApiError(404, "Withdrawal request not found");
+  return getPayoutAuditTrail(withdrawalId);
+}
+
+export async function adminCancelWithdrawal(
+  withdrawalId: number,
+  adminId: number,
+  reason?: string,
+) {
+  const item = await db.withdrawalRequest.findUnique({
+    where: { id: withdrawalId },
+    include: { user: { select: { id: true, name: true, email: true } } },
+  });
+  if (!item) throw new ApiError(404, "Withdrawal request not found");
+
+  const updated = await cancelPayoutByAdmin(withdrawalId, adminId, reason);
+  await createNotification(
+    item.user.id,
+    "FUNDS_RELEASED",
+    "Withdrawal cancelled",
+    `Your withdrawal of ${item.amount} EGP was cancelled.${reason ? ` ${reason}` : ""}`,
+    "/balance",
+  );
+  return { ...updated, user: item.user };
+}
+
+export async function adminResolveWithdrawal(
+  withdrawalId: number,
+  adminId: number,
+  action: "release_funds" | "mark_completed" | "cancel",
+  reason?: string,
+) {
+  const item = await db.withdrawalRequest.findUnique({
+    where: { id: withdrawalId },
+    include: { user: { select: { id: true, name: true, email: true } } },
+  });
+  if (!item) throw new ApiError(404, "Withdrawal request not found");
+
+  const updated = await resolvePayoutManualReview(
+    withdrawalId,
+    adminId,
+    action,
+    reason,
+  );
+
+  const title =
+    action === "mark_completed"
+      ? "Withdrawal completed"
+      : "Withdrawal resolved";
+  const body =
+    action === "mark_completed"
+      ? `Your withdrawal of ${item.amount} EGP has been confirmed after manual review.`
+      : `Your withdrawal of ${item.amount} EGP was resolved after manual review.${reason ? ` ${reason}` : ""}`;
+
+  await createNotification(
+    item.user.id,
+    "FUNDS_RELEASED",
+    title,
+    body,
+    "/balance",
+  );
+
+  return { ...updated, user: item.user };
+}
+
+export async function adminTriggerPayoutReconciliation() {
+  return reconcilePendingPayouts(50);
+}
+
+export async function getPayoutStats() {
+  const now = new Date();
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [
+    total,
+    completed,
+    failed,
+    processing,
+    manualReview,
+    volume24h,
+    volume30d,
+    completed30d,
+    failed30d,
+  ] = await Promise.all([
+    db.withdrawalRequest.count(),
+    db.withdrawalRequest.count({ where: { status: "COMPLETED" } }),
+    db.withdrawalRequest.count({
+      where: { status: { in: ["FAILED", "REJECTED", "CANCELLED"] } },
+    }),
+    db.withdrawalRequest.count({
+      where: {
+        status: {
+          in: [
+            "PENDING",
+            "PENDING_REVIEW",
+            "APPROVED",
+            "TRANSFER_INITIATED",
+            "SUBMITTED",
+            "PROCESSING",
+          ],
+        },
+      },
+    }),
+    db.withdrawalRequest.count({
+      where: { status: "FAILED_NEEDS_MANUAL_REVIEW" },
+    }),
+    db.withdrawalRequest.aggregate({
+      where: { createdAt: { gte: last24h }, status: "COMPLETED" },
+      _sum: { amount: true },
+    }),
+    db.withdrawalRequest.aggregate({
+      where: { createdAt: { gte: last30d }, status: "COMPLETED" },
+      _sum: { amount: true },
+    }),
+    db.withdrawalRequest.count({
+      where: { createdAt: { gte: last30d }, status: "COMPLETED" },
+    }),
+    db.withdrawalRequest.count({
+      where: {
+        createdAt: { gte: last30d },
+        status: { in: ["FAILED", "REJECTED", "CANCELLED"] },
+      },
+    }),
+  ]);
+
+  const settled30d = completed30d + failed30d;
+  const successRate =
+    settled30d > 0 ? Math.round((completed30d / settled30d) * 1000) / 10 : 0;
+
+  return {
+    total,
+    completed,
+    failed,
+    processing,
+    manualReview,
+    volume24h: toNumber(volume24h._sum.amount ?? 0),
+    volume30d: toNumber(volume30d._sum.amount ?? 0),
+    successRate,
+  };
 }
 
 export async function overridePaymentStatus(paymentId: number, status: "RELEASED" | "REFUNDED") {
@@ -1046,6 +1297,294 @@ export async function updateSupportTicket(
       resolvedBy: { select: { id: true, name: true } },
     },
   });
+}
+
+export async function revealWithdrawalBankDetails(
+  withdrawalId: number,
+  adminId: number,
+  adminIp?: string,
+  adminUserAgent?: string,
+) {
+  const item = await db.withdrawalRequest.findUnique({
+    where: { id: withdrawalId },
+    select: { 
+      id: true,
+      payoutType: true,
+      bankName: true,
+      country: true,
+      accountHolderNameEncrypted: true,
+      ibanEncrypted: true,
+      swiftBicEncrypted: true,
+      bankAddressEncrypted: true,
+    }
+  });
+
+  if (!item || item.payoutType !== "IBAN") {
+    throw new ApiError(404, "International withdrawal request not found");
+  }
+
+  const { decryptSensitiveField } = await import("../../utils/fieldEncryption");
+  
+  const decrypted = {
+    bankName: item.bankName,
+    country: item.country,
+    accountHolderName: item.accountHolderNameEncrypted ? decryptSensitiveField(item.accountHolderNameEncrypted) : null,
+    iban: item.ibanEncrypted ? decryptSensitiveField(item.ibanEncrypted) : null,
+    swiftBic: item.swiftBicEncrypted ? decryptSensitiveField(item.swiftBicEncrypted) : null,
+    bankAddress: item.bankAddressEncrypted ? decryptSensitiveField(item.bankAddressEncrypted) : null,
+  };
+
+  const { logPayoutEvent } = await import("../payouts/payout.audit");
+  await logPayoutEvent(db as any, {
+    withdrawalId,
+    event: "ADMIN_VIEWED_BANK_DETAILS",
+    actorId: adminId,
+    actorIp: adminIp,
+    actorUserAgent: adminUserAgent,
+  });
+
+  return decrypted;
+}
+
+export async function approveInternationalWithdrawal(withdrawalId: number, adminId: number, notes?: string) {
+  const updated = await db.$transaction(async (tx) => {
+    const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
+    if (!item || item.payoutType !== "IBAN") {
+      throw new ApiError(404, "International withdrawal request not found");
+    }
+    assertPayoutTransition(item.status, "APPROVED");
+
+    const result = await tx.withdrawalRequest.updateMany({
+      where: { id: withdrawalId, payoutType: "IBAN", status: "PENDING_REVIEW" },
+      data: {
+        status: "APPROVED",
+        approvedAt: new Date(),
+        approvedById: adminId,
+        internalNotes: appendInternalNotes(item.internalNotes, notes),
+      },
+    });
+    if (result.count === 0) {
+      throw new ApiError(400, "Withdrawal is not pending review or was already processed");
+    }
+
+    const updatedRow = await tx.withdrawalRequest.findUniqueOrThrow({
+      where: { id: withdrawalId },
+    });
+
+    const { logPayoutEvent } = await import("../payouts/payout.audit");
+    await logPayoutEvent(tx as any, {
+      withdrawalId,
+      event: "ADMIN_APPROVED",
+      statusBefore: "PENDING_REVIEW",
+      statusAfter: "APPROVED",
+      actorId: adminId,
+      message: notes,
+    });
+
+    return updatedRow;
+  });
+
+  await createNotification(
+    updated.userId,
+    "FUNDS_HELD",
+    "Withdrawal approved",
+    `Your international withdrawal of ${updated.amount} EGP was approved and is awaiting transfer.`,
+    "/balance",
+  );
+
+  return updated;
+}
+
+export async function rejectInternationalWithdrawal(withdrawalId: number, adminId: number, reason: string, notes?: string) {
+  const updated = await db.$transaction(async (tx) => {
+    const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
+    if (!item || item.payoutType !== "IBAN") {
+      throw new ApiError(404, "International withdrawal request not found");
+    }
+    assertPayoutTransition(item.status, "REJECTED");
+
+    const result = await tx.withdrawalRequest.updateMany({
+      where: { id: withdrawalId, payoutType: "IBAN", status: "PENDING_REVIEW" },
+      data: {
+        status: "REJECTED",
+        rejectedAt: new Date(),
+        rejectedById: adminId,
+        rejectionReason: reason,
+        internalNotes: appendInternalNotes(item.internalNotes, notes),
+        processedAt: new Date(),
+      },
+    });
+    if (result.count === 0) {
+      throw new ApiError(400, "Withdrawal is not pending review or was already processed");
+    }
+
+    const { lockWalletForUpdate } = await import("../../utils/wallet");
+    const wallet = await lockWalletForUpdate(tx, item.userId);
+
+    await tx.walletTransaction.updateMany({
+      where: { relatedWithdrawalId: withdrawalId, type: "WITHDRAWAL" },
+      data: { status: "REJECTED" },
+    });
+
+    await tx.wallet.update({
+      where: { id: wallet.id },
+      data: { 
+        availableBalance: { increment: Number(item.amount) },
+        version: { increment: 1 }
+      },
+    });
+
+    const updatedRow = await tx.withdrawalRequest.findUniqueOrThrow({
+      where: { id: withdrawalId },
+    });
+
+    const { logPayoutEvent } = await import("../payouts/payout.audit");
+    await logPayoutEvent(tx as any, {
+      withdrawalId,
+      event: "ADMIN_REJECTED",
+      statusBefore: "PENDING_REVIEW",
+      statusAfter: "REJECTED",
+      actorId: adminId,
+      message: reason,
+      metadata: { notes },
+    });
+    await logPayoutEvent(tx as any, {
+      withdrawalId,
+      event: "BALANCE_RELEASED",
+      statusBefore: "PENDING_REVIEW",
+      statusAfter: "REJECTED",
+      actorId: adminId,
+      message: String(item.amount),
+    });
+
+    return updatedRow;
+  });
+
+  await createNotification(
+    updated.userId,
+    "FUNDS_RELEASED",
+    "Withdrawal rejected",
+    `Your international withdrawal of ${updated.amount} EGP was rejected. ${reason}`,
+    "/balance",
+  );
+
+  return updated;
+}
+
+export async function initiateTransfer(withdrawalId: number, adminId: number, externalReference: string, notes?: string) {
+  const updated = await db.$transaction(async (tx) => {
+    const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
+    if (!item || item.payoutType !== "IBAN") {
+      throw new ApiError(404, "International withdrawal request not found");
+    }
+    assertPayoutTransition(item.status, "TRANSFER_INITIATED");
+
+    const result = await tx.withdrawalRequest.updateMany({
+      where: { id: withdrawalId, payoutType: "IBAN", status: "APPROVED" },
+      data: {
+        status: "TRANSFER_INITIATED",
+        externalReference,
+        internalNotes: appendInternalNotes(item.internalNotes, notes),
+      },
+    });
+    if (result.count === 0) {
+      throw new ApiError(400, "Withdrawal is not approved or was already processed");
+    }
+
+    const updatedRow = await tx.withdrawalRequest.findUniqueOrThrow({
+      where: { id: withdrawalId },
+    });
+
+    const { logPayoutEvent } = await import("../payouts/payout.audit");
+    await logPayoutEvent(tx as any, {
+      withdrawalId,
+      event: "TRANSFER_INITIATED",
+      statusBefore: "APPROVED",
+      statusAfter: "TRANSFER_INITIATED",
+      actorId: adminId,
+      metadata: { externalReference, notes },
+    });
+
+    return updatedRow;
+  });
+
+  await createNotification(
+    updated.userId,
+    "FUNDS_HELD",
+    "Transfer initiated",
+    `Your international withdrawal of ${updated.amount} EGP transfer has been initiated (ref: ${externalReference}).`,
+    "/balance",
+  );
+
+  return updated;
+}
+
+export async function recordCompletion(withdrawalId: number, adminId: number, notes?: string) {
+  const updated = await db.$transaction(async (tx) => {
+    const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
+    if (!item || item.payoutType !== "IBAN") {
+      throw new ApiError(404, "International withdrawal request not found");
+    }
+    assertPayoutTransition(item.status, "COMPLETED");
+
+    const result = await tx.withdrawalRequest.updateMany({
+      where: {
+        id: withdrawalId,
+        payoutType: "IBAN",
+        status: { in: ["TRANSFER_INITIATED", "PROCESSING"] },
+      },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        completedById: adminId,
+        internalNotes: appendInternalNotes(item.internalNotes, notes),
+        processedAt: new Date(),
+      },
+    });
+    if (result.count === 0) {
+      throw new ApiError(400, "Withdrawal transfer has not been initiated or was already completed");
+    }
+
+    await tx.walletTransaction.updateMany({
+      where: { relatedWithdrawalId: withdrawalId, type: "WITHDRAWAL" },
+      data: { status: "COMPLETED" },
+    });
+
+    const { lockWalletForUpdate } = await import("../../utils/wallet");
+    const wallet = await lockWalletForUpdate(tx, item.userId);
+    await tx.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        version: { increment: 1 }
+      }
+    });
+
+    const updatedRow = await tx.withdrawalRequest.findUniqueOrThrow({
+      where: { id: withdrawalId },
+    });
+
+    const { logPayoutEvent } = await import("../payouts/payout.audit");
+    await logPayoutEvent(tx as any, {
+      withdrawalId,
+      event: "COMPLETED",
+      statusBefore: item.status,
+      statusAfter: "COMPLETED",
+      actorId: adminId,
+      message: notes,
+    });
+
+    return updatedRow;
+  });
+
+  await createNotification(
+    updated.userId,
+    "FUNDS_RELEASED",
+    "Withdrawal completed",
+    `Your international withdrawal of ${updated.amount} EGP has been completed.`,
+    "/balance",
+  );
+
+  return updated;
 }
 
 

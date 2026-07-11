@@ -1,5 +1,23 @@
 import { z } from "zod";
 import { phoneField, addressField } from "../../utils/fields";
+import {
+  isValidCountryCode,
+  normalizeCountryCode,
+} from "../../utils/countryCodes";
+import {
+  ACCOUNT_HOLDER_NAME_MESSAGE,
+  isValidAccountHolderName,
+  normalizeAccountHolderName,
+} from "../../utils/accountHolderName";
+
+function accountHolderNameField(label = "Account holder name") {
+  return z
+    .string()
+    .trim()
+    .max(100, `${label} is too long`)
+    .transform(normalizeAccountHolderName)
+    .refine(isValidAccountHolderName, ACCOUNT_HOLDER_NAME_MESSAGE);
+}
 
 export const initiateCheckoutSchema = z.object({
   paymentMethodId: z.coerce
@@ -108,18 +126,22 @@ export const autoWithdrawalSchema = z.discriminatedUnion("channel", [
     accountNumber: z
       .string()
       .trim()
-      .min(6, "Account number or IBAN is too short")
-      .max(34, "Account number or IBAN is too long"),
+      .transform((value) => value.replace(/\s+/g, "").toUpperCase())
+      .refine(
+        (value) => value.length >= 15 && value.length <= 34,
+        "IBAN must be between 15 and 34 characters",
+      )
+      .refine(isValidIban, "Enter a valid IBAN for this bank account")
+      .refine(
+        (value) => value.startsWith("EG"),
+        "Egyptian bank transfers require an IBAN starting with EG",
+      ),
     bankCode: z
       .string()
       .trim()
       .min(2, "Bank code is required")
       .max(10, "Bank code is too long"),
-    fullName: z
-      .string()
-      .trim()
-      .min(3, "Full name is required for bank transfers")
-      .max(100, "Full name is too long"),
+    fullName: accountHolderNameField("Account holder name"),
     nationalId: z
       .string()
       .trim()
@@ -130,3 +152,63 @@ export const autoWithdrawalSchema = z.discriminatedUnion("channel", [
 ]);
 
 export type AutoWithdrawalInput = z.infer<typeof autoWithdrawalSchema>;
+
+
+
+function normalizeIban(value: string) {
+  return value.replace(/\s+/g, "").toUpperCase();
+}
+
+function isValidIban(iban: string) {
+  const normalized = normalizeIban(iban);
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(normalized)) return false;
+  const rearranged = normalized.slice(4) + normalized.slice(0, 4);
+  const numeric = rearranged
+    .split("")
+    .map((ch) => (ch >= "A" && ch <= "Z" ? (ch.charCodeAt(0) - 55).toString() : ch))
+    .join("");
+  let remainder = numeric;
+  while (remainder.length > 2) {
+    const block = remainder.slice(0, 9);
+    remainder = (Number(block) % 97).toString() + remainder.slice(block.length);
+  }
+  return Number(remainder) % 97 === 1;
+}
+
+export const internationalWithdrawalSchema = z.object({
+  amount: z.coerce
+    .number({ error: "Amount is required" })
+    .positive("Amount must be greater than zero"),
+  iban: z
+    .string()
+    .trim()
+    .min(15, "IBAN is too short")
+    .max(34, "IBAN is too long")
+    .refine((value) => isValidIban(value), "Enter a valid IBAN"),
+  accountHolderName: accountHolderNameField("Account holder name"),
+  bankName: z
+    .string()
+    .trim()
+    .min(2, "Bank name is required")
+    .max(120, "Bank name is too long"),
+  country: z
+    .string()
+    .trim()
+    .min(2, "Country is required")
+    .transform((value) => normalizeCountryCode(value))
+    .refine(
+      (value) => isValidCountryCode(value),
+      "Country must be a 2-letter ISO code (e.g. GB, DE, US). Common names like UK are accepted.",
+    ),
+  swiftBic: z
+    .string()
+    .trim()
+    .regex(/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/i, "Invalid SWIFT/BIC code")
+    .optional()
+    .or(z.literal("")),
+  bankAddress: z.string().trim().max(200, "Bank address is too long").optional(),
+});
+
+export type InternationalWithdrawalInput = z.infer<
+  typeof internationalWithdrawalSchema
+>;

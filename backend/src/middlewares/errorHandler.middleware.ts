@@ -6,14 +6,6 @@ import { formatZodError } from "../utils/zodErrors";
 import { resolveUploadError } from "../utils/uploadErrors";
 
 export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
-  const uploadErr = resolveUploadError(err);
-  if (uploadErr) {
-    res
-      .status(uploadErr.statusCode)
-      .json(ApiResponse(uploadErr.statusCode, uploadErr.message));
-    return;
-  }
-
   if (err instanceof ApiError) {
     res.status(err.statusCode).json(ApiResponse(err.statusCode, err.message));
     return;
@@ -25,6 +17,14 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
       ...ApiResponse(400, message, { errors }),
       errors,
     });
+    return;
+  }
+
+  const uploadErr = resolveUploadError(err);
+  if (uploadErr) {
+    res
+      .status(uploadErr.statusCode)
+      .json(ApiResponse(uploadErr.statusCode, uploadErr.message));
     return;
   }
 

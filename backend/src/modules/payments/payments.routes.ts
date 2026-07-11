@@ -4,7 +4,7 @@ import {
   authorize,
 } from "../../middlewares/auth.middleware";
 import {
-  createEngineerAutoWithdrawalController,
+  createEngineerWithdrawalController,
   paymobWebhookController,
   paymobPayoutWebhookController,
   getPaymentByGatewayController,
@@ -65,11 +65,11 @@ router.get(
 import { payoutRateLimit } from "../../middlewares/payoutRateLimit";
 
 router.post(
-  "/engineer/withdrawals/auto",
+  "/engineer/withdrawals",
   authenticate,
   authorize("ENGINEER"),
   payoutRateLimit,
-  createEngineerAutoWithdrawalController,
+  createEngineerWithdrawalController,
 );
 router.get(
   "/escrow/:paymentId",

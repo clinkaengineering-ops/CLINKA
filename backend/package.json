@@ -13,7 +13,10 @@
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate deploy",
     "db:test": "ts-node src/test-db.ts",
-    "db:setup": "npm run db:up && npm run db:migrate"
+    "db:setup": "npm run db:up && npm run db:migrate",
+    "test": "node --require ts-node/register --test src/modules/payouts/payout.state.test.ts",
+    "test:payouts": "npm run test",
+    "verify:paymob": "ts-node scripts/verify-paymob-payout-e2e.ts"
   },
   "engines": {
     "node": ">=20"

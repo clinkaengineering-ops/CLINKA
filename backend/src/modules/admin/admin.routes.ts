@@ -32,6 +32,16 @@ import {
   updateSupportTicketController,
   getWithdrawalRequestsController,
   updateWithdrawalRequestStatusController,
+  getWithdrawalAuditTrailController,
+  adminCancelWithdrawalController,
+  adminResolveWithdrawalController,
+  adminReconcilePayoutsController,
+  getPayoutStatsController,
+  adminRevealBankDetailsController,
+  adminApproveWithdrawalController,
+  adminRejectWithdrawalController,
+  adminInitiateTransferController,
+  adminRecordCompletionController,
 } from "./admin.controller";
 
 const router = Router();
@@ -78,6 +88,16 @@ router.get("/support-tickets", getSupportTicketsController);
 router.patch("/support-tickets/:ticketId", updateSupportTicketController);
 
 router.get("/withdrawals", getWithdrawalRequestsController);
+router.get("/withdrawals/stats", getPayoutStatsController);
+router.get("/withdrawals/:withdrawalId/audit", getWithdrawalAuditTrailController);
 router.patch("/withdrawals/:withdrawalId", updateWithdrawalRequestStatusController);
+router.post("/withdrawals/:withdrawalId/cancel", adminCancelWithdrawalController);
+router.post("/withdrawals/:withdrawalId/resolve", adminResolveWithdrawalController);
+router.post("/withdrawals/:withdrawalId/reveal-bank-details", adminRevealBankDetailsController);
+router.post("/withdrawals/:withdrawalId/approve", adminApproveWithdrawalController);
+router.post("/withdrawals/:withdrawalId/reject", adminRejectWithdrawalController);
+router.post("/withdrawals/:withdrawalId/initiate-transfer", adminInitiateTransferController);
+router.post("/withdrawals/:withdrawalId/record-completion", adminRecordCompletionController);
+router.post("/payouts/reconcile", adminReconcilePayoutsController);
 
 export default router;

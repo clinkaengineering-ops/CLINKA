@@ -84,7 +84,7 @@ export const howItWorksSteps: LandingStep[] = [
 ];
 
 export const landingStats: LandingStat[] = [
-  { id: "budget", labelKey: "stat.budget", value: "$3.4M" },
+  { id: "budget", labelKey: "stat.budget", value: "3.4M EGP" },
   { id: "timeline", labelKey: "stat.timeline", value: "12 weeks" },
   { id: "bids", labelKey: "stat.bids", value: "124+ bids" },
 ];

@@ -1,23 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getApiErrorMessage } from "@/lib/apiErrors";
 import { fetchEngineerBalance } from "../api/payments.api";
 import type { EngineerBalanceSummary } from "../types";
 
-function axiosMessage(err: unknown): string {
-  const e = err as {
-    response?: { data?: { message?: string } };
-    message?: string;
-  };
-  return e?.response?.data?.message ?? e?.message ?? "Request failed";
-}
-
 const emptyBalance: EngineerBalanceSummary = {
   availableBalance: 0,
+  spendableBalance: 0,
+  heldInWithdrawals: 0,
   pendingBalance: 0,
   securedBalance: 0,
   awaitingClientPayment: 0,
   transactions: [],
+  walletHistory: [],
   withdrawalRequests: [],
 };
 
@@ -32,7 +28,7 @@ export function useEngineerBalance() {
     try {
       setBalance(await fetchEngineerBalance());
     } catch (err) {
-      setError(axiosMessage(err));
+      setError(getApiErrorMessage(err, "Request failed"));
       setBalance(emptyBalance);
     } finally {
       setLoading(false);

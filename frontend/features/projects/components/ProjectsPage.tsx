@@ -5,6 +5,7 @@ import { Button, Card } from "@/components/UI";
 import { IconFilter, IconSearch, IconBriefcase, IconArrow } from "@/components/Icons";
 import { cn } from "@/utils/cn";
 import { useI18n } from "@/i18n";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { useProjects } from "../hooks/useProjects";
 import { PostProjectModal } from "./PostProjectModal";
 import { Badge } from "@/components/UI";
@@ -146,7 +147,7 @@ export function ProjectsPage() {
                   </div>
                   <p className="mt-1 text-sm text-slate-500 line-clamp-2">{p.description}</p>
                   <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
-                    <span>${p.budget.toLocaleString()}</span>
+                    <span>{formatMoney(p.budget)}</span>
                     <span>·</span>
                     <span>{p._count?.bids ?? 0} {t("common.bids")}</span>
                     <span>·</span>

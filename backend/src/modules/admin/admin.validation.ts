@@ -40,11 +40,71 @@ export const updateSupportTicketSchema = z.object({
 });
 
 export const updateWithdrawalRequestSchema = z.object({
-  status: z.enum(["PENDING", "PROCESSING", "COMPLETED", "REJECTED"]),
+  status: z.enum([
+    "PENDING",
+    "PENDING_REVIEW",
+    "APPROVED",
+    "TRANSFER_INITIATED",
+    "SUBMITTED",
+    "PROCESSING",
+    "COMPLETED",
+    "FAILED",
+    "CANCELLED",
+    "REJECTED",
+    "FAILED_NEEDS_MANUAL_REVIEW",
+  ]),
   adminNotes: z.string().trim().max(1000).optional(),
+});
+
+export const resolveWithdrawalSchema = z.object({
+  action: z.enum(["release_funds", "mark_completed", "cancel"]),
+  reason: z.string().trim().max(1000).optional(),
+});
+
+export const cancelWithdrawalSchema = z.object({
+  reason: z.string().trim().max(1000).optional(),
+});
+
+export const withdrawalListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z
+    .enum([
+      "PENDING",
+      "PENDING_REVIEW",
+      "APPROVED",
+      "TRANSFER_INITIATED",
+      "SUBMITTED",
+      "PROCESSING",
+      "COMPLETED",
+      "FAILED",
+      "CANCELLED",
+      "REVERSED",
+      "REJECTED",
+      "FAILED_NEEDS_MANUAL_REVIEW",
+    ])
+    .optional(),
+  payoutType: z.enum(["PAYMOB", "IBAN"]).optional(),
 });
 
 export type UpdateSupportTicketInput = z.infer<typeof updateSupportTicketSchema>;
 export type UpdateWithdrawalRequestInput = z.infer<
   typeof updateWithdrawalRequestSchema
 >;
+export type ResolveWithdrawalInput = z.infer<typeof resolveWithdrawalSchema>;
+export type CancelWithdrawalInput = z.infer<typeof cancelWithdrawalSchema>;
+
+export const approveWithdrawalSchema = z.object({
+  notes: z.string().trim().max(1000).optional(),
+});
+export const rejectWithdrawalSchema = z.object({
+  reason: z.string().trim().min(3).max(1000),
+  notes: z.string().trim().max(1000).optional(),
+});
+export const initiateTransferSchema = z.object({
+  externalReference: z.string().trim().min(3).max(255),
+  notes: z.string().trim().max(1000).optional(),
+});
+export const recordCompletionSchema = z.object({
+  notes: z.string().trim().max(1000).optional(),
+});

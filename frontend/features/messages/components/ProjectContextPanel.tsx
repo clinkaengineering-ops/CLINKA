@@ -22,6 +22,7 @@ import {
   STATUS_LABEL_KEYS,
 } from "@/features/projects/utils/projectStatus";
 import { MessagesPolicyNotice } from "./MessagesPolicyNotice";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 
 interface ProjectPayment {
   id: number;
@@ -33,14 +34,6 @@ interface ProjectPayment {
 interface ProjectContextPanelProps {
   conversation: ConversationListItem | null;
   onProjectUpdated?: () => void | Promise<void>;
-}
-
-function formatAmount(amount: number) {
-  return new Intl.NumberFormat("en-EG", {
-    style: "currency",
-    currency: "EGP",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export function ProjectContextPanel({
@@ -261,7 +254,7 @@ export function ProjectContextPanel({
               {isClient ? t("pay.escrowFunded") : t("bal.status.in_progress")}
             </p>
             <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mt-1">
-              {formatAmount(
+              {formatMoney(
                 isEngineer ? payment.amount - payment.commission : payment.amount,
               )}
             </p>
@@ -285,7 +278,7 @@ export function ProjectContextPanel({
               {t("pay.released")}
             </p>
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-1">
-              {formatAmount(payment.amount - payment.commission)}
+              {formatMoney(payment.amount - payment.commission)}
             </p>
           </div>
         )}

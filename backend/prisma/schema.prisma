@@ -96,8 +96,16 @@ enum WalletTransactionStatus {
   REJECTED
 }
 
+enum PayoutType {
+  PAYMOB
+  IBAN
+}
+
 enum WithdrawalRequestStatus {
   PENDING
+  PENDING_REVIEW
+  APPROVED
+  TRANSFER_INITIATED
   SUBMITTED
   PROCESSING
   COMPLETED
@@ -122,6 +130,11 @@ enum PayoutAuditEvent {
   BALANCE_RELEASED
   ADMIN_OVERRIDE
   RECONCILIATION
+  ADMIN_APPROVED
+  ADMIN_REJECTED
+  ADMIN_VIEWED_BANK_DETAILS
+  TRANSFER_INITIATED
+  IDEMPOTENT_REQUEST_REUSED
 }
 
 model User {
@@ -380,6 +393,7 @@ model Wallet {
   userId          Int      @unique
   availableBalance Decimal @default(0) @db.Decimal(18, 2)
   pendingBalance   Decimal @default(0) @db.Decimal(18, 2)
+  version         Int      @default(1)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -408,19 +422,41 @@ model WithdrawalRequest {
   amount                  Decimal                 @db.Decimal(18, 2)
   method                  String
   accountNumber           String
+  payoutType              PayoutType              @default(PAYMOB)
+  currency                String                  @default("EGP") // Wallet settlement currency. Currently always EGP. Reserved for future multi-currency support.
+  country                 String?
+  bankName                String?
+  accountHolderName       String?
+  accountHolderNameEncrypted String?
+  ibanEncrypted           String?
+  swiftBic                String?
+  swiftBicEncrypted       String?
+  bankAddress             String?
+  bankAddressEncrypted    String?
   status                  WithdrawalRequestStatus @default(PENDING)
   adminNotes              String?
+  internalNotes           String?
   paymobTransactionId     String?
   paymobDisbursementStatus String?
   paymobStatusDescription String?
   paymobClientReference   String?                 @unique
+  externalReference       String?
   idempotencyKey          String?
   retryCount              Int                     @default(0)
   failureReason           String?
+  rejectionReason         String?
   balanceHeldAt           DateTime?
   submittedAt             DateTime?
   lastInquiryAt           DateTime?
   processedAt             DateTime?
+  approvedAt              DateTime?
+  approvedById            Int?
+  completedAt             DateTime?
+  completedById           Int?
+  rejectedAt              DateTime?
+  rejectedById            Int?
+  reconciledAt            DateTime?
+  reconciledById          Int?
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 

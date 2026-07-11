@@ -1,4 +1,6 @@
 import db from "../../config/db";
+import { sanitizeWithdrawalForEngineer } from "../payouts/payout.presenter";
+import { BALANCE_HELD_STATUSES } from "../payouts/payout.state";
 import { getClientUrl } from "../../config/clientUrl";
 import {
   buildPaymobCheckoutUrl,
@@ -28,7 +30,6 @@ import {
   parseCheckoutReturnQuery,
 } from "./checkoutReturnQuery";
 import {
-  createEngineerPayout,
   getLegacyReservedWithdrawalAmount,
 } from "../payouts/payout.service";
 import {
@@ -872,7 +873,7 @@ export async function getEngineerBalance(engineerUserId: number) {
   const heldInWithdrawals = await db.withdrawalRequest.aggregate({
     where: {
       userId: engineerUserId,
-      status: { in: ["PENDING", "SUBMITTED", "PROCESSING"] },
+      status: { in: [...BALANCE_HELD_STATUSES] },
       balanceHeldAt: { not: null },
     },
     _sum: { amount: true },
@@ -892,7 +893,7 @@ export async function getEngineerBalance(engineerUserId: number) {
     awaitingClientPayment,
     transactions,
     walletHistory,
-    withdrawalRequests,
+    withdrawalRequests: withdrawalRequests.map(sanitizeWithdrawalForEngineer),
   };
 }
 
@@ -989,18 +990,29 @@ export async function listEngineerWithdrawalRequests(engineerUserId: number) {
     settleMaturedWalletTransactions(tx, engineerUserId),
   );
 
-  return db.withdrawalRequest.findMany({
+  const rows = await db.withdrawalRequest.findMany({
     where: { userId: engineerUserId },
     orderBy: { createdAt: "desc" },
   });
+  return rows.map(sanitizeWithdrawalForEngineer);
 }
 
-export async function createEngineerAutoWithdrawal(
+export async function createWithdrawalRequest(
   engineerUserId: number,
-  input: AutoWithdrawalInput,
-  options?: { idempotencyKey?: string },
+  payoutMethod: "PAYMOB" | "IBAN",
+  input: import("./payments.validation").AutoWithdrawalInput | import("./payments.validation").InternationalWithdrawalInput,
+  idempotencyKey: string,
 ) {
-  return createEngineerPayout(engineerUserId, input, options);
+  const { createPaymobPayout, createIbanPayout } = await import("../payouts/payout.service");
+  switch (payoutMethod) {
+    case "PAYMOB":
+      return createPaymobPayout(engineerUserId, input as import("./payments.validation").AutoWithdrawalInput, { idempotencyKey });
+    case "IBAN":
+      return createIbanPayout(engineerUserId, input as import("./payments.validation").InternationalWithdrawalInput, { idempotencyKey });
+    default:
+      const ApiError = (await import("../../utils/ApiError")).default;
+      throw new ApiError(400, `Unsupported payout method: ${payoutMethod}`);
+  }
 }
 
 export async function listEngineerEscrow(engineerUserId: number) {

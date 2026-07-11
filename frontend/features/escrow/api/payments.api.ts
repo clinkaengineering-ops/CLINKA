@@ -132,14 +132,17 @@ export const verifyCheckoutReturn = (payload: {
 export const verifyPayment = (paymentId: number): Promise<unknown> =>
   unwrap(api.post<ApiResponse<unknown>>(`/payments/${paymentId}/verify`));
 
-/** POST /payments/engineer/withdrawals/auto — Paymob instant payout */
-export const createEngineerAutoWithdrawal = (
-  payload: import("../types").AutoWithdrawalPayload,
+export const createEngineerWithdrawal = (
+  payload: import("../types").UnifiedWithdrawalPayload,
+  idempotencyKey?: string,
 ): Promise<import("../types").WithdrawalRequest> =>
   unwrap(
     api.post<ApiResponse<import("../types").WithdrawalRequest>>(
-      `/payments/engineer/withdrawals/auto`,
+      `/payments/engineer/withdrawals`,
       payload,
+      idempotencyKey
+        ? { headers: { "Idempotency-Key": idempotencyKey } }
+        : undefined,
     ),
   );
 

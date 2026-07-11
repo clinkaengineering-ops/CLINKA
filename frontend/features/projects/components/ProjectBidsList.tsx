@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge, Button } from "@/components/UI";
 import { IconCheck } from "@/components/Icons";
 import { useI18n } from "@/i18n";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { approveBid } from "@/features/bids/api/bids.api";
 import type { Project, ProjectBid } from "../api/project.api";
 
@@ -77,7 +78,7 @@ export function ProjectBidsList({
             <div>
               <p className="font-semibold">{bid.engineer.user.name}</p>
               <p className="text-xs text-slate-500 mt-0.5">
-                ${bid.price.toLocaleString()} · {bid.duration}
+                {formatMoney(bid.price)} · {bid.duration}
               </p>
               <p className="mt-2 text-slate-600 dark:text-slate-400">{bid.description}</p>
             </div>

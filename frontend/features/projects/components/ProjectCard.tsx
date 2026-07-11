@@ -14,6 +14,7 @@ import {
 } from "../../../components/Icons";
 import { useI18n } from "../../../i18n";
 import { cn } from "../../../utils/cn";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { useProjects } from "../hooks/useProjects";
 import type { Project, ServiceType } from "../api/project.api";
 import { isReviewableStatus } from "../utils/projectStatus";
@@ -63,8 +64,8 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
 
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
         <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-          <IconWallet width={14} height={14} className="text-electric-500" />$
-          {project.budget.toLocaleString()}
+          <IconWallet width={14} height={14} className="text-electric-500" />
+          {formatMoney(project.budget)}
         </span>
         <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
           <IconLocation width={14} height={14} className="text-electric-500" />

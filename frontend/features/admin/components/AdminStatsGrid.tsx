@@ -5,13 +5,7 @@ import { IconUsers, IconWallet, IconShield, IconAlert } from "@/components/Icons
 import { useI18n } from "@/i18n";
 import type { AdminStats } from "../api/admin.api";
 
-function formatMoney(n: number) {
-  return new Intl.NumberFormat("en-EG", {
-    style: "currency",
-    currency: "EGP",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 
 interface Props {
   stats: AdminStats;

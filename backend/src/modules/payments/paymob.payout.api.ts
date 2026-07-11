@@ -59,20 +59,65 @@ interface PaymobTokenResponse {
   token_type: string;
 }
 
-function formatPaymobPayoutError(message: unknown, status: number): string {
-  if (typeof message === "string" && message.trim()) return message;
-  if (message && typeof message === "object") {
-    const obj = message as Record<string, unknown>;
-    if (typeof obj.status_description === "string") return obj.status_description;
-    if (typeof obj.error_description === "string") return obj.error_description;
-    if (typeof obj.detail === "string") return obj.detail;
-    const parts = Object.entries(obj).map(([key, value]) => {
-      const text = Array.isArray(value) ? value.join(", ") : String(value);
-      return `${key}: ${text}`;
-    });
-    if (parts.length) return parts.join("; ");
+export function humanizePaymobPayoutError(
+  description: string,
+  context?: { channel?: "mobile_wallet" | "bank_transfer" },
+): string {
+  let trimmed = description.trim().replace(/^non_field_errors:\s*/i, "");
+  trimmed = trimmed.replace(/\s*\[ErrorDetail[^\]]*\]/gi, "").trim();
+
+  if (
+    /bank_card_number.*IBAN|IBAN must be between 15 and 34/i.test(trimmed)
+  ) {
+    return "Enter a valid Egyptian IBAN (29 characters, starting with EG) for bank transfers.";
   }
-  return `Paymob payout request failed (${status})`;
+
+  if (/full_name.*at least 10 characters/i.test(trimmed)) {
+    return "Enter the account holder's full legal first and last name exactly as it appears on the bank account.";
+  }
+
+  if (/Process stopped during an internal error/i.test(trimmed)) {
+    if (context?.channel === "bank_transfer") {
+      return "Paymob could not process this bank transfer. Check the account number/IBAN, selected bank, and that the account holder name and national ID match your bank records.";
+    }
+    return "Paymob could not complete this withdrawal. Please try again or contact support if the problem continues.";
+  }
+
+  if (!trimmed || /^HTTP Error\.?(\s*HTTP Error\.?)*$/i.test(trimmed)) {
+    if (context?.channel === "bank_transfer") {
+      return "Paymob could not send funds to this bank account. Verify the account number, bank code, and that the name and national ID match your bank records.";
+    }
+    return "Paymob could not send funds to this wallet number. Use a Vodafone (010), Etisalat (011), or Orange (012) number registered in your name with the same national ID.";
+  }
+
+  return trimmed;
+}
+
+function formatPaymobPayoutError(
+  message: unknown,
+  status: number,
+  context?: { channel?: "mobile_wallet" | "bank_transfer" },
+): string {
+  let raw: string;
+  if (typeof message === "string" && message.trim()) {
+    raw = message;
+  } else if (message && typeof message === "object") {
+    const obj = message as Record<string, unknown>;
+    if (typeof obj.status_description === "string") raw = obj.status_description;
+    else if (typeof obj.error_description === "string") raw = obj.error_description;
+    else if (typeof obj.detail === "string") raw = obj.detail;
+    else {
+      const parts = Object.entries(obj).map(([key, value]) => {
+        const text = Array.isArray(value) ? value.join(", ") : String(value);
+        return `${key}: ${text}`;
+      });
+      raw = parts.length ? parts.join("; ") : `Paymob payout request failed (${status})`;
+    }
+  } else {
+    raw = `Paymob payout request failed (${status})`;
+  }
+
+  return humanizePaymobPayoutError(raw, context);
 }
 
 async function requestPayoutToken(
@@ -299,12 +344,15 @@ export async function createPaymobInstantCashin(
     throw new ApiError(502, "Paymob payout response was invalid JSON");
   }
 
+  const payoutChannel = input.msisdn ? "mobile_wallet" : "bank_transfer";
+
   if (!response.ok) {
     throw new ApiError(
       502,
       formatPaymobPayoutError(
         payload.status_description ?? payload.detail ?? payload,
         response.status,
+        { channel: payoutChannel },
       ),
     );
   }
@@ -312,12 +360,15 @@ export async function createPaymobInstantCashin(
   const disbursementStatus = String(
     payload.disbursement_status ?? payload.status ?? "failed",
   );
-  const statusDescription =
+  const rawDescription =
     typeof payload.status_description === "string"
       ? payload.status_description
       : typeof payload.status_description === "object"
         ? JSON.stringify(payload.status_description)
         : "Paymob payout response received";
+  const statusDescription = humanizePaymobPayoutError(rawDescription, {
+    channel: payoutChannel,
+  });
 
   return {
     transactionId:

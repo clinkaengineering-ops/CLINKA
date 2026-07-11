@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, Button, Badge } from "@/components/UI";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { fetchAdminProjects, updateAdminProject, type AdminProject } from "../api/admin.api";
 
 function axiosMessage(err: unknown): string {
@@ -93,7 +94,7 @@ export function AdminProjectsPanel() {
                     <p className="text-xs text-slate-500">{p.client.email}</p>
                   </td>
                   <td className="p-3">
-                    <p className="font-medium">${p.budget.toLocaleString()}</p>
+                    <p className="font-medium">{formatMoney(p.budget)}</p>
                     <Badge color="slate">{p.serviceType}</Badge>
                   </td>
                   <td className="p-3">
