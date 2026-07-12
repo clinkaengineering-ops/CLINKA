@@ -24,6 +24,7 @@ const navItems = [
   { href: "/engineers", label: "side.findEngineers", icon: IconUsers, section: "side.discover" },
   { href: "/projects", label: "side.findProjects", icon: IconBriefcase, section: "side.discover" },
   { href: "/my-bids", label: "side.myBids", icon: IconBriefcase, section: "side.workspace" },
+  { href: "/invitations", label: "side.invitations", icon: IconBriefcase, section: "side.workspace", roles: ["ENGINEER"] as const },
 
   // Workspace
   { href: "/dashboard", label: "side.clientDash", icon: IconChart, section: "side.workspace" },
@@ -73,6 +74,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         return false;
       }
       if (item.href === "/my-bids" && user?.role !== "ENGINEER") return false;
+      if (item.href === "/invitations" && user?.role !== "ENGINEER") return false;
       return true;
     });
   }, [user]);

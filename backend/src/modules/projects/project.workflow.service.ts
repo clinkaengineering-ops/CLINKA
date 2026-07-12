@@ -257,7 +257,7 @@ export async function approveProjectWork(clientId: number, projectId: number) {
   assertProjectTransition(project.status, "COMPLETED");
 
   const netAmount = netEngineerAmount(
-    project.payment.amount,
+    project.payment.amountUsd,
     project.payment.commission,
   );
 

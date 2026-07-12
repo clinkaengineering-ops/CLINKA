@@ -40,7 +40,7 @@ import type { WithdrawalRequestStatus } from "../../generated/prisma/client";
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
 
-function formatEgp(amount: number) {
+function formatUsd(amount: number) {
   return `$${roundMoney(amount).toFixed(2)}`;
 }
 
@@ -448,14 +448,14 @@ export async function createPaymobPayout(
   if (currentVolume + amount > payoutConfig.maxWithdrawalAmount) {
     throw new ApiError(
       400,
-      `Rolling 24-hour withdrawal limit exceeded. Remaining allowance is ${formatEgp(Math.max(0, payoutConfig.maxWithdrawalAmount - currentVolume))}.`,
+      `Rolling 24-hour withdrawal limit exceeded. Remaining allowance is ${formatUsd(Math.max(0, payoutConfig.maxWithdrawalAmount - currentVolume))}.`,
     );
   }
 
   if (input.channel === "bank_transfer" && amount < payoutConfig.instantBankMinAmount) {
     throw new ApiError(
       400,
-      `Bank withdrawals require at least ${formatEgp(payoutConfig.instantBankMinAmount)}`,
+      `Bank withdrawals require at least ${formatUsd(payoutConfig.instantBankMinAmount)}`,
     );
   }
 
@@ -481,7 +481,7 @@ export async function createPaymobPayout(
       if (amount > spendable) {
         throw new ApiError(
           400,
-          `Withdrawal exceeds available spendable balance (${formatEgp(spendable)})`,
+          `Withdrawal exceeds available spendable balance (${formatUsd(spendable)})`,
         );
       }
 
@@ -528,7 +528,7 @@ export async function createPaymobPayout(
         event: "BALANCE_HELD",
         statusBefore: "PENDING",
         statusAfter: "PENDING",
-        message: formatEgp(amount),
+        message: formatUsd(amount),
       });
 
       return { withdrawal: created, wallet: lockedWallet };
@@ -582,7 +582,7 @@ export async function createPaymobPayout(
       engineerUserId,
       "FUNDS_RELEASED",
       "Withdrawal completed",
-      `${formatEgp(amount)} was sent to your ${methodLabel} account via Paymob.`,
+      `${formatUsd(amount)} was sent to your ${methodLabel} account via Paymob.`,
       "/balance",
     );
   } else if (updated.status === "PROCESSING") {
@@ -590,7 +590,7 @@ export async function createPaymobPayout(
       engineerUserId,
       "FUNDS_RELEASED",
       "Withdrawal processing",
-      `Your ${formatEgp(amount)} withdrawal via Paymob is being processed.`,
+      `Your ${formatUsd(amount)} withdrawal via Paymob is being processed.`,
       "/balance",
     );
   } else if (updated.status === "FAILED") {
@@ -598,7 +598,7 @@ export async function createPaymobPayout(
       engineerUserId,
       "FUNDS_RELEASED",
       "Withdrawal failed",
-      `Your ${formatEgp(amount)} withdrawal could not be completed.${updated.paymobStatusDescription ? ` ${updated.paymobStatusDescription}` : ""}`,
+      `Your ${formatUsd(amount)} withdrawal could not be completed.${updated.paymobStatusDescription ? ` ${updated.paymobStatusDescription}` : ""}`,
       "/balance",
     );
   }
@@ -658,7 +658,7 @@ export async function createIbanPayout(
       if (amount > spendable) {
         throw new ApiError(
           400,
-          `Withdrawal exceeds available spendable balance (${formatEgp(spendable)})`,
+          `Withdrawal exceeds available spendable balance (${formatUsd(spendable)})`,
         );
       }
       
@@ -722,7 +722,7 @@ export async function createIbanPayout(
         event: "BALANCE_HELD",
         statusBefore: "PENDING_REVIEW",
         statusAfter: "PENDING_REVIEW",
-        message: formatEgp(amount),
+        message: formatUsd(amount),
       });
 
       return { withdrawal: created, wallet: lockedWallet };
@@ -744,7 +744,7 @@ export async function createIbanPayout(
     engineerUserId,
     "FUNDS_HELD",
     "Withdrawal request received",
-    `Your ${formatEgp(amount)} international withdrawal request is pending review.`,
+    `Your ${formatUsd(amount)} international withdrawal request is pending review.`,
     "/balance",
   );
 

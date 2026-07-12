@@ -17,6 +17,7 @@ import { ProjectListPanel } from "./ProjectListPanel";
 import { ProjectDetailPanel } from "./ProjectDetailPanel";
 import { PostProjectModal } from "./PostProjectModal";
 import { matchesBudget, matchesPostedTimeline } from "../utils/projectFilters";
+import type { ServiceType } from "../api/project.api";
 
 export default function ProjectMarketplace() {
   const { t } = useI18n();
@@ -102,6 +103,20 @@ export default function ProjectMarketplace() {
     });
   }, [projects, search, budget, timeline, serviceType]);
 
+  const initialDraft = useMemo(() => {
+    const create = searchParams.get("create");
+    if (create !== "1") return null;
+    const title = searchParams.get("title") ?? undefined;
+    const description = searchParams.get("description") ?? undefined;
+    const budget = searchParams.get("budget") ?? undefined;
+    const serviceType = searchParams.get("service") as ServiceType | null;
+    const normalizedService =
+      serviceType === "DESIGN" || serviceType === "SUPERVISION" || serviceType === "REVIEW"
+        ? serviceType
+        : undefined;
+    return { title, description, budget, serviceType: normalizedService };
+  }, [searchParams]);
+
   const handleSelect = useCallback((id: number) => setSelectedId(id), []);
 
   useEffect(() => {
@@ -121,22 +136,22 @@ export default function ProjectMarketplace() {
       }
     }
 
-    if (searchParams.get("create") !== "1") return;
-
-    if (!user) {
-      router.replace("/login?next=/projects?create=1");
-      return;
-    }
-    if (user.role === "ADMIN") {
+    if (initialDraft) {
+      if (!user) {
+        router.replace("/login?next=/projects?create=1");
+        return;
+      }
+      if (user.role === "ADMIN") {
+        router.replace("/projects", { scroll: false });
+        return;
+      }
+      if (user.role === "CLIENT") {
+        setPostOpen(true);
+        setViewMode("mine");
+      }
       router.replace("/projects", { scroll: false });
-      return;
     }
-    if (user.role === "CLIENT") {
-      setPostOpen(true);
-      setViewMode("mine");
-    }
-    router.replace("/projects", { scroll: false });
-  }, [searchParams, user, router, isClient]);
+  }, [searchParams, user, router, isClient, initialDraft]);
 
   const handlePostClick = () => {
     if (!user) {
@@ -253,6 +268,10 @@ export default function ProjectMarketplace() {
         open={postOpen}
         onClose={() => setPostOpen(false)}
         onCreated={handleRefresh}
+        initialTitle={initialDraft?.title}
+        initialDescription={initialDraft?.description}
+        initialBudget={initialDraft?.budget}
+        initialServiceType={initialDraft?.serviceType}
       />
     </div>
   );

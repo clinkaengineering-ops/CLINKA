@@ -181,7 +181,7 @@ export interface Project {
   description: string;
   budget: number;
   serviceType: "DESIGN" | "SUPERVISION" | "REVIEW";
-  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status: "OPEN" | "AWAITING_PAYMENT" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   clientId: number;
   createdAt: string;
   updatedAt: string;

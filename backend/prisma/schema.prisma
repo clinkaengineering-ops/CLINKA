@@ -14,24 +14,25 @@ datasource db {
 }
 
 enum Role {
-CLIENT
-ENGINEER
-ADMIN
+  CLIENT
+  ENGINEER
+  ADMIN
 }
 
 enum EngineerSpecialty {
-CIVIL
-ARCHITECTURAL
+  CIVIL
+  ARCHITECTURAL
 }
 
-enum ServiceType{
-DESIGN
-SUPERVISION
-REVIEW
+enum ServiceType {
+  DESIGN
+  SUPERVISION
+  REVIEW
 }
 
 enum ProjectStatus {
   OPEN
+  AWAITING_PAYMENT
   IN_PROGRESS
   AWAITING_APPROVAL
   SUBMITTED_FOR_REVIEW
@@ -53,23 +54,23 @@ enum PaymentLedgerType {
   REFUNDED
 }
 
-enum BidStatus{
-PENDING
-ACCEPTED
-REJECTED
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
-enum PaymentStatus{
-PENDING
-FUNDED
-RELEASED
-REFUNDED
+enum PaymentStatus {
+  PENDING
+  FUNDED
+  RELEASED
+  REFUNDED
 }
 
-enum VerificationStatus{
-PENDING
-APPROVED
-REJECTED
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum BanReason {
@@ -138,50 +139,52 @@ enum PayoutAuditEvent {
 }
 
 model User {
-id Int @id @default(autoincrement())
-name String
-email String @unique
-password String
-googleId String? @unique
-role Role @default(CLIENT)
-isVerified Boolean @default(false)
-avatarUrl String?
-notificationPrefs Json?
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  name              String
+  email             String   @unique
+  password          String
+  googleId          String?  @unique
+  role              Role     @default(CLIENT)
+  isVerified        Boolean  @default(false)
+  avatarUrl         String?
+  notificationPrefs Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-profile EngineerProfile?
-projects Project[]
-reviews Review[]
-messages Message[]
-notifications Notification[]
-clientConversations Conversation[] @relation("ClientConversations")
-engineerConversations Conversation[] @relation("EngineerConversations")
-ban         Ban?
-bannedBans  Ban[]  @relation("BannedByAdmin")
+  profile               EngineerProfile?
+  projects              Project[]
+  reviews               Review[]
+  messages              Message[]
+  notifications         Notification[]
+  clientConversations   Conversation[]      @relation("ClientConversations")
+  engineerConversations Conversation[]      @relation("EngineerConversations")
+  receivedInvitations   ProjectInvitation[] @relation("EngineerInvitations")
+  sentInvitations       ProjectInvitation[] @relation("ClientInvitations")
+  ban                   Ban?
+  bannedBans            Ban[]               @relation("BannedByAdmin")
 
-clientPayments   Payment[] @relation("ClientPayments")
-supportTickets   SupportTicket[] @relation("UserSupportTickets")
-resolvedTickets  SupportTicket[] @relation("ResolvedSupportTickets")
-wallet           Wallet?
-withdrawalRequests WithdrawalRequest[]
-
+  clientPayments     Payment[]           @relation("ClientPayments")
+  supportTickets     SupportTicket[]     @relation("UserSupportTickets")
+  resolvedTickets    SupportTicket[]     @relation("ResolvedSupportTickets")
+  wallet             Wallet?
+  withdrawalRequests WithdrawalRequest[]
 }
 
 model Ban {
-  id          Int       @id @default(autoincrement())
-  userId      Int       @unique
-  reason      BanReason
-  bannedAt    DateTime  @default(now())
-  expiresAt   DateTime
-  bannedById      Int?
-  note            String?
-  triggerMessage  String?
-  active          Boolean   @default(true)
+  id             Int       @id @default(autoincrement())
+  userId         Int       @unique
+  reason         BanReason
+  bannedAt       DateTime  @default(now())
+  expiresAt      DateTime
+  bannedById     Int?
+  note           String?
+  triggerMessage String?
+  active         Boolean   @default(true)
 
   user     User  @relation(fields: [userId], references: [id])
   bannedBy User? @relation("BannedByAdmin", fields: [bannedById], references: [id])
 }
+
 model EngineerProfile {
   id                 Int                @id @default(autoincrement())
   userId             Int                @unique
@@ -190,17 +193,17 @@ model EngineerProfile {
   bio                String?
   coverImageUrl      String?
   verificationStatus VerificationStatus @default(PENDING)
-  nationalId         String?            /// Egyptian national ID (14 digits) — required for Paymob payouts
+  nationalId         String? /// Egyptian national ID (14 digits) — required for Paymob payouts
 
   collegeIdUrl     String?
   certificateUrl   String?
   syndicateCardUrl String?
 
-  averageRating      Float              @default(0)
-  totalReviews       Int                @default(0)
-  createdAt          DateTime           @default(now())
+  averageRating Float    @default(0)
+  totalReviews  Int      @default(0)
+  createdAt     DateTime @default(now())
 
-  user User @relation(fields:[userId], references:[id])
+  user             User      @relation(fields: [userId], references: [id])
   engineerPayments Payment[] @relation("EngineerPayments")
 
   portfolio PortfolioItem[]
@@ -209,35 +212,36 @@ model EngineerProfile {
 }
 
 model PortfolioItem {
-  id          Int             @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   engineerId  Int
   imageUrl    String
   description String
-  createdAt   DateTime        @default(now())
+  createdAt   DateTime @default(now())
 
-  engineer    EngineerProfile @relation(fields: [engineerId], references: [id])
+  engineer EngineerProfile @relation(fields: [engineerId], references: [id])
 }
 
 model Project {
-  id          Int           @id @default(autoincrement())
-  clientId    Int
-  title       String
-  description String
-  budget      Decimal       @db.Decimal(18, 2)
-  serviceType ServiceType
-  status      ProjectStatus @default(OPEN)
-  progressNote String?
+  id                Int           @id @default(autoincrement())
+  clientId          Int
+  title             String
+  description       String
+  budget            Decimal       @db.Decimal(18, 2)
+  serviceType       ServiceType
+  status            ProjectStatus @default(OPEN)
+  progressNote      String?
   progressUpdatedAt DateTime?
-  isFlagged   Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  isFlagged         Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  client       User          @relation(fields: [clientId], references: [id])
+  client       User                @relation(fields: [clientId], references: [id])
   bids         Bid[]
   payment      Payment?
   conversation Conversation?
   review       Review?
   submissions  ProjectSubmission[]
+  invitations  ProjectInvitation[]
 }
 
 model Bid {
@@ -255,22 +259,44 @@ model Bid {
 }
 
 model Payment {
-  id                 Int           @id @default(autoincrement())
-  projectId          Int           @unique
-  clientId           Int
-  engineerId         Int
-  amount             Decimal       @db.Decimal(18, 2)
-  commission         Decimal       @db.Decimal(18, 2)
-  gatewayInvoiceId   String?
-  gatewayInvoiceKey  String?
-  status             PaymentStatus @default(PENDING)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id                Int           @id @default(autoincrement())
+  projectId         Int           @unique
+  clientId          Int
+  engineerId        Int
+  amountUsd         Decimal       @map("amount") @db.Decimal(18, 2)
+  commission        Decimal       @db.Decimal(18, 2)
+  gatewayInvoiceId  String?
+  gatewayInvoiceKey String?
+  status            PaymentStatus @default(PENDING)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  project    Project         @relation(fields: [projectId], references: [id])
-  client     User            @relation("ClientPayments",   fields: [clientId],   references: [id])
-  engineer   EngineerProfile @relation("EngineerPayments", fields: [engineerId], references: [id])
+  exchangeRate      Decimal?      @db.Decimal(18, 6)
+  amountEgp         Decimal?      @db.Decimal(18, 2)
+  exchangeProvider  String?
+  rateFetchedAt     DateTime?
+  providerTimestamp DateTime?
+
+  project       Project              @relation(fields: [projectId], references: [id])
+  client        User                 @relation("ClientPayments", fields: [clientId], references: [id])
+  engineer      EngineerProfile      @relation("EngineerPayments", fields: [engineerId], references: [id])
   ledgerEntries PaymentLedgerEntry[]
+
+  invitationId Int?
+  invitation   ProjectInvitation? @relation(fields: [invitationId], references: [id])
+}
+
+model ExchangeRateCache {
+  id        String   @id @default("USD_EGP")
+  base      String
+  target    String
+  rate      Decimal  @db.Decimal(18, 6)
+  provider  String
+  fetchedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([base, target])
 }
 
 model PaymentLedgerEntry {
@@ -330,10 +356,13 @@ model Conversation {
   engineerLastReadAt DateTime?
   createdAt          DateTime  @default(now())
 
-  project  Project  @relation(fields: [projectId], references: [id])
-  client   User     @relation("ClientConversations", fields: [clientId], references: [id])
-  engineer User     @relation("EngineerConversations", fields: [engineerId], references: [id])
+  project  Project   @relation(fields: [projectId], references: [id])
+  client   User      @relation("ClientConversations", fields: [clientId], references: [id])
+  engineer User      @relation("EngineerConversations", fields: [engineerId], references: [id])
   messages Message[]
+
+  invitationId Int?               @unique
+  invitation   ProjectInvitation? @relation(fields: [invitationId], references: [id])
 }
 
 model Message {
@@ -371,31 +400,31 @@ model PlatformSettings {
 }
 
 model SupportTicket {
-  id          Int                 @id @default(autoincrement())
-  name        String
-  email       String
-  subject     String
-  message     String
-  status      SupportTicketStatus @default(OPEN)
-  solution    String?
-  userId      Int?
+  id           Int                 @id @default(autoincrement())
+  name         String
+  email        String
+  subject      String
+  message      String
+  status       SupportTicketStatus @default(OPEN)
+  solution     String?
+  userId       Int?
   resolvedById Int?
-  resolvedAt  DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  resolvedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   user       User? @relation("UserSupportTickets", fields: [userId], references: [id])
   resolvedBy User? @relation("ResolvedSupportTickets", fields: [resolvedById], references: [id])
 }
 
 model Wallet {
-  id              Int      @id @default(autoincrement())
-  userId          Int      @unique
-  availableBalance Decimal @default(0) @db.Decimal(18, 2)
-  pendingBalance   Decimal @default(0) @db.Decimal(18, 2)
-  version         Int      @default(1)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique
+  availableBalance Decimal  @default(0) @db.Decimal(18, 2)
+  pendingBalance   Decimal  @default(0) @db.Decimal(18, 2)
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions WalletTransaction[]
@@ -417,50 +446,50 @@ model WalletTransaction {
 }
 
 model WithdrawalRequest {
-  id                      Int                     @id @default(autoincrement())
-  userId                  Int
-  amount                  Decimal                 @db.Decimal(18, 2)
-  method                  String
-  accountNumber           String
-  payoutType              PayoutType              @default(PAYMOB)
-  currency                String                  @default("USD") // Wallet settlement currency. Currently always EGP. Reserved for future multi-currency support.
-  country                 String?
-  bankName                String?
-  accountHolderName       String?
+  id                         Int                     @id @default(autoincrement())
+  userId                     Int
+  amount                     Decimal                 @db.Decimal(18, 2)
+  method                     String
+  accountNumber              String
+  payoutType                 PayoutType              @default(PAYMOB)
+  currency                   String                  @default("USD") // Wallet settlement currency. Currently always EGP. Reserved for future multi-currency support.
+  country                    String?
+  bankName                   String?
+  accountHolderName          String?
   accountHolderNameEncrypted String?
-  ibanEncrypted           String?
-  swiftBic                String?
-  swiftBicEncrypted       String?
-  bankAddress             String?
-  bankAddressEncrypted    String?
-  status                  WithdrawalRequestStatus @default(PENDING)
-  adminNotes              String?
-  internalNotes           String?
-  paymobTransactionId     String?
-  paymobDisbursementStatus String?
-  paymobStatusDescription String?
-  paymobClientReference   String?                 @unique
-  externalReference       String?
-  idempotencyKey          String?
-  retryCount              Int                     @default(0)
-  failureReason           String?
-  rejectionReason         String?
-  balanceHeldAt           DateTime?
-  submittedAt             DateTime?
-  lastInquiryAt           DateTime?
-  processedAt             DateTime?
-  approvedAt              DateTime?
-  approvedById            Int?
-  completedAt             DateTime?
-  completedById           Int?
-  rejectedAt              DateTime?
-  rejectedById            Int?
-  reconciledAt            DateTime?
-  reconciledById          Int?
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
+  ibanEncrypted              String?
+  swiftBic                   String?
+  swiftBicEncrypted          String?
+  bankAddress                String?
+  bankAddressEncrypted       String?
+  status                     WithdrawalRequestStatus @default(PENDING)
+  adminNotes                 String?
+  internalNotes              String?
+  paymobTransactionId        String?
+  paymobDisbursementStatus   String?
+  paymobStatusDescription    String?
+  paymobClientReference      String?                 @unique
+  externalReference          String?
+  idempotencyKey             String?
+  retryCount                 Int                     @default(0)
+  failureReason              String?
+  rejectionReason            String?
+  balanceHeldAt              DateTime?
+  submittedAt                DateTime?
+  lastInquiryAt              DateTime?
+  processedAt                DateTime?
+  approvedAt                 DateTime?
+  approvedById               Int?
+  completedAt                DateTime?
+  completedById              Int?
+  rejectedAt                 DateTime?
+  rejectedById               Int?
+  reconciledAt               DateTime?
+  reconciledById             Int?
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
 
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   auditLogs PayoutAuditLog[]
 
   @@unique([userId, idempotencyKey])
@@ -469,21 +498,72 @@ model WithdrawalRequest {
 }
 
 model PayoutAuditLog {
-  id           Int              @id @default(autoincrement())
-  withdrawalId Int
-  event        PayoutAuditEvent
-  statusBefore WithdrawalRequestStatus?
-  statusAfter  WithdrawalRequestStatus?
-  message      String?
-  metadata     Json?
-  previousHash String?
-  hash         String?
-  actorId      Int?
-  actorIp      String?
+  id             Int                      @id @default(autoincrement())
+  withdrawalId   Int
+  event          PayoutAuditEvent
+  statusBefore   WithdrawalRequestStatus?
+  statusAfter    WithdrawalRequestStatus?
+  message        String?
+  metadata       Json?
+  previousHash   String?
+  hash           String?
+  actorId        Int?
+  actorIp        String?
   actorUserAgent String?
-  createdAt    DateTime         @default(now())
+  createdAt      DateTime                 @default(now())
 
   withdrawal WithdrawalRequest @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
 
   @@index([withdrawalId, createdAt])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+enum InvitationEventType {
+  SENT
+  VIEWED
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+model ProjectInvitation {
+  id         Int              @id @default(autoincrement())
+  projectId  Int
+  engineerId Int
+  clientId   Int
+  status     InvitationStatus @default(PENDING)
+  expiresAt  DateTime
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  project      Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  engineer     User              @relation("EngineerInvitations", fields: [engineerId], references: [id])
+  client       User              @relation("ClientInvitations", fields: [clientId], references: [id])
+  events       InvitationEvent[]
+  payments     Payment[]
+  conversation Conversation?
+
+  @@index([projectId, status])
+  @@index([engineerId, status])
+}
+
+model InvitationEvent {
+  id           Int                 @id @default(autoincrement())
+  invitationId Int
+  event        InvitationEventType
+  actorId      Int?
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+
+  invitation ProjectInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId, createdAt])
 }

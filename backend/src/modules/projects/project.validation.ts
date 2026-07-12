@@ -11,6 +11,7 @@ export const createProjectSchema = z.object({
   description: projectDescriptionField,
   budget: budgetField,
   serviceType: serviceTypeField,
+  inviteEngineerId: z.number().int().positive().optional(),
 });
 
 export const updateProjectSchema = z.object({

@@ -8,6 +8,7 @@ import { useI18n } from "@/i18n";
 import { useMe } from "@/features/auth/hooks/useMe";
 import { useMyBids } from "@/features/bids/hooks/useMyBids";
 import { fetchConversations } from "@/features/messages/api/messages.api";
+import { fetchMyInvitations } from "@/features/invitations/api/invitation.api";
 import { useEffect, useState } from "react";
 import { fetchEngineerBalance } from "@/features/escrow/api/payments.api";
 import { formatMoney } from "@/features/escrow/utils/formatMoney";
@@ -20,9 +21,13 @@ export function EngineerDashboardPage() {
   const { me, loading } = useMe();
   const { activeContracts, bids } = useMyBids();
   const [inboxCount, setInboxCount] = useState(0);
+  const [invitationsCount, setInvitationsCount] = useState(0);
   const [balance, setBalance] = useState<EngineerBalanceSummary | null>(null);
 
   useEffect(() => {
+    fetchMyInvitations()
+      .then((invs) => setInvitationsCount(invs.filter(i => i.status === "PENDING").length))
+      .catch(() => setInvitationsCount(0));
     fetchConversations()
       .then((c) => setInboxCount(c.length))
       .catch(() => setInboxCount(0));
@@ -52,7 +57,7 @@ export function EngineerDashboardPage() {
         </Button>
       </div>
 
-      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard
           label={t("bal.available")}
           value={formatMoney(balance?.availableBalance ?? 0)}
@@ -81,6 +86,13 @@ export function EngineerDashboardPage() {
           accent="up"
           icon={<IconMessage width={20} height={20} />}
         />
+        <StatCard
+          label={t("side.invitations")}
+          value={String(invitationsCount)}
+          change="Pending Action"
+          accent={invitationsCount > 0 ? "down" : "up"}
+          icon={<IconBriefcase width={20} height={20} />}
+        />
       </div>
 
       <EngineerDashboardAnalytics bids={bids} />
@@ -97,6 +109,9 @@ export function EngineerDashboardPage() {
           </Link>
           <Link href="/messages">
             <Button variant="secondary">{t("side.messages")}</Button>
+          </Link>
+          <Link href="/invitations">
+            <Button variant="secondary">{t("side.invitations")}</Button>
           </Link>
           <Link href="/balance">
             <Button variant="secondary">{t("side.balance")}</Button>

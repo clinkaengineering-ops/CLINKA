@@ -349,9 +349,10 @@ function CheckoutReturnStatus({
           {message}
         </p>
         <div className="mt-6 flex flex-col sm:flex-row flex-wrap justify-center gap-3">
-          {variant === "error" && retryHref ? (
+          {(variant === "error" || (variant === "pending" && !verifying)) && retryHref ? (
             <Link
               href={retryHref}
+              onClick={() => clearCheckoutReturnStorage()}
               className="inline-flex items-center justify-center min-h-11 w-full sm:w-auto px-6 rounded-lg bg-brand-teal hover:bg-electric-400 text-white text-sm font-semibold transition-smooth motion-safe:active:scale-[0.98]"
             >
               {t("checkout.return.tryAgain")}
@@ -363,9 +364,10 @@ function CheckoutReturnStatus({
                 ? `/projects?id=${resolvedProjectId}`
                 : "/projects"
             }
+            onClick={() => clearCheckoutReturnStorage()}
             className={cn(
               "inline-flex items-center justify-center min-h-11 w-full sm:w-auto px-6 rounded-lg text-sm font-semibold transition-smooth motion-safe:active:scale-[0.98]",
-              variant === "error" && retryHref
+              (variant === "error" || (variant === "pending" && !verifying)) && retryHref
                 ? "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 : "bg-brand-teal hover:bg-electric-400 text-white",
             )}
@@ -382,51 +384,58 @@ function CheckoutForm({ projectId }: { projectId: number }) {
   const { t } = useI18n();
   const router = useRouter();
 
-  const [status, setStatus] = useState<Status>("form");
+  const [status, setStatus] = useState<Status>("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState(0);
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
 
-  const handleProceed = useCallback(async () => {
-    if (!phone.trim() || !address.trim()) return;
+  useEffect(() => {
+    let alive = true;
 
-    setStatus("loading");
-
-    try {
-      const session = await fetchCheckoutSession(
-        projectId,
-        phone.trim(),
-        address.trim(),
-      );
-
-      setTitle(session.projectTitle);
-      setAmount(session.amount);
-
-      if (session.paymentId) {
-        writeCheckoutReturnStorage({
+    const proceed = async () => {
+      try {
+        const session = await fetchCheckoutSession(
           projectId,
-          paymentId: session.paymentId,
-        });
-      }
+          "01000000000",
+          "N/A",
+        );
 
-      if (!session.checkoutUrl) {
-        throw new Error("Missing checkout URL from server.");
-      }
+        if (!alive) return;
 
-      window.location.href = session.checkoutUrl;
-    } catch (err) {
-      const e = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      setErrorMsg(
-        e?.response?.data?.message ?? e?.message ?? t("checkout.loadFailed"),
-      );
-      setStatus("error");
-    }
-  }, [projectId, phone, address, t]);
+        setTitle(session.projectTitle);
+        setAmount(session.amount);
+
+        if (session.paymentId) {
+          writeCheckoutReturnStorage({
+            projectId,
+            paymentId: session.paymentId,
+          });
+        }
+
+        if (!session.checkoutUrl) {
+          throw new Error("Missing checkout URL from server.");
+        }
+
+        window.location.href = session.checkoutUrl;
+      } catch (err) {
+        if (!alive) return;
+        const e = err as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        setErrorMsg(
+          e?.response?.data?.message ?? e?.message ?? t("checkout.loadFailed"),
+        );
+        setStatus("error");
+      }
+    };
+
+    proceed();
+
+    return () => {
+      alive = false;
+    };
+  }, [projectId, t]);
 
   return (
     <CheckoutShell amount={amount > 0 ? amount : undefined}>
@@ -435,41 +444,6 @@ function CheckoutForm({ projectId }: { projectId: number }) {
           {title}
         </p>
       ) : null}
-
-      {status === "form" && (
-        <div className="flex flex-col gap-4 px-4 sm:px-5 py-6 animate-stagger">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            {t("checkout.contactDetails")}
-          </p>
-          <Field label={t("checkout.phone")}>
-            <Input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="01xxxxxxxxx"
-              className="min-h-11"
-            />
-          </Field>
-          <Field label={t("checkout.address")}>
-            <Input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder={t("checkout.addressPh")}
-              className="min-h-11"
-            />
-          </Field>
-          <Button
-            type="button"
-            onClick={handleProceed}
-            disabled={!phone.trim() || !address.trim()}
-            className="mt-1 w-full min-h-11"
-            size="lg"
-          >
-            {t("checkout.continue")}
-          </Button>
-        </div>
-      )}
 
       {status === "loading" && (
         <div className="flex flex-col items-center gap-4 py-16 px-6 animate-fade-in">

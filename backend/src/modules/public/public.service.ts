@@ -25,9 +25,9 @@ export async function createSupportTicket(
 }
 
 function formatCompactCurrency(amount: number): string {
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M EGP`;
-  if (amount >= 1_000) return `${Math.round(amount / 1_000)}K EGP`;
-  return `${Math.round(amount)} EGP`;
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1_000) return `$${Math.round(amount / 1_000)}K`;
+  return `$${Math.round(amount)}`;
 }
 
 function toNumber(value: number | { toString(): string }) {
@@ -52,7 +52,7 @@ export async function getLandingSnapshot() {
     db.engineerProfile.count({ where: { verificationStatus: "APPROVED" } }),
     db.payment.findMany({
       where: { status: "RELEASED" },
-      select: { amount: true },
+      select: { amountUsd: true },
     }),
     db.user.findMany({
       where: {
@@ -86,7 +86,7 @@ export async function getLandingSnapshot() {
   ]);
 
   const escrowReleasedTotal = releasedPayments.reduce(
-    (s, p) => s + toNumber(p.amount),
+    (s, p) => s + toNumber(p.amountUsd),
     0,
   );
 

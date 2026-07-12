@@ -139,7 +139,7 @@ export function ProjectContextPanel({
 
   const showPayButton =
     isClient &&
-    projectStatus === "IN_PROGRESS" &&
+    (projectStatus === "IN_PROGRESS" || projectStatus === "AWAITING_PAYMENT") &&
     (paymentStatus === null || paymentStatus === "PENDING");
 
   const showEscrowFundedBadge =
@@ -147,7 +147,7 @@ export function ProjectContextPanel({
 
   const showWaitingForPayment =
     isEngineer &&
-    projectStatus === "IN_PROGRESS" &&
+    (projectStatus === "IN_PROGRESS" || projectStatus === "AWAITING_PAYMENT") &&
     (paymentStatus === null || paymentStatus === "PENDING");
 
   const showSubmitWork =
@@ -255,7 +255,7 @@ export function ProjectContextPanel({
             </p>
             <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mt-1">
               {formatMoney(
-                isEngineer ? payment.amount - payment.commission : payment.amount,
+                isEngineer ? payment.amountUsd - payment.commission : payment.amountUsd,
               )}
             </p>
           </div>
@@ -278,7 +278,7 @@ export function ProjectContextPanel({
               {t("pay.released")}
             </p>
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-1">
-              {formatMoney(payment.amount - payment.commission)}
+              {formatMoney(payment.amountUsd - payment.commission)}
             </p>
           </div>
         )}

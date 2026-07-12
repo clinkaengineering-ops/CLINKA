@@ -15,6 +15,7 @@ import {
   getProjects,
   markProjectFinished,
   updateProject,
+  getMyOpenProjects,
 } from "./project.service";
 import {
   approveProjectWork,
@@ -221,6 +222,21 @@ export async function getMyProjectsController(
     res
       .status(200)
       .json(ApiResponse(200, "My projects fetched successfully", projects));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getMyOpenProjectsController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const projects = await getMyOpenProjects(req.user!.userId);
+    res
+      .status(200)
+      .json(ApiResponse(200, "My open projects fetched successfully", projects));
   } catch (error) {
     next(error);
   }

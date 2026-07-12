@@ -28,6 +28,7 @@ export async function createProject(
       serviceType,
     },
   });
+
   return project;
 }
 
@@ -80,6 +81,19 @@ export async function getMyProjects(clientId: number) {
   return projects;
 }
 
+export async function getMyOpenProjects(clientId: number) {
+  const projects = await db.project.findMany({
+    where: { clientId, status: "OPEN" },
+    include: {
+      _count: {
+        select: { bids: true, invitations: true },
+      },
+    },
+    orderBy: { createdAt: "desc" }
+  });
+  return projects;
+}
+
 export async function getProjectById(projectId: number) {
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -122,6 +136,10 @@ export async function updateProject(
 
   if (project.clientId !== clientId) {
     throw new ApiError(403, "Not your project");
+  }
+
+  if (project.status === "AWAITING_PAYMENT") {
+    throw new ApiError(400, "Cannot edit a project that an engineer has already accepted. Complete payment first.");
   }
 
   if (project.status !== "OPEN") {

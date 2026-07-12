@@ -141,7 +141,7 @@ export async function listPendingReviews(clientId: number) {
     .map((p) => ({
       projectId: p.id,
       projectTitle: p.title,
-      amount: p.payment?.amount ?? p.bids[0].price,
+      amount: p.payment?.amountUsd ?? p.bids[0].price,
       engineerUserId: p.bids[0].engineer.user.id,
       engineerName: p.bids[0].engineer.user.name,
       projectStatus: p.status,

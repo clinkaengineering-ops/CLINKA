@@ -7,6 +7,8 @@ import transporter from "./config/mailer";
 import { validateProductionEnv } from "./config/env";
 import { initSocket } from "./socket";
 import { startPayoutReconciliationScheduler } from "./modules/payouts/payout.scheduler";
+import { startInvitationScheduler } from "./modules/projects/invitation.scheduler";
+import { initializeExchangeRateScheduler } from "./modules/exchange-rate/exchange-rate.scheduler";
 
 validateProductionEnv();
 
@@ -22,6 +24,8 @@ httpServer.listen(PORT, async () => {
   console.log("✅ Database connected successfully");
 
   startPayoutReconciliationScheduler();
+  startInvitationScheduler();
+  initializeExchangeRateScheduler();
 
   try {
     await transporter.verify();

@@ -11,6 +11,8 @@ import { BidForm } from "@/features/bids/components/BidForm";
 import { ProjectBidsList } from "./ProjectBidsList";
 import { ProjectPaymentCard } from "./ProjectPaymentCard";
 import { ProjectReviewSection } from "@/features/reviews/components/ProjectReviewSection";
+import { ProjectInvitationsPanel } from "./ProjectInvitationsPanel";
+import { STATUS_LABEL_KEYS } from "../utils/projectStatus";
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   DESIGN: "Design",
@@ -60,7 +62,9 @@ export function ProjectDetailPanel({
           </div>
           <div className="rounded-lg bg-white/10 p-2.5">
             <p className="text-white/60 text-[10px] uppercase">Status</p>
-            <p className="font-bold mt-0.5">{project.status}</p>
+            <p className="font-bold mt-0.5 truncate" title={project.status}>
+              {t(STATUS_LABEL_KEYS[project.status] ?? "common.status")}
+            </p>
           </div>
           <div className="rounded-lg bg-white/10 p-2.5">
             <p className="text-white/60 text-[10px] uppercase">{t("stat.bids")}</p>
@@ -98,6 +102,8 @@ export function ProjectDetailPanel({
             {project.description}
           </p>
         </div>
+
+        {isOwner && <ProjectInvitationsPanel projectId={project.id} />}
 
         <ProjectBidsList
           project={project}

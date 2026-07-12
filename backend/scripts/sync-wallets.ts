@@ -15,7 +15,7 @@ async function main() {
   console.log(`Found ${releasedPayments.length} released payments.`);
 
   for (const payment of releasedPayments) {
-    const netAmount = payment.amount - payment.commission;
+    const netAmount = payment.amountUsd - payment.commission;
     
     await db.$transaction(async (tx) => {
       // Ensure wallet exists

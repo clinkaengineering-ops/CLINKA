@@ -48,7 +48,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
 
   let card: React.ReactNode = null;
 
-  if (project.status === "IN_PROGRESS" && project.payment?.status !== "FUNDED") {
+  if ((project.status === "IN_PROGRESS" || project.status === "AWAITING_PAYMENT") && project.payment?.status !== "FUNDED") {
     card = (
       <Card className="p-5 border-s-4 border-s-slate-400 bg-slate-50 dark:bg-slate-900/50">
         <div className="flex items-start justify-between gap-4">
@@ -58,7 +58,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
               <h4 className="font-bold">{t("pay.status.needsPayment")}</h4>
             </div>
             <p className="text-sm text-slate-500 mt-1">
-              {isClient ? "Fund the escrow to start the project." : t("pay.waitingClient")}
+              {isClient ? (project.status === "AWAITING_PAYMENT" ? "Engineer accepted. Fund the escrow to start the project." : "Fund the escrow to start the project.") : t("pay.waitingClient")}
             </p>
           </div>
           {isClient && (

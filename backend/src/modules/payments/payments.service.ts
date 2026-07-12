@@ -1,5 +1,7 @@
 import db from "../../config/db";
 import { sanitizeWithdrawalForEngineer } from "../payouts/payout.presenter";
+import { exchangeRateService } from "../exchange-rate";
+import { PaymobProvider } from "./providers/paymob.provider";
 import { BALANCE_HELD_STATUSES } from "../payouts/payout.state";
 import { getClientUrl } from "../../config/clientUrl";
 import {
@@ -68,97 +70,8 @@ function sleep(ms: number) {
 const CHECKOUT_VERIFY_POLL_ATTEMPTS = 6;
 const CHECKOUT_VERIFY_POLL_INTERVAL_MS = 1500;
 
-function paymobPaymentReferenceBase(paymentId: number) {
-  return `clinka-payment-${paymentId}`;
-}
 
-function paymobCheckoutSpecialReference(paymentId: number) {
-  // Unique per checkout attempt — Paymob rejects duplicate merchant references.
-  return `${paymobPaymentReferenceBase(paymentId)}-${Date.now()}`;
-}
-
-async function createProjectPaymobIntention(
-  project: {
-    id: number;
-    title: string;
-    client: { name: string; email: string };
-  },
-  payment: { id: number },
-  totalCharged: number,
-  phone: string,
-  address: string,
-  paymentMethodIds?: number[],
-) {
-  const config = getPaymobConfig();
-  const { first_name, last_name } = splitCustomerName(project.client.name);
-  const redirectionUrls = getRedirectionUrls(project.id, payment.id);
-  const amountCents = amountToCents(totalCharged);
-
-  const intention = await createPaymobIntention({
-    amountCents,
-    currency: config.currency,
-    paymentMethods: paymentMethodIds?.length
-      ? paymentMethodIds
-      : config.integrationIds,
-    items: [
-      {
-        name: project.title.slice(0, 100),
-        amount: amountCents,
-        quantity: 1,
-        description: `Escrow funding for project #${project.id}`,
-      },
-    ],
-    billingData: {
-      first_name,
-      last_name,
-      email: project.client.email,
-      phone_number: phone,
-      street: address,
-    },
-    specialReference: paymobCheckoutSpecialReference(payment.id),
-    notificationUrl: redirectionUrls.webhookUrl,
-    redirectionUrl: redirectionUrls.successUrl,
-    extras: {
-      projectId: project.id,
-      paymentId: payment.id,
-    },
-  });
-
-  return {
-    intention,
-    checkoutUrl: buildPaymobCheckoutUrl(config, intention.clientSecret),
-  };
-}
-
-function splitCustomerName(fullName: string): {
-  first_name: string;
-  last_name: string;
-} {
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) {
-    return { first_name: parts[0], last_name: parts[0] };
-  }
-  return {
-    first_name: parts[0],
-    last_name: parts.slice(1).join(" "),
-  };
-}
-
-function getRedirectionUrls(projectId: number, paymentId: number) {
-  const clientUrl = getClientUrl();
-  const apiUrl = (
-    process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 5000}`
-  ).replace(/\/$/, "");
-
-  return {
-    successUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=success`,
-    failUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=fail`,
-    pendingUrl: `${clientUrl}/checkout?projectId=${projectId}&paymentId=${paymentId}&status=pending`,
-    webhookUrl: `${apiUrl}/api/payments/webhook/paymob`,
-  };
-}
-
-function formatEgp(amount: number) {
+function formatUsd(amount: number) {
   return `\${Math.round(amount * 100) / 100}`;
 }
 
@@ -185,11 +98,11 @@ async function sendWithdrawalRequestEmailToAdmins(input: {
     await transporter.sendMail({
       from: getEmailFrom(),
       to: recipients.join(","),
-      subject: `New Withdrawal Request - ${formatEgp(input.amount)}`,
+      subject: `New Withdrawal Request - ${formatUsd(input.amount)}`,
       html: withdrawalNotificationEmailHtml({
         engineerName: input.engineerName,
         engineerEmail: input.engineerEmail,
-        amount: formatEgp(input.amount),
+        amount: formatUsd(input.amount),
         method: input.method,
         accountNumber: input.accountNumber,
         requestDate: input.requestDate.toLocaleString("en-EG", {
@@ -207,17 +120,31 @@ async function sendWithdrawalRequestEmailToAdmins(input: {
 }
 OLD_WITHDRAWAL_END */
 
-async function getAcceptedBidForProject(projectId: number) {
+async function getAcceptedAgreementForProject(projectId: number, projectBudget: number | any) {
   const bid = await db.bid.findFirst({
     where: { projectId, status: "ACCEPTED" },
     include: {
       engineer: { include: { user: { select: { id: true } } } },
     },
   });
-  if (!bid) {
-    throw new ApiError(400, "No accepted bid found for this project");
+  if (bid) {
+    return { engineerProfileId: bid.engineerId, amount: bid.price };
   }
-  return bid;
+
+  const invitation = await db.projectInvitation.findFirst({
+    where: { projectId, status: "ACCEPTED" },
+  });
+  if (invitation) {
+    const profile = await db.engineerProfile.findUnique({
+      where: { userId: invitation.engineerId },
+    });
+    if (!profile) {
+      throw new ApiError(400, "Engineer profile not found for the invited user");
+    }
+    return { engineerProfileId: profile.id, amount: projectBudget };
+  }
+
+  throw new ApiError(400, "No accepted bid or invitation found for this project");
 }
 
 export async function listPaymentMethods() {
@@ -265,10 +192,10 @@ export async function initiateProjectCheckout(
   if (project.clientId !== clientId) {
     throw new ApiError(403, "Only the project owner can fund escrow");
   }
-  if (project.status !== "IN_PROGRESS") {
+  if (project.status !== "IN_PROGRESS" && project.status !== "AWAITING_PAYMENT") {
     throw new ApiError(
       400,
-      "Escrow payment is only available for in-progress projects",
+      "Escrow payment is only available for in-progress or awaiting payment projects",
     );
   }
 
@@ -279,14 +206,21 @@ export async function initiateProjectCheckout(
     throw new ApiError(400, "Payment has already been released");
   }
 
-  const bid = await getAcceptedBidForProject(projectId);
-  // bid.engineerId is the EngineerProfile.id — correct foreign key for Payment.engineerId
-  const engineerProfileId = bid.engineerId;
+  const agreement = await getAcceptedAgreementForProject(projectId, project.budget);
+  const engineerProfileId = agreement.engineerProfileId;
   const config = getPaymobConfig();
-  const amount = toNumber(bid.price);
-  const commission = Math.round(amount * config.commissionRate * 100) / 100;
+  const amountUsd = toNumber(agreement.amount);
+  const commission = Math.round(amountUsd * config.commissionRate * 100) / 100;
   // Client is charged amount + commission so the platform fee is actually collected
-  const totalCharged = Math.round((amount + commission) * 100) / 100;
+  const totalChargedUsd = Math.round((amountUsd + commission) * 100) / 100;
+
+  // Currency Conversion
+  const { amountConverted: totalChargedEgp, rateUsed } = await exchangeRateService.convert(
+    totalChargedUsd,
+    "USD",
+    "EGP"
+  );
+  const amountEgp = Math.round(amountUsd * rateUsed.rate * 100) / 100;
 
   const payment =
     project.payment ??
@@ -295,16 +229,40 @@ export async function initiateProjectCheckout(
         projectId,
         clientId,
         engineerId: engineerProfileId,
-        amount,
+        amountUsd,
         commission,
         status: "PENDING",
+        // Snapshot
+        exchangeRate: rateUsed.rate,
+        amountEgp,
+        exchangeProvider: rateUsed.provider,
+        rateFetchedAt: new Date(),
+        providerTimestamp: rateUsed.timestamp,
       },
     }));
 
-  const { intention, checkoutUrl } = await createProjectPaymobIntention(
+  if (project.payment) {
+    // Update existing payment with the latest snapshot
+    await db.payment.update({
+      where: { id: payment.id },
+      data: {
+        amountUsd,
+        commission,
+        exchangeRate: rateUsed.rate,
+        amountEgp,
+        exchangeProvider: rateUsed.provider,
+        rateFetchedAt: new Date(),
+        providerTimestamp: rateUsed.timestamp,
+      },
+    });
+  }
+
+  const paymobProvider = new PaymobProvider();
+  const intentionResult = await paymobProvider.createPaymentIntention(
+    totalChargedEgp,
+    "EGP",
     project,
-    payment,
-    totalCharged,
+    payment.id,
     input.phone ?? "01000000000",
     input.address ?? "N/A",
     input.paymentMethodId ? [input.paymentMethodId] : undefined,
@@ -313,18 +271,18 @@ export async function initiateProjectCheckout(
   const updatedPayment = await db.payment.update({
     where: { id: payment.id },
     data: {
-      gatewayInvoiceId: String(intention.orderId || intention.id),
-      gatewayInvoiceKey: intention.id,
+      gatewayInvoiceId: intentionResult.intentionId,
+      gatewayInvoiceKey: intentionResult.intentionId,
       status: "PENDING",
     },
   });
 
   return {
     payment: updatedPayment,
-    intentionId: intention.id,
-    orderId: intention.orderId,
-    checkoutUrl,
-    clientSecret: intention.clientSecret,
+    intentionId: intentionResult.intentionId,
+    orderId: undefined, // orderId might not be returned directly in the clientSecret
+    checkoutUrl: intentionResult.checkoutUrl,
+    clientSecret: intentionResult.clientSecret,
   };
 }
 
@@ -343,10 +301,10 @@ export async function prepareProjectCheckoutSession(
   if (project.clientId !== clientId) {
     throw new ApiError(403, "Only the project owner can fund escrow");
   }
-  if (project.status !== "IN_PROGRESS") {
+  if (project.status !== "IN_PROGRESS" && project.status !== "AWAITING_PAYMENT") {
     throw new ApiError(
       400,
-      "Escrow payment is only available for in-progress projects",
+      "Escrow payment is only available for in-progress or awaiting payment projects",
     );
   }
   if (project.payment?.status === "FUNDED") {
@@ -356,15 +314,22 @@ export async function prepareProjectCheckoutSession(
     throw new ApiError(400, "Payment has already been released");
   }
 
-  const bid = await getAcceptedBidForProject(projectId);
-  // bid.engineerId is the EngineerProfile.id — correct foreign key for Payment.engineerId
-  const engineerProfileId = bid.engineerId;
-  const currency = process.env.PAYMOB_CURRENCY ?? "EGP";
+  const agreement = await getAcceptedAgreementForProject(projectId, project.budget);
+  const engineerProfileId = agreement.engineerProfileId;
+  const config = getPaymobConfig();
+  const amountUsd = toNumber(agreement.amount);
   const commissionRate = Number(process.env.PLATFORM_COMMISSION_RATE ?? "0.1");
-  const amount = toNumber(bid.price);
-  const commission = Math.round(amount * commissionRate * 100) / 100;
+  const commission = Math.round(amountUsd * commissionRate * 100) / 100;
   // Client is charged amount + commission so the platform fee is actually collected
-  const totalCharged = Math.round((amount + commission) * 100) / 100;
+  const totalChargedUsd = Math.round((amountUsd + commission) * 100) / 100;
+
+  // Currency Conversion
+  const { amountConverted: totalChargedEgp, rateUsed } = await exchangeRateService.convert(
+    totalChargedUsd,
+    "USD",
+    "EGP"
+  );
+  const amountEgp = Math.round(amountUsd * rateUsed.rate * 100) / 100;
 
   const payment =
     project.payment ??
@@ -373,21 +338,44 @@ export async function prepareProjectCheckoutSession(
         projectId,
         clientId,
         engineerId: engineerProfileId,
-        amount,
+        amountUsd,
         commission,
         status: "PENDING",
+        // Snapshot
+        exchangeRate: rateUsed.rate,
+        amountEgp,
+        exchangeProvider: rateUsed.provider,
+        rateFetchedAt: new Date(),
+        providerTimestamp: rateUsed.timestamp,
       },
     }));
+
+  if (project.payment) {
+    // Update existing payment with the latest snapshot
+    await db.payment.update({
+      where: { id: payment.id },
+      data: {
+        amountUsd,
+        commission,
+        exchangeRate: rateUsed.rate,
+        amountEgp,
+        exchangeProvider: rateUsed.provider,
+        rateFetchedAt: new Date(),
+        providerTimestamp: rateUsed.timestamp,
+      },
+    });
+  }
 
   if (!process.env.PAYMOB_SECRET_KEY?.trim()) {
     throw new ApiError(503, "Payment gateway is not configured (PAYMOB_SECRET_KEY)");
   }
 
-  const config = getPaymobConfig();
-  const { intention, checkoutUrl } = await createProjectPaymobIntention(
+  const paymobProvider = new PaymobProvider();
+  const intentionResult = await paymobProvider.createPaymentIntention(
+    totalChargedEgp,
+    "EGP",
     project,
-    payment,
-    totalCharged,
+    payment.id,
     phone ?? "01000000000",
     address ?? "N/A",
   );
@@ -395,24 +383,24 @@ export async function prepareProjectCheckoutSession(
   await db.payment.update({
     where: { id: payment.id },
     data: {
-      gatewayInvoiceId: String(intention.orderId || intention.id),
-      gatewayInvoiceKey: intention.id,
+      gatewayInvoiceId: intentionResult.intentionId,
+      gatewayInvoiceKey: intentionResult.intentionId,
       status: "PENDING",
     },
   });
 
   return {
-    checkoutUrl,
-    clientSecret: intention.clientSecret,
-    intentionId: intention.id,
-    orderId: intention.orderId,
-    currency: config.currency,
+    checkoutUrl: intentionResult.checkoutUrl,
+    clientSecret: intentionResult.clientSecret,
+    intentionId: intentionResult.intentionId,
+    orderId: undefined,
+    currency: "EGP", // Displaying EGP to Paymob
     projectId,
     projectTitle: project.title,
     paymentId: payment.id,
-    amount,
+    amount: amountUsd, // Returning USD to frontend for display
     commission,
-    totalCharged,
+    totalCharged: totalChargedUsd, // Returning USD to frontend
   };
 }
 
@@ -442,9 +430,25 @@ async function fundPaymentFromVerifiedTransaction(
     include: {
       project: { select: { id: true, title: true, clientId: true, status: true } },
       engineer: { include: { user: { select: { id: true } } } },
+      invitation: true,
     },
   });
   if (!payment) throw new ApiError(404, "Payment not found");
+
+  if (payment.invitation) {
+    if (payment.invitation.status !== "ACCEPTED") {
+      throw new ApiError(400, "Invitation is not accepted");
+    }
+    if (payment.project.status !== "AWAITING_PAYMENT") {
+      throw new ApiError(400, "Project is not awaiting payment");
+    }
+    if (payment.invitation.clientId !== payment.clientId) {
+      throw new ApiError(400, "Paying client does not match invitation");
+    }
+    if (payment.invitation.projectId !== payment.projectId) {
+      throw new ApiError(400, "Project mismatch between payment and invitation");
+    }
+  }
 
   if (payment.status === "FUNDED" || payment.status === "RELEASED") {
     return { payment, duplicate: true as const };
@@ -460,7 +464,7 @@ async function fundPaymentFromVerifiedTransaction(
     throw new ApiError(409, "This Paymob transaction was already applied to a payment");
   }
 
-  const netAmount = netEngineerAmount(payment.amount, payment.commission);
+  const netAmount = netEngineerAmount(payment.amountUsd, payment.commission);
   const ledgerNote =
     source === "webhook"
       ? "Client escrow payment received via Paymob"
@@ -499,7 +503,7 @@ async function fundPaymentFromVerifiedTransaction(
       await recordPaymentLedger(tx, funded.id, [
         {
           type: "FUNDED",
-          amount: toNumber(funded.amount) + toNumber(funded.commission),
+          amount: toNumber(funded.amountUsd) + toNumber(funded.commission),
           note: ledgerNote,
         },
         {
@@ -557,7 +561,7 @@ async function resolveVerifiedPaymobTransaction(
   input: VerifyCheckoutReturnInput,
   payment: {
     id: number;
-    amount: any;
+    amountUsd: any;
     commission: any;
     gatewayInvoiceId: string | null;
   },
@@ -619,7 +623,8 @@ async function resolveVerifiedPaymobTransaction(
         config.integrationIds,
       );
       return transaction;
-    } catch {
+    } catch (err: any) {
+      console.error(`Validation failed for transaction ${transaction.id}: ${err.message}`);
       // Try next candidate
     }
   }
@@ -738,7 +743,7 @@ export async function getPaymentByGatewayId(
     id: payment.id,
     projectId: payment.projectId,
     projectTitle: payment.project.title,
-    amount: payment.amount,
+    amount: payment.amountUsd,
     commission: payment.commission,
     status: payment.status,
     gatewayInvoiceId: payment.gatewayInvoiceId,
@@ -828,7 +833,7 @@ export async function getEngineerBalance(engineerUserId: number) {
   let awaitingClientPayment = 0;
 
   const transactions = payments.map((payment) => {
-    const netAmount = netEngineerAmount(payment.amount, payment.commission);
+    const netAmount = netEngineerAmount(payment.amountUsd, payment.commission);
     const status = mapEngineerPaymentStatus(
       payment.status,
       payment.project.status,
@@ -844,7 +849,7 @@ export async function getEngineerBalance(engineerUserId: number) {
       id: payment.id,
       projectId: payment.projectId,
       projectTitle: payment.project.title,
-      amount: payment.amount,
+      amount: payment.amountUsd,
       netAmount,
       commission: payment.commission,
       status,
@@ -944,7 +949,7 @@ export async function createEngineerWithdrawalRequest(
     if (amount > spendable) {
       throw new ApiError(
         400,
-        `Withdrawal exceeds available spendable balance (${formatEgp(spendable)})`,
+        `Withdrawal exceeds available spendable balance (${formatUsd(spendable)})`,
       );
     }
 
@@ -1060,7 +1065,7 @@ export async function listClientEscrow(clientId: number) {
     projectId: payment.projectId,
     projectTitle: payment.project.title,
     projectStatus: payment.project.status,
-    amount: payment.amount,
+    amount: payment.amountUsd,
     commission: payment.commission,
     status: mapPaymentStatusToEscrow(payment.status),
     createdAt: payment.createdAt,
@@ -1107,7 +1112,7 @@ export async function releaseEscrowPayment(
     );
   }
 
-  const netAmount = netEngineerAmount(payment.amount, payment.commission);
+  const netAmount = netEngineerAmount(payment.amountUsd, payment.commission);
   const projectTitle = payment.project?.title ?? "Project";
   const engineerProfile = await db.engineerProfile.findUnique({
     where: { id: payment.engineerId },
@@ -1213,7 +1218,7 @@ export async function getEscrowPaymentById(paymentId: number, userId: number) {
     id: payment.id,
     projectId: payment.projectId,
     projectTitle: payment.project.title,
-    amount: payment.amount,
+    amount: payment.amountUsd,
     commission: payment.commission,
     status: mapPaymentStatusToEscrow(payment.status),
     gatewayInvoiceId: payment.gatewayInvoiceId,

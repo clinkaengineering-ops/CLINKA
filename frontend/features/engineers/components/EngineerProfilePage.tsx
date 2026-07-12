@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { fetchConversations } from "@/features/messages/api/messages.api";
 import useAuthStore from "@/store/authStore";
 import { useEngineerById } from "../hooks/useEngineerById";
+import { HireEngineerModal } from "./HireEngineerModal";
 
 export function EngineerProfilePage({ id }: { id: number }) {
   const { t } = useI18n();
@@ -19,6 +20,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
     number | null
   >(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+  const [hireModalOpen, setHireModalOpen] = useState(false);
   const isAdmin = currentUser?.role === "ADMIN";
 
   const goPrev = () => {
@@ -117,14 +119,52 @@ export function EngineerProfilePage({ id }: { id: number }) {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(56,189,248,0.4),_transparent_50%)]" />
           )}
         </div>
-        <div className="px-6 pb-6 -mt-12 flex flex-col md:flex-row md:items-end gap-5">
-          <div className="ring-4 ring-white dark:ring-slate-900 rounded-full">
-            <Avatar
-              name={engineer.name}
-              src={engineer.avatarUrl ?? undefined}
-              size={104}
-            />
+        <div className="px-6 pb-6 -mt-12 flex flex-col gap-4">
+          <div className="flex justify-between items-end gap-5">
+            <div className="ring-4 ring-white dark:ring-slate-900 rounded-full w-max">
+              <Avatar
+                name={engineer.name}
+                src={engineer.avatarUrl ?? undefined}
+                size={104}
+              />
+            </div>
+            {!isAdmin && (
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  icon={<IconMessage width={14} height={14} />}
+                  onClick={() => {
+                    if (!currentUser) {
+                      router.push(`/login?next=/engineers/${id}`);
+                      return;
+                    }
+                    if (messageConversationId) {
+                      router.push(`/messages?c=${messageConversationId}`);
+                    } else {
+                      router.push(`/messages?engineer=${id}`);
+                    }
+                  }}
+                >
+                  {t("common.message")}
+                </Button>
+                {currentUser?.role !== "ENGINEER" && (
+                  <Button
+                    icon={<IconBriefcase width={14} height={14} />}
+                    onClick={() => {
+                      if (!currentUser) {
+                        router.push(`/login?next=/engineers/${id}`);
+                        return;
+                      }
+                      setHireModalOpen(true);
+                    }}
+                  >
+                    {t("common.hire")}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
+          
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{engineer.name}</h1>
             <p className="mt-1 text-slate-500 flex flex-wrap items-center gap-1">
@@ -152,35 +192,6 @@ export function EngineerProfilePage({ id }: { id: number }) {
               </span>
             </div>
           </div>
-          {!isAdmin && (
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                icon={<IconMessage width={14} height={14} />}
-                onClick={() => {
-                  if (!currentUser) {
-                    router.push(`/login?next=/engineers/${id}`);
-                    return;
-                  }
-                  if (messageConversationId) {
-                    router.push(`/messages?c=${messageConversationId}`);
-                  } else {
-                    router.push(`/messages?engineer=${id}`);
-                  }
-                }}
-              >
-                {t("common.message")}
-              </Button>
-              {currentUser?.role === "CLIENT" && (
-                <Button
-                  icon={<IconBriefcase width={14} height={14} />}
-                  onClick={() => router.push("/projects")}
-                >
-                  {t("common.hire")}
-                </Button>
-              )}
-            </div>
-          )}
         </div>
       </Card>
 
@@ -358,6 +369,14 @@ export function EngineerProfilePage({ id }: { id: number }) {
           )}
         </div>
       )}
+
+      <HireEngineerModal
+        open={hireModalOpen}
+        onClose={() => setHireModalOpen(false)}
+        engineerId={id}
+        engineerName={engineer.name}
+        engineerSpecialty={profile?.specialty}
+      />
     </div>
   );
 }

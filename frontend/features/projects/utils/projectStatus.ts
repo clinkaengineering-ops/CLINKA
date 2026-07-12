@@ -1,5 +1,6 @@
 export type ProjectStatus =
   | "OPEN"
+  | "AWAITING_PAYMENT"
   | "IN_PROGRESS"
   | "AWAITING_APPROVAL"
   | "SUBMITTED_FOR_REVIEW"
@@ -27,6 +28,7 @@ export function isSubmittableStatus(status: string): boolean {
 
 export const STATUS_COLORS: Record<string, "green" | "amber" | "blue" | "slate" | "violet"> = {
   OPEN: "blue",
+  AWAITING_PAYMENT: "amber",
   IN_PROGRESS: "amber",
   AWAITING_APPROVAL: "amber",
   SUBMITTED_FOR_REVIEW: "amber",
@@ -37,6 +39,7 @@ export const STATUS_COLORS: Record<string, "green" | "amber" | "blue" | "slate" 
 
 export const STATUS_LABEL_KEYS: Record<string, string> = {
   OPEN: "proj.status.open",
+  AWAITING_PAYMENT: "proj.status.awaitingPayment",
   IN_PROGRESS: "proj.status.inProgress",
   AWAITING_APPROVAL: "proj.status.submitted",
   SUBMITTED_FOR_REVIEW: "proj.status.submitted",

@@ -201,26 +201,38 @@ export async function inquirePaymobTransactionByMerchantOrderId(
 }
 
 export function getExpectedAmountCents(payment: {
-  amount: number | { toString(): string };
+  amountUsd: number | { toString(): string };
   commission: number | { toString(): string };
+  exchangeRate?: number | { toString(): string } | null;
 }) {
-  const amount =
-    typeof payment.amount === "number"
-      ? payment.amount
-      : Number(payment.amount.toString());
+  const amountUsd =
+    typeof payment.amountUsd === "number"
+      ? payment.amountUsd
+      : Number(payment.amountUsd.toString());
   const commission =
     typeof payment.commission === "number"
       ? payment.commission
       : Number(payment.commission.toString());
-  return amountToCents(amount + commission);
+  const exchangeRate =
+    payment.exchangeRate
+      ? typeof payment.exchangeRate === "number"
+        ? payment.exchangeRate
+        : Number(payment.exchangeRate.toString())
+      : 1;
+
+  const totalUsd = Math.round((amountUsd + commission) * 100) / 100;
+  const totalEgp = Math.round(totalUsd * exchangeRate * 100) / 100;
+  
+  return amountToCents(totalEgp);
 }
 
 /** Validates that a Paymob transaction is a successful, final payment for the expected amount. */
 export function validatePaymobTransactionForPayment(
   transaction: PaymobTransactionObject,
   payment: {
-    amount: number | { toString(): string };
+    amountUsd: number | { toString(): string };
     commission: number | { toString(): string };
+    exchangeRate?: number | { toString(): string } | null;
     gatewayInvoiceId?: string | null;
     id: number;
   },
@@ -240,10 +252,10 @@ export function validatePaymobTransactionForPayment(
   }
 
   const expectedCents = getExpectedAmountCents(payment);
-  if (transaction.amount_cents !== expectedCents) {
+  if (Math.abs(transaction.amount_cents - expectedCents) > 5) {
     throw new ApiError(
       502,
-      `Payment amount mismatch: expected ${expectedCents} cents, got ${transaction.amount_cents}`,
+      `Payment amount mismatch: expected ~${expectedCents} cents, got ${transaction.amount_cents}`,
     );
   }
 
