@@ -23,14 +23,22 @@ export const loginPasswordField = z
   .min(1, "Password is required")
   .max(128, "Password must be at most 128 characters");
 
+export const PASSWORD_RULES = {
+  MIN_LENGTH: 8,
+  UPPERCASE: /[A-Z]/,
+  LOWERCASE: /[a-z]/,
+  NUMBER: /[0-9]/,
+  SPECIAL: /[^A-Za-z0-9]/,
+};
+
 export const passwordField = z
   .string()
-  .min(8, "Password must be at least 8 characters")
+  .min(PASSWORD_RULES.MIN_LENGTH, "Password must be at least 8 characters")
   .max(128, "Password must be at most 128 characters")
-  .regex(/[A-Z]/, "Include at least one uppercase letter")
-  .regex(/[a-z]/, "Include at least one lowercase letter")
-  .regex(/[0-9]/, "Include at least one number")
-  .regex(/[^A-Za-z0-9]/, "Include at least one special character")
+  .regex(PASSWORD_RULES.UPPERCASE, "Include at least one uppercase letter")
+  .regex(PASSWORD_RULES.LOWERCASE, "Include at least one lowercase letter")
+  .regex(PASSWORD_RULES.NUMBER, "Include at least one number")
+  .regex(PASSWORD_RULES.SPECIAL, "Include at least one special character")
   .refine(
     (v) => !COMMON_PASSWORDS.has(v.toLowerCase()),
     "Choose a less common password",

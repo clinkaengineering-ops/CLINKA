@@ -36,6 +36,7 @@ import { AuthRequest } from "../../middlewares/auth.middleware";
 import {
   getGoogleAuthRedirectUrl,
   handleGoogleCallback,
+  completeGoogleRegistration,
 } from "./google.service";
 import { isGoogleAuthEnabled } from "../../config/google";
 
@@ -349,7 +350,7 @@ export async function googleAuthStartController(
     const next =
       typeof req.query.next === "string" ? req.query.next : undefined;
     const role =
-      req.query.role === "ENGINEER" ? ("ENGINEER" as const) : ("CLIENT" as const);
+      req.query.role === "ENGINEER" ? ("ENGINEER" as const) : req.query.role === "CLIENT" ? ("CLIENT" as const) : undefined;
     const apiOrigin =
       typeof req.query.api_origin === "string" ? req.query.api_origin : undefined;
     const clientOrigin =
@@ -402,6 +403,32 @@ export async function googleAuthCallbackController(
     }
 
     res.redirect(result.redirectUrl);
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export async function googleCompleteRegistrationController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { token, role, specialty, bio, nationality } = req.body;
+    if (!token || !role) {
+      throw new ApiError(400, "Token and role are required");
+    }
+    const result = await completeGoogleRegistration(token, role, { specialty, bio, nationality });
+    
+    // Set cookie
+    res.cookie(
+      "token",
+      result.token,
+      authCookieOptions(req.headers.origin),
+    );
+
+    res.status(200).json(ApiResponse(200, "Registration completed successfully", result.user));
   } catch (error) {
     next(error);
   }

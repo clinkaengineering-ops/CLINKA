@@ -128,10 +128,10 @@ async function prepareEngineerWallet() {
       });
       pass(
         "Engineer wallet",
-        `Credited wallet to ${TEST_AMOUNT + 100} EGP (was ${current})`,
+        `Credited wallet to ${TEST_AMOUNT + 100} (was ${current})`,
       );
     } else {
-      pass("Engineer wallet", `Available balance ${current} EGP — sufficient`);
+      pass("Engineer wallet", `Available balance \${current} — sufficient`);
     }
   });
 }

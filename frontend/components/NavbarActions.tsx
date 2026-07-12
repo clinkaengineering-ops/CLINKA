@@ -53,7 +53,7 @@ export function NavbarActions({ showInbox = true }: { showInbox?: boolean }) {
         >
           <IconMessage width={18} height={18} />
           {msgUnread > 0 && (
-            <span className="absolute top-1.5 right-1.5 min-w-[8px] h-2 px-0.5 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
+            <span className="absolute top-1.5 end-1.5 min-w-[8px] h-2 px-0.5 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
           )}
         </Link>
       )}
@@ -67,7 +67,7 @@ export function NavbarActions({ showInbox = true }: { showInbox?: boolean }) {
         >
           <IconBell width={18} height={18} />
           {unread > 0 && (
-            <span className="absolute top-1.5 right-1.5 min-w-[8px] h-2 px-0.5 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
+            <span className="absolute top-1.5 end-1.5 min-w-[8px] h-2 px-0.5 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
           )}
         </button>
 

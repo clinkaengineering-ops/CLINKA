@@ -84,7 +84,7 @@ export function getGoogleAuthRedirectUrl(options?: {
   const state = signState({
     nonce: crypto.randomBytes(16).toString("hex"),
     next: options?.next,
-    role: options?.role ?? "CLIENT",
+    role: options?.role,
     redirectUri,
     clientOrigin: options?.clientOrigin
       ? normalizeOrigin(options.clientOrigin)
@@ -191,9 +191,9 @@ async function engineerNeedsDocumentUpload(userId: number): Promise<boolean> {
   return !hasDoc || portfolioCount < 3;
 }
 
-async function findOrCreateGoogleUser(
+async function findGoogleUser(
   profile: GoogleProfile,
-  role: "CLIENT" | "ENGINEER",
+  role?: "CLIENT" | "ENGINEER",
   meta?: EngineerSignupMeta,
 ) {
   const email = profile.email.toLowerCase().trim();
@@ -229,7 +229,7 @@ async function findOrCreateGoogleUser(
       },
     });
     const { password: _, ...safe } = updated;
-    return safe;
+    return { user: safe };
   }
 
   const byEmail = await db.user.findUnique({
@@ -267,56 +267,10 @@ async function findOrCreateGoogleUser(
       },
     });
     const { password: _, ...safe } = updated;
-    return safe;
+    return { user: safe };
   }
 
-  const password = await randomPasswordHash();
-
-  if (role === "ENGINEER") {
-    if (!meta?.specialty || !meta?.nationality) {
-      throw new ApiError(
-        400,
-        "Select your specialty and nationality before continuing with Google.",
-      );
-    }
-
-    const user = await db.user.create({
-      data: {
-        name,
-        email,
-        password,
-        googleId,
-        role: "ENGINEER",
-        isVerified: true,
-        avatarUrl,
-        profile: {
-          create: {
-            specialty: meta.specialty,
-            bio: meta.bio,
-            nationality: meta.nationality,
-            verificationStatus: "PENDING",
-          },
-        },
-      },
-      include: { profile: true },
-    });
-    const { password: _, ...safe } = user;
-    return safe;
-  }
-
-  const user = await db.user.create({
-    data: {
-      name,
-      email,
-      password,
-      googleId,
-      role: "CLIENT",
-      isVerified: true,
-      avatarUrl,
-    },
-  });
-  const { password: _, ...safe } = user;
-  return safe;
+  return { profile, isNew: true };
 }
 
 function parseClientOriginFromState(stateParam?: string): string | undefined {
@@ -358,12 +312,31 @@ export async function handleGoogleCallback(
   try {
     const state = verifyState(stateParam);
     const profile = await exchangeCodeForProfile(code, state.redirectUri);
-    const role = state.role === "ENGINEER" ? "ENGINEER" : "CLIENT";
-    const user = await findOrCreateGoogleUser(profile, role, {
+    const role = state.role;
+    const result = await findGoogleUser(profile, role, {
       specialty: state.specialty,
       bio: state.bio,
       nationality: state.nationality,
     });
+
+    if (result.isNew) {
+      // Encode profile into a short-lived token to securely pass to the frontend
+      const tempToken = jwt.sign(
+        { profile: result.profile, state: stateParam }, 
+        process.env.JWT_SECRET as string, 
+        { expiresIn: "1h" }
+      );
+      const redirectUrl = clientUrl(
+        `/role-selection?token=${encodeURIComponent(tempToken)}`,
+        state.clientOrigin
+      );
+      return { redirectUrl, clientOrigin: state.clientOrigin };
+    }
+
+    const user = result.user;
+    if (!user) {
+      throw new ApiError(500, "User not found after Google authentication.");
+    }
     const token = generateToken(user.id, user.role);
 
     let nextPath = state.next?.trim() || "";
@@ -394,4 +367,76 @@ export async function handleGoogleCallback(
       clientOrigin: fallbackClientOrigin,
     };
   }
+}
+
+export async function completeGoogleRegistration(
+  tempToken: string,
+  role: "CLIENT" | "ENGINEER",
+  meta?: EngineerSignupMeta
+) {
+  let decoded: any;
+  try {
+    decoded = jwt.verify(tempToken, process.env.JWT_SECRET as string);
+  } catch (error) {
+    throw new ApiError(400, "Invalid or expired registration session. Please sign in with Google again.");
+  }
+
+  const { profile, state } = decoded;
+  if (!profile) throw new ApiError(400, "Invalid session data.");
+
+  // For the final step, we call the same flow, but we provide the role
+  // Since we already refactored findGoogleUser, we can just call it
+  const password = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+  const email = profile.email.toLowerCase().trim();
+  const name = profile.name?.trim() || email.split("@")[0];
+  const avatarUrl = profile.picture ?? null;
+  const googleId = profile.id || profile.sub || "";
+
+  // Make sure they didn't get created in the meantime
+  const existing = await db.user.findFirst({ where: { OR: [{ email }, { googleId }] } });
+  if (existing) {
+     return { user: existing, token: generateToken(existing.id, existing.role) };
+  }
+
+  let user;
+  if (role === "ENGINEER") {
+    if (!meta?.specialty || !meta?.nationality) {
+      throw new ApiError(400, "Select your specialty and nationality before continuing.");
+    }
+    user = await db.user.create({
+      data: {
+        name,
+        email,
+        password,
+        googleId,
+        role: "ENGINEER",
+        isVerified: true,
+        avatarUrl,
+        profile: {
+          create: {
+            specialty: meta.specialty,
+            bio: meta.bio,
+            nationality: meta.nationality,
+            verificationStatus: "PENDING",
+          },
+        },
+      },
+      include: { profile: true },
+    });
+  } else {
+    user = await db.user.create({
+      data: {
+        name,
+        email,
+        password,
+        googleId,
+        role: "CLIENT",
+        isVerified: true,
+        avatarUrl,
+      },
+    });
+  }
+
+  const { password: _, ...safe } = user;
+  return { user: safe, token: generateToken(user.id, user.role) };
 }

@@ -64,7 +64,7 @@ async function main() {
         });
       }
 
-      console.log(`Synced payment ${payment.id} -> ${status} (${netAmount} EGP)`);
+      console.log(`Synced payment ${payment.id} -> ${status} (\${netAmount})`);
     });
   }
 

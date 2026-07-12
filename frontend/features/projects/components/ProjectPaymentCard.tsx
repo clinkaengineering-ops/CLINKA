@@ -50,7 +50,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
 
   if (project.status === "IN_PROGRESS" && project.payment?.status !== "FUNDED") {
     card = (
-      <Card className="p-5 border-l-4 border-l-slate-400 bg-slate-50 dark:bg-slate-900/50">
+      <Card className="p-5 border-s-4 border-s-slate-400 bg-slate-50 dark:bg-slate-900/50">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
     );
   } else if (project.status === "IN_PROGRESS" && project.payment?.status === "FUNDED") {
     card = (
-      <Card className="p-5 border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/10">
+      <Card className="p-5 border-s-4 border-s-blue-500 bg-blue-50 dark:bg-blue-900/10">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
     );
   } else if (isReviewableStatus(project.status)) {
     card = (
-      <Card className="p-5 border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/10">
+      <Card className="p-5 border-s-4 border-s-amber-500 bg-amber-50 dark:bg-amber-900/10">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
     );
   } else if (project.status === "REVISION_REQUESTED") {
     card = (
-      <Card className="p-5 border-l-4 border-l-violet-500 bg-violet-50 dark:bg-violet-900/10">
+      <Card className="p-5 border-s-4 border-s-violet-500 bg-violet-50 dark:bg-violet-900/10">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h4 className="font-bold text-violet-900 dark:text-violet-100">
@@ -145,7 +145,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
     );
   } else if (project.status === "COMPLETED" && project.payment?.status === "RELEASED") {
     card = (
-      <Card className="p-5 border-l-4 border-l-green-500 bg-green-50 dark:bg-green-900/10">
+      <Card className="p-5 border-s-4 border-s-green-500 bg-green-50 dark:bg-green-900/10">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">

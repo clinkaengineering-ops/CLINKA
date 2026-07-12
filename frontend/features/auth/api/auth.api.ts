@@ -56,4 +56,7 @@ export const authApi = {
 
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
     api.post("/auth/change-password", data),
+
+  googleCompleteRegistration: (data: { token: string; role: string; specialty?: string; bio?: string; nationality?: string }) =>
+    api.post<{ data: User }>("/auth/google/complete-registration", data),
 };

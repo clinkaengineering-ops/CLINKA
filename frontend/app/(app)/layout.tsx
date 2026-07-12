@@ -194,7 +194,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Main content — offset by sidebar width on desktop */}
-          <main className="flex-1 min-w-0 lg:ml-72">
+          <main className="flex-1 min-w-0 lg:ms-72">
             {/* Top bar */}
             <div className="hidden lg:flex sticky top-0 z-30 items-center justify-between gap-2 h-16 px-6 lg:px-8 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900">
               <BrandLink logoClassName="h-11 w-auto max-w-[220px]" priority />

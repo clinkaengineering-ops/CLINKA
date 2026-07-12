@@ -125,7 +125,7 @@ export function AdminSystemLogs() {
               <div
                 key={`${log.timestamp}-${log.message}`}
                 className={cn(
-                  "px-4 py-3 flex gap-3 items-start border-l-4",
+                  "px-4 py-3 flex gap-3 items-start border-s-4",
                   log.level === "ERROR"
                     ? "border-rose-500 bg-rose-50/50 dark:bg-rose-900/10"
                     : log.level === "WARN"

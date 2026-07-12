@@ -193,7 +193,7 @@ export function AdminOperationsOverview({
               color={CHART_COLOR}
               height={200}
               formatValue={(n) => formatMoney(n)}
-              yAxisLabel="EGP"
+              yAxisLabel="USD"
             />
             <ChartMeta
               items={[
@@ -233,7 +233,7 @@ export function AdminOperationsOverview({
               color={CHART_COLOR}
               height={180}
               formatValue={(n) => formatMoney(n)}
-              yAxisLabel="EGP"
+              yAxisLabel="USD"
             />
             <ChartMeta
               items={[

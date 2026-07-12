@@ -37,7 +37,7 @@ export function getPaymobConfig(): PaymobConfig {
     apiKey: process.env.PAYMOB_API_KEY ?? "",
     publicKey: process.env.PAYMOB_PUBLIC_KEY ?? "",
     hmacSecret: process.env.PAYMOB_HMAC_SECRET ?? "",
-    currency: process.env.PAYMOB_CURRENCY ?? "EGP",
+    currency: process.env.PAYMOB_CURRENCY ?? "USD",
     commissionRate: Number(process.env.PLATFORM_COMMISSION_RATE ?? "0.1"),
     integrationIds,
   };
@@ -96,7 +96,7 @@ export function getPaymobPayoutConfig(): PaymobPayoutConfig {
     clientSecret,
     username,
     password,
-    currency: process.env.PAYMOB_CURRENCY ?? "EGP",
+    currency: process.env.PAYMOB_CURRENCY ?? "USD",
     instantBankMinAmount: Number(
       process.env.PAYMOB_PAYOUT_INSTANT_BANK_MIN ?? "112",
     ),

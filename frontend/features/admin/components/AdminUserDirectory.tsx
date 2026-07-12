@@ -118,7 +118,7 @@ export function AdminUserDirectory() {
           </div>
 
           {user.role === "ENGINEER" && (
-            <div className="space-y-4 border-l border-slate-200 dark:border-slate-800 pl-6">
+            <div className="space-y-4 border-s border-slate-200 dark:border-slate-800 ps-6">
               <h3 className="font-semibold border-b border-slate-200 dark:border-slate-800 pb-2">
                 Update Engineer Profile
               </h3>

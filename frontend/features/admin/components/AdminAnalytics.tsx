@@ -165,7 +165,7 @@ export function AdminAnalytics() {
                   color={CHART_COLOR}
                   height={180}
                   formatValue={(n) => formatMoney(n)}
-                  yAxisLabel="EGP"
+                  yAxisLabel="USD"
                 />
                 <ChartMeta
                   items={[
@@ -196,7 +196,7 @@ export function AdminAnalytics() {
                   color={CHART_COLOR}
                   height={180}
                   formatValue={(n) => formatMoney(n)}
-                  yAxisLabel="EGP"
+                  yAxisLabel="USD"
                 />
                 <ChartMeta
                   items={[

@@ -149,7 +149,7 @@ export function AboutPage() {
           <SectionHeader title={t("about.howTitle")} center />
           
           <div className="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6 relative">
-            <div className="hidden lg:block absolute top-12 left-12 right-12 h-0.5 bg-slate-300 dark:bg-slate-700" />
+            <div className="hidden lg:block absolute top-12 start-12 end-12 h-0.5 bg-slate-300 dark:bg-slate-700" />
             {howSteps.map((step, i) => {
               // Strip the number "1. " from the title
               const titleRaw = step.title.replace(/^\d+\.\s*/, '');

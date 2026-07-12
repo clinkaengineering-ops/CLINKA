@@ -121,9 +121,8 @@ export function ThemeToggle({
       type="button"
       onClick={toggleTheme}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg border transition-colors",
-        "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-        "dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700",
+        "flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300",
+        "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700",
         "focus:outline-none focus:ring-2 focus:ring-electric-500/40",
         compact
           ? "h-10 w-10 shrink-0"

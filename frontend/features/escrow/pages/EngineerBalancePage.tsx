@@ -24,7 +24,7 @@ import {
   normalizeCountryCode,
 } from "@/lib/validation/countryCodes";
 
-const PAYMOB_BANK_MIN_EGP = 112;
+const PAYMOB_BANK_MIN_USD = 112;
 
 const BANK_OPTIONS = [
   { code: "CIB", label: "Commercial International Bank (CIB)" },
@@ -154,7 +154,7 @@ export function EngineerBalancePage() {
         }
       }
       if (channel === "bank_transfer") {
-        if (withdrawAmount < PAYMOB_BANK_MIN_EGP) {
+        if (withdrawAmount < PAYMOB_BANK_MIN_USD) {
           setModalError(t("bal.withdrawBankMin"));
           return;
         }

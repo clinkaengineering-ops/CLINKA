@@ -258,12 +258,12 @@ export function AdminPayoutPanel() {
           <StatCard label={t("ad.payoutStats.failed")} value={String(stats.failed)} icon={<IconWallet width={18} height={18} />} />
           <StatCard
             label={t("ad.payoutStats.volume24h")}
-            value={`${stats.volume24h.toLocaleString()} EGP`}
+            value={`$${stats.volume24h.toLocaleString()}`}
             icon={<IconWallet width={18} height={18} />}
           />
           <StatCard
             label={t("ad.payoutStats.volume30d")}
-            value={`${stats.volume30d.toLocaleString()} EGP`}
+            value={`$${stats.volume30d.toLocaleString()}`}
             icon={<IconWallet width={18} height={18} />}
           />
         </div>
@@ -328,7 +328,7 @@ export function AdminPayoutPanel() {
                       </p>
                     </td>
                     <td className="p-3 font-semibold text-emerald-600 dark:text-emerald-400">
-                      {Number(w.amount).toLocaleString()} EGP
+                      ${Number(w.amount).toLocaleString()}
                     </td>
                     <td className="p-3">
                       <Badge color={w.method === "IBAN" ? "blue" : "slate"}>

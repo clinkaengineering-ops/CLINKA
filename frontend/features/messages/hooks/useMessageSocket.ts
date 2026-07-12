@@ -18,7 +18,10 @@ export function useMessageSocket(
   const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
   const [typingUserId, setTypingUserId] = useState<number | null>(null);
   const onNewMessageRef = useRef(onNewMessage);
-  onNewMessageRef.current = onNewMessage;
+  
+  useEffect(() => {
+    onNewMessageRef.current = onNewMessage;
+  }, [onNewMessage]);
 
   useEffect(() => {
     const sock = getMessageSocket();

@@ -17,6 +17,8 @@ import {
 } from "@/lib/validation";
 import { cn } from "@/utils/cn";
 import { Button, Card, Divider, Field, Input, Textarea } from "@/components/UI";
+import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordChecklist } from "@/components/PasswordChecklist";
 import {
   IconArrow,
   IconBriefcase,
@@ -74,6 +76,7 @@ export function RegisterForm() {
     portfolioFiles: [] as File[],
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [passFocus, setPassFocus] = useState(false);
 
   useEffect(() => {
     const preset = searchParams.get("role");
@@ -483,14 +486,22 @@ export function RegisterForm() {
             </Field>
 
             <Field label={t("auth.password")} error={fieldErrors.password}>
-              <Input
+              <PasswordInput
                 icon={<IconLock width={16} height={16} />}
-                type="password"
                 placeholder={t("auth.passMin")}
                 value={form.password}
                 error={!!fieldErrors.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onFocus={() => setPassFocus(true)}
+                onBlur={() => setPassFocus(false)}
               />
+              {(passFocus || form.password.length > 0) ? (
+                <PasswordChecklist password={form.password} />
+              ) : (
+                <p className="text-xs text-slate-500 mt-2">
+                  {t("auth.passReq.helper")}
+                </p>
+              )}
             </Field>
 
             {role === "ENGINEER" && (

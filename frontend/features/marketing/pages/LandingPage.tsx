@@ -60,7 +60,7 @@ export function LandingPage() {
           )}
         >
           <div className="max-w-3xl mx-auto text-center animate-fade-up relative">
-            <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none select-none">
+            <div className="absolute start-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none select-none">
               <BrandLogo
                 variant="mark"
                 className="w-[280px] sm:w-[420px] lg:w-[560px] h-auto opacity-[0.2] dark:opacity-[0.25]"
@@ -232,7 +232,7 @@ export function LandingPage() {
       {/* HOW IT WORKS */}
       <section className="relative py-16 sm:py-24 overflow-hidden bg-brand-ice text-slate-900 dark:bg-navy-950 dark:text-white">
         <div className="absolute inset-0 grid-bg opacity-30 dark:opacity-50" />
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-96 w-full max-w-[800px] bg-brand-teal/10 dark:bg-electric-500/20 blur-[120px] rounded-full" />
+        <div className="absolute -top-40 start-1/2 -translate-x-1/2 h-96 w-full max-w-[800px] bg-brand-teal/10 dark:bg-electric-500/20 blur-[120px] rounded-full" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-teal/30 bg-brand-teal/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-teal dark:border-electric-500/30 dark:bg-electric-500/10 dark:text-electric-300">

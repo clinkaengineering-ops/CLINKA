@@ -41,7 +41,7 @@ import type { WithdrawalRequestStatus } from "../../generated/prisma/client";
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
 
 function formatEgp(amount: number) {
-  return `${roundMoney(amount).toFixed(2)} EGP`;
+  return `$${roundMoney(amount).toFixed(2)}`;
 }
 
 function paymobResultToStatus(result: {
@@ -495,7 +495,7 @@ export async function createPaymobPayout(
           method: methodLabel,
           accountNumber,
           payoutType: "PAYMOB",
-          currency: "EGP",
+          currency: "USD",
           status: "PENDING",
           paymobClientReference: clientReference,
           idempotencyKey,
@@ -683,7 +683,7 @@ export async function createIbanPayout(
           method: "IBAN",
           accountNumber: maskedIban,
           payoutType: "IBAN",
-          currency: "EGP",
+          currency: "USD",
           country: input.country,
           bankName: input.bankName,
           accountHolderName: maskedName,

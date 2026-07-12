@@ -127,6 +127,28 @@ export async function registerEngineer(
   } catch {
     // Account is created; verification email can be resent later
   }
+  const { createNotification } = await import("../../utils/notifications");
+  await createNotification(
+    user.id,
+    "ENGINEER_APPLICATION_RECEIVED",
+    "Engineer application received",
+    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
+    "/settings",
+    { force: true },
+  );
+
+  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  for (const admin of admins) {
+    await createNotification(
+      admin.id,
+      "ENGINEER_APPLICATION_RECEIVED",
+      "New Engineer Application",
+      "A new engineer has submitted their application and is pending review.",
+      "/admin/verification",
+      { force: true },
+    );
+  }
+
   return stripPassword(user);
 }
 
@@ -189,6 +211,28 @@ export async function resumeEngineerRegistration(
     } catch {
       // Portfolio saved; verification email can be resent later
     }
+  }
+
+  const { createNotification } = await import("../../utils/notifications");
+  await createNotification(
+    user.id,
+    "ENGINEER_APPLICATION_RECEIVED",
+    "Engineer application received",
+    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
+    "/settings",
+    { force: true },
+  );
+
+  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  for (const admin of admins) {
+    await createNotification(
+      admin.id,
+      "ENGINEER_APPLICATION_RECEIVED",
+      "New Engineer Application",
+      "A new engineer has submitted their application and is pending review.",
+      "/admin/verification",
+      { force: true },
+    );
   }
 
   return stripPassword(refreshed);
@@ -267,6 +311,18 @@ export async function applyClientAsEngineer(
     "/settings",
     { force: true },
   );
+
+  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  for (const admin of admins) {
+    await createNotification(
+      admin.id,
+      "ENGINEER_APPLICATION_RECEIVED",
+      "New Engineer Application",
+      "A new engineer has submitted their application and is pending review.",
+      "/admin/verification",
+      { force: true },
+    );
+  }
 
   const refreshed = await db.user.findUnique({
     where: { id: userId },
@@ -347,6 +403,18 @@ export async function completeGoogleEngineerRegistration(
     { force: true },
   );
 
+  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  for (const admin of admins) {
+    await createNotification(
+      admin.id,
+      "ENGINEER_APPLICATION_RECEIVED",
+      "New Engineer Application",
+      "A new engineer has submitted their application and is pending review.",
+      "/admin/verification",
+      { force: true },
+    );
+  }
+
   const refreshed = await db.user.findUnique({
     where: { id: userId },
     include: { profile: { include: { portfolio: true } } },
@@ -412,9 +480,14 @@ export async function verifyOtp(userId: number, otp: string) {
 }
 
 export async function verifyEmail(token: string) {
-  const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
-    userId: number;
-  };
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
+      userId: number;
+    };
+  } catch (error) {
+    throw new ApiError(400, "Invalid or expired verification link");
+  }
 
   const existing = await db.user.findUnique({
     where: { id: payload.userId },
@@ -469,9 +542,14 @@ export async function forgotPassword(email: string) {
 }
 
 export async function resetPassword(token: string, newPassword: string) {
-  const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
-    userId: number;
-  };
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
+      userId: number;
+    };
+  } catch (error) {
+    throw new ApiError(400, "Invalid or expired password reset link");
+  }
 
   const hashed = await bcrypt.hash(newPassword, 10);
 

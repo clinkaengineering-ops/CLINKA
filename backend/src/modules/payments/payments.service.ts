@@ -159,7 +159,7 @@ function getRedirectionUrls(projectId: number, paymentId: number) {
 }
 
 function formatEgp(amount: number) {
-  return `${Math.round(amount * 100) / 100} EGP`;
+  return `\${Math.round(amount * 100) / 100}`;
 }
 
 /* OLD_WITHDRAWAL_START — Manual withdrawal email notification (commented out for auto-withdrawal via Paymob)

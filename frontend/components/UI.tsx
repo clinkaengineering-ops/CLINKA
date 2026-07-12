@@ -12,6 +12,7 @@ import { BrandLink } from "./BrandLogo";
 import { AuthShellAside } from "./AuthShellAside";
 import { ThemeToggle } from "./theme";
 import Link from "next/link";
+import Image from "next/image";
 /* ---------- Button ---------- */
 export const Button = forwardRef<
   HTMLButtonElement,
@@ -71,7 +72,7 @@ export const Card = ({
 }: HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/80 backdrop-blur shadow-sm dark:shadow-none transition-smooth motion-safe:hover:shadow-md",
+      "rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/80 backdrop-blur shadow-sm dark:shadow-none transition-smooth hover-lift",
       className,
     )}
     {...props}
@@ -124,7 +125,7 @@ export const Input = forwardRef<
 >(({ className, icon, error, ...props }, ref) => (
   <div className="relative">
     {icon && (
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+      <div className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400">
         {icon}
       </div>
     )}
@@ -136,7 +137,7 @@ export const Input = forwardRef<
         error
           ? "border-rose-500 focus:ring-rose-500/30 dark:border-rose-500"
           : "border-slate-200 dark:border-slate-800 focus:ring-electric-500/30",
-        icon && "pl-10",
+        icon && "ps-10",
         className,
       )}
       {...props}
@@ -201,10 +202,12 @@ export const Avatar = ({
       style={{ width: size, height: size, fontSize: size * 0.4 }}
     >
       {src ? (
-        <img
+        <Image
           src={src}
-          className="w-full h-full rounded-full object-cover"
+          className="rounded-full object-cover"
           alt={name}
+          width={size}
+          height={size}
         />
       ) : (
         initials.toUpperCase()
@@ -263,9 +266,9 @@ export const StatCard = ({
   icon: ReactNode;
   accent?: "up" | "down" | "none";
 }) => {
-  const isValueZero = /^(EGP|\$|€|£)?\s*0(\.0+)?$/i.test(value.trim());
-  const isChangeZero = change === "—" || (change && /^(\+|-)?\s*(EGP|\$|€|£)?\s*0(\.0+)?(\s+|$|%)/i.test(change.trim()));
-  const isChangeTextOnly = change && !/^(\+|-)?\s*(EGP|\$|€|£)?\s*\d/i.test(change.trim());
+  const isValueZero = /^(USD|\$|€|£)?\s*0(\.0+)?$/i.test(value.trim());
+  const isChangeZero = change === "—" || (change && /^(\+|-)?\s*(USD|\$|€|£)?\s*0(\.0+)?(\s+|$|%)/i.test(change.trim()));
+  const isChangeTextOnly = change && !/^(\+|-)?\s*(USD|\$|€|£)?\s*\d/i.test(change.trim());
   
   const isNeutral = isValueZero || isChangeZero || isChangeTextOnly;
   const finalAccent = accent === "down" ? "down" : accent === "none" ? "none" : (isNeutral ? "none" : "up");
@@ -342,7 +345,7 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-screen overflow-x-hidden grid lg:grid-cols-2 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="relative flex items-center justify-center px-4 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12">
         <div className="absolute end-4 top-4 sm:end-6 sm:top-6 lg:end-8 lg:top-8">
-          <ThemeToggle />
+          <ThemeToggle compact />
         </div>
         <div className="w-full max-w-md min-w-0">
           <BrandLink logoClassName="h-11 w-auto max-w-[220px] sm:h-12 sm:max-w-[260px]" priority />

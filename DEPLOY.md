@@ -59,7 +59,7 @@ Point your platform health check to `/api/health`.
 1. Import the repo; set **Root Directory** to `frontend`.
 2. Add env vars from `frontend/.env.example`:
    - `NEXT_PUBLIC_API_URL` = `https://YOUR-API-URL/api`
-   - `NEXT_PUBLIC_PAYMENT_CURRENCY` = `EGP`
+   - `NEXT_PUBLIC_PAYMENT_CURRENCY` = `USD`
 
 ### Coolify / Dokploy
 

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, Field, Input } from "@/components/UI";
+import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordChecklist } from "@/components/PasswordChecklist";
 import { IconCheck } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import {
@@ -19,6 +21,7 @@ export function SecuritySettingsTab() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [newPassFocus, setNewPassFocus] = useState(false);
 
   async function handlePasswordUpdate() {
     const result = validateForm(changePasswordFormSchema, {
@@ -52,8 +55,7 @@ export function SecuritySettingsTab() {
         <h2 className="font-bold">{t("st.password")}</h2>
         <div className="mt-4 grid sm:grid-cols-2 gap-4">
           <Field label={t("st.curPass")} error={fieldErrors.oldPassword}>
-            <Input
-              type="password"
+            <PasswordInput 
               autoComplete="current-password"
               value={oldPassword}
               error={!!fieldErrors.oldPassword}
@@ -61,13 +63,22 @@ export function SecuritySettingsTab() {
             />
           </Field>
           <Field label={t("st.newPass")} error={fieldErrors.newPassword}>
-            <Input
-              type="password"
+            <PasswordInput 
               autoComplete="new-password"
+              placeholder={t("auth.passwordPh")}
               value={newPassword}
               error={!!fieldErrors.newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              onFocus={() => setNewPassFocus(true)}
+              onBlur={() => setNewPassFocus(false)}
             />
+            {(newPassFocus || newPassword.length > 0) ? (
+              <PasswordChecklist password={newPassword} />
+            ) : (
+              <p className="text-xs text-slate-500 mt-2">
+                {t("auth.passReq.helper")}
+              </p>
+            )}
           </Field>
         </div>
         {message && (

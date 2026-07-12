@@ -1,0 +1,302 @@
+[
+  {
+    "key": "side.searchPlaceholder",
+    "en": "Search engineers, projects, contracts…",
+    "ar": "ابحث عن مهندسين، مشاريع، عقود…"
+  },
+  {
+    "key": "help.namePh",
+    "en": "Enter your full name",
+    "ar": "أدخل اسمك الكامل"
+  },
+  {
+    "key": "help.emailPh",
+    "en": "Enter your email address",
+    "ar": "أدخل بريدك الإلكتروني"
+  },
+  {
+    "key": "help.subjectPlaceholder",
+    "en": "Brief summary of the issue",
+    "ar": "ملخص مختصر للمشكلة"
+  },
+  {
+    "key": "help.messagePlaceholder",
+    "en": "Tell us what happened and how we can help…",
+    "ar": "أخبرنا بما حدث وكيف يمكننا المساعدة…"
+  },
+  {
+    "key": "help.admin.solutionPlaceholder",
+    "en": "Describe what was done or why it could not be solved…",
+    "ar": "صف ما تم إنجازه أو سبب عدم إمكانية الحل…"
+  },
+  {
+    "key": "legal.privacy.s6.p2",
+    "en": "To exercise other rights or ask questions about this policy, contact us via the Help Center at /help or email our support team.",
+    "ar": "لممارسة حقوق أخرى أو طرح أسئلة حول هذه السياسة، تواصل معنا عبر مركز المساعدة على /help أو بريد فريق الدعم."
+  },
+  {
+    "key": "legal.terms.s3.p1",
+    "en": "You must provide accurate registration information and keep your credentials secure. You are responsible for all activity under your account. You must be at least 18 years old and legally able to enter contracts in your jurisdiction.",
+    "ar": "يجب تقديم معلومات تسجيل دقيقة والحفاظ على أمان بيانات الدخول. أنت مسؤول عن كل نشاط يتم عبر حسابك. يجب أن يكون عمرك 18 عاماً على الأقل وأن تكون قادراً قانونياً على إبرام العقود في بلدك."
+  },
+  {
+    "key": "legal.terms.s12.p1",
+    "en": "We may update these Terms from time to time. Continued use after updates constitutes acceptance. Questions or disputes should first be submitted through the Help Center at /help.",
+    "ar": "قد نحدّث هذه الشروط من وقت لآخر. الاستمرار في الاستخدام بعد التحديثات يعني القبول. يجب تقديم الأسئلة أو النزاعات أولاً عبر مركز المساعدة على /help."
+  },
+  {
+    "key": "legal.security.s8.p1",
+    "en": "If you discover a vulnerability or security concern, contact us through the Help Center at /help or email our support team. We investigate all good-faith reports promptly.",
+    "ar": "إذا اكتشفت ثغرة أو مخاوف أمنية، تواصل معنا عبر مركز المساعدة على /help أو بريد فريق الدعم. نحقق في جميع البلاغات بحسن نية بسرعة."
+  },
+  {
+    "key": "es.phoneRequired",
+    "en": "Enter a valid phone number",
+    "ar": "أدخل رقم هاتف صالح"
+  },
+  {
+    "key": "es.phoneLabel",
+    "en": "Phone number",
+    "ar": "رقم الهاتف"
+  },
+  {
+    "key": "bal.withdrawAccountPh",
+    "en": "Enter bank account number or IBAN",
+    "ar": "أدخل رقم الحساب أو عنوان IPA الخاص بك"
+  },
+  {
+    "key": "bal.withdrawAmountPh",
+    "en": "Enter withdrawal amount",
+    "ar": "أدخل مبلغ السحب"
+  },
+  {
+    "key": "bal.withdrawNationalIdPh",
+    "en": "Enter your 14-digit national ID",
+    "ar": "أدخل الرقم القومي (14 رقمًا)"
+  },
+  {
+    "key": "bal.withdrawMsisdnPh",
+    "en": "Enter mobile wallet number",
+    "ar": "أدخل رقم المحفظة المحمولة"
+  },
+  {
+    "key": "bal.withdrawFullNamePh",
+    "en": "Enter account holder name",
+    "ar": "أدخل اسم صاحب الحساب"
+  },
+  {
+    "key": "bal.withdrawEgyptIbanPh",
+    "en": "EG380019000500000000263180002",
+    "ar": "EG380019000500000000263180002"
+  },
+  {
+    "key": "bal.withdrawEgyptIbanInvalid",
+    "en": "Enter a valid Egyptian IBAN.",
+    "ar": "أدخل IBAN مصريًا صالحًا."
+  },
+  {
+    "key": "bal.withdrawWalletRequired",
+    "en": "Enter your mobile wallet number.",
+    "ar": "أدخل رقم محفظتك."
+  },
+  {
+    "key": "bal.withdrawWalletInvalid",
+    "en": "Enter a valid Vodafone (010), Etisalat (011), or Orange (012) wallet number.",
+    "ar": "أدخل رقمًا صالحًا لفودافون (010) أو اتصالات (011) أو أورنج (012)."
+  },
+  {
+    "key": "bal.withdrawAccountRequired",
+    "en": "Enter your bank account number or IBAN.",
+    "ar": "أدخل رقم الحساب أو IBAN."
+  },
+  {
+    "key": "bal.withdrawFullNameRequired",
+    "en": "Enter the account holder full name.",
+    "ar": "أدخل اسم صاحب الحساب."
+  },
+  {
+    "key": "bal.withdrawAccountNameInvalid",
+    "en": "Enter the account holder's full legal name (first and last name) using letters, spaces, hyphens, or apostrophes only.",
+    "ar": "أدخل الاسم القانوني الكامل لصاحب الحساب (الاسم الأول واسم العائلة) باستخدام حروف ومسافات وواصلات أو فواصل عليا فقط."
+  },
+  {
+    "key": "bal.withdrawBankFullNamePh",
+    "en": "e.g. John Doe",
+    "ar": "مثال: John Doe"
+  },
+  {
+    "key": "bal.withdrawBankFullNameHint",
+    "en": "Enter the name exactly as it appears on the bank account.",
+    "ar": "أدخل الاسم كما يظهر على الحساب البنكي بالضبط."
+  },
+  {
+    "key": "bal.withdrawAccountIbanInvalid",
+    "en": "Enter a valid IBAN for this bank account.",
+    "ar": "أدخل IBAN صالحًا لهذا الحساب البنكي."
+  },
+  {
+    "key": "bal.withdrawIbanInvalid",
+    "en": "Enter a valid IBAN.",
+    "ar": "أدخل IBAN صالحًا."
+  },
+  {
+    "key": "bal.withdrawSwiftInvalid",
+    "en": "Enter a valid SWIFT/BIC code (8 or 11 characters).",
+    "ar": "أدخل رمز SWIFT/BIC صالحًا (8 أو 11 حرفًا)."
+  },
+  {
+    "key": "bal.withdrawIbanPh",
+    "en": "e.g. GB82WEST12345698765432",
+    "ar": "مثال: GB82WEST12345698765432"
+  },
+  {
+    "key": "bal.withdrawBankNamePh",
+    "en": "e.g. Barclays",
+    "ar": "مثال: Barclays"
+  },
+  {
+    "key": "bal.withdrawSwiftPh",
+    "en": "8 or 11 characters",
+    "ar": "8 أو 11 حرفًا"
+  },
+  {
+    "key": "bal.withdrawBankAddressPh",
+    "en": "Branch city/region",
+    "ar": "المدينة أو المنطقة"
+  },
+  {
+    "key": "rv.commentPlaceholder",
+    "en": "Share your experience working on this project…",
+    "ar": "شارك تجربتك في هذا المشروع…"
+  },
+  {
+    "key": "auth.bioPh",
+    "en": "Describe your expertise and experience",
+    "ar": "أخبر العملاء عن خبرتك…"
+  },
+  {
+    "key": "auth.finish",
+    "en": "Finish & enter app",
+    "ar": "إنهاء والدخول للتطبيق"
+  },
+  {
+    "key": "vf.dropHere",
+    "en": "Drag & drop your files here",
+    "ar": "اسحب وأفلت ملفاتك هنا"
+  },
+  {
+    "key": "vf.dropHelp",
+    "en": "PDF, JPG, PNG up to 25MB. End-to-end encrypted.",
+    "ar": "PDF، JPG، PNG حتى 25 ميجا. تشفير من طرف إلى طرف."
+  },
+  {
+    "key": "st.otpPh",
+    "en": "Enter 6-digit verification code",
+    "ar": "أدخل الرمز المكون من 6 أرقام"
+  },
+  {
+    "key": "st.bioPh",
+    "en": "Tell others about yourself",
+    "ar": "تحدث قليلاً عن خبراتك ومهاراتك"
+  },
+  {
+    "key": "st.nationalityPh",
+    "en": "Select your nationality",
+    "ar": "اختر جنسيتك"
+  },
+  {
+    "key": "st.phone",
+    "en": "Phone",
+    "ar": "الهاتف"
+  },
+  {
+    "key": "pay.revisionPlaceholder",
+    "en": "Describe what needs to change (min. 10 characters)...",
+    "ar": "اشرح التعديلات المطلوبة (10 أحرف على الأقل)..."
+  },
+  {
+    "key": "pay.submitWork.notesPlaceholder",
+    "en": "Summarize what you delivered...",
+    "ar": "لخّص ما قمت بتسليمه..."
+  },
+  {
+    "key": "pay.submitWork.urlPh",
+    "en": "https://example.com/deliverable",
+    "ar": "أدخل رابط ملفات التسليم"
+  },
+  {
+    "key": "auth.emailPh",
+    "en": "Enter your email address",
+    "ar": "you@firm.com"
+  },
+  {
+    "key": "auth.passwordPh",
+    "en": "Enter your password",
+    "ar": "••••••••"
+  },
+  {
+    "key": "auth.otpPh",
+    "en": "Enter 6-digit code",
+    "ar": "رمز التحقق (6 أرقام)"
+  },
+  {
+    "key": "auth.namePh",
+    "en": "Enter your full name",
+    "ar": "محمد طلال"
+  },
+  {
+    "key": "auth.nationalityPh",
+    "en": "Select your nationality",
+    "ar": "اختر الجنسية..."
+  },
+  {
+    "key": "auth.otp.subtitle",
+    "en": "Enter the 6-digit code we sent you",
+    "ar": "أدخل الرمز المكوّن من 6 أرقام الذي أرسلناه"
+  },
+  {
+    "key": "auth.forgot.enterEmail",
+    "en": "Enter your email and we'll send you a reset link",
+    "ar": "أدخل بريدك الإلكتروني وسنرسل لك رابط الاستعادة"
+  },
+  {
+    "key": "auth.reset.confirmPh",
+    "en": "Confirm your password",
+    "ar": "أعد إدخال كلمة المرور"
+  },
+  {
+    "key": "pm.postModal.titlePh",
+    "en": "Enter project title",
+    "ar": "مثال: برج متعدد الاستخدامات 12 طابقًا"
+  },
+  {
+    "key": "pm.postModal.descPh",
+    "en": "Describe scope, deliverables, and timeline expectations",
+    "ar": "نطاق العمل، المخرجات، التوقعات الزمنية…"
+  },
+  {
+    "key": "pm.postModal.budgetPh",
+    "en": "Enter project budget",
+    "ar": "مثال: 5000"
+  },
+  {
+    "key": "checkout.contactDetails",
+    "en": "Please enter your contact details to continue",
+    "ar": "أدخل بيانات الاتصال للمتابعة"
+  },
+  {
+    "key": "checkout.phone",
+    "en": "Phone number",
+    "ar": "رقم الهاتف"
+  },
+  {
+    "key": "checkout.addressPh",
+    "en": "Your billing address",
+    "ar": "عنوان الفوترة"
+  },
+  {
+    "key": "st.uploadPhoto",
+    "en": "Upload Photo",
+    "ar": "رفع صورة"
+  }
+]

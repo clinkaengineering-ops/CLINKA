@@ -83,6 +83,7 @@ export function buildEmailHtml(options: BuildEmailOptions): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
   <title>${safeTitle}</title>
   <!--[if mso]>
   <noscript>
@@ -101,7 +102,7 @@ export function buildEmailHtml(options: BuildEmailOptions): string {
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:${BRAND.ice};font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:0;background-color:${BRAND.ice};font-family:'Cairo',Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
     ${safePreheader}
   </div>

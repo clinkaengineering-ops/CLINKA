@@ -4,6 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button, Card, Field, Input } from "@/components/UI";
+import { PasswordInput as ActualPasswordInput } from "@/components/PasswordInput";
+import { PasswordChecklist } from "@/components/PasswordChecklist";
 import { authApi } from "@/features/auth/api/auth.api";
 import {
   parseApiValidation,
@@ -22,6 +24,7 @@ function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [passFocus, setPassFocus] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -64,18 +67,25 @@ function ResetPasswordForm() {
             {formError && <p className="text-sm text-rose-500">{formError}</p>}
 
             <Field label={t("auth.reset.newPassword")} error={fieldErrors.password}>
-              <Input
-                type="password"
+              <ActualPasswordInput 
                 placeholder={t("auth.passMin")}
                 autoComplete="new-password"
                 value={password}
                 error={!!fieldErrors.password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setPassFocus(true)}
+                onBlur={() => setPassFocus(false)}
               />
+              {(passFocus || password.length > 0) ? (
+                <PasswordChecklist password={password} confirmPassword={confirm} />
+              ) : (
+                <p className="text-xs text-slate-500 mt-2">
+                  {t("auth.passReq.helper")}
+                </p>
+              )}
             </Field>
             <Field label={t("auth.reset.confirmPassword")} error={fieldErrors.confirm}>
-              <Input
-                type="password"
+              <ActualPasswordInput 
                 placeholder={t("auth.reset.confirmPh")}
                 autoComplete="new-password"
                 value={confirm}

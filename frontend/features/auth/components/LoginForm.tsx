@@ -10,6 +10,7 @@ import {
   type FieldErrors,
 } from "@/lib/validation";
 import { Button, Card, Divider, Field, Input } from "@/components/UI";
+import { PasswordInput } from "@/components/PasswordInput";
 import { IconArrow, IconLock, IconMail, IconEye } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 
@@ -42,8 +43,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const [form, setForm] = useState({ email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [showPassword, setShowPassword] = useState(false);
-
+  
   function handleGoogleSignIn() {
     const next = searchParams.get("next");
     startGoogleSignIn({
@@ -106,32 +106,23 @@ export function LoginForm() {
             </Link>
           }
         >
-          <div className="relative">
-            <Input
-              icon={<IconLock width={16} height={16} />}
-              type={showPassword ? "text" : "password"}
-              placeholder={t("auth.passwordPh")}
-              autoComplete="current-password"
-              value={form.password}
-              error={!!fieldErrors.password}
-              onChange={(e) => {
-                setForm({ ...form, password: e.target.value });
-                if (fieldErrors.password) {
-                  setFieldErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.password;
-                    return next;
-                  });
-                }
-              }}
-            />
-            <IconEye
-              width={16}
-              height={16}
-              className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
-              onClick={() => setShowPassword((prev) => !prev)}
-            />
-          </div>
+          <PasswordInput
+            icon={<IconLock width={16} height={16} />}
+            placeholder={t("auth.passwordPh")}
+            autoComplete="current-password"
+            value={form.password}
+            error={!!fieldErrors.password}
+            onChange={(e) => {
+              setForm({ ...form, password: e.target.value });
+              if (fieldErrors.password) {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.password;
+                  return next;
+                });
+              }
+            }}
+          />
         </Field>
 
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">

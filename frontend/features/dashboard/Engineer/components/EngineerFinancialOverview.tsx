@@ -38,7 +38,7 @@ export function EngineerFinancialOverview({
           </p>
         </div>
         {/* Decorative background element */}
-        <div className="absolute -right-20 -bottom-20 w-64 h-64 rounded-full bg-white opacity-10 blur-3xl"></div>
+        <div className="absolute -end-20 -bottom-20 w-64 h-64 rounded-full bg-white opacity-10 blur-3xl"></div>
       </Card>
 
       {/* Financial Grid */}

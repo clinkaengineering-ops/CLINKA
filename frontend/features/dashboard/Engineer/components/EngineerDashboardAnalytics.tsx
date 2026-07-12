@@ -106,7 +106,7 @@ export function EngineerDashboardAnalytics({ bids }: { bids: MyBid[] }) {
               color={CHART_COLOR}
               height={200}
               formatValue={(n) => formatMoney(n)}
-              yAxisLabel="EGP"
+              yAxisLabel="USD"
             />
             <ChartMeta
               items={[

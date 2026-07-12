@@ -308,7 +308,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
           {/* Close button */}
           <button
             onClick={() => setActivePhotoIndex(null)}
-            className="absolute top-4 right-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+            className="absolute top-4 end-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
             aria-label="Close"
           >
             <IconClose width={24} height={24} />
@@ -318,7 +318,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
           {profile.portfolio.length > 1 && (
             <button
               onClick={goPrev}
-              className="absolute left-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+              className="absolute start-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
               aria-label="Previous"
             >
               <IconArrow width={24} height={24} className="rotate-180" />
@@ -350,7 +350,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
           {profile.portfolio.length > 1 && (
             <button
               onClick={goNext}
-              className="absolute right-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+              className="absolute end-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
               aria-label="Next"
             >
               <IconArrow width={24} height={24} />

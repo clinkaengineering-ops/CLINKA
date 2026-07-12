@@ -58,7 +58,7 @@ function normalizePaymobTransaction(
       typeof raw.amount_cents === "number" ? raw.amount_cents : 0,
     created_at:
       typeof raw.created_at === "string" ? raw.created_at : new Date().toISOString(),
-    currency: typeof raw.currency === "string" ? raw.currency : "EGP",
+    currency: typeof raw.currency === "string" ? raw.currency : "USD",
     error_occured: Boolean(raw.error_occured ?? raw.error_occured),
     has_parent_transaction: Boolean(raw.has_parent_transaction),
     integration_id:

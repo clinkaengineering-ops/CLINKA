@@ -423,7 +423,7 @@ model WithdrawalRequest {
   method                  String
   accountNumber           String
   payoutType              PayoutType              @default(PAYMOB)
-  currency                String                  @default("EGP") // Wallet settlement currency. Currently always EGP. Reserved for future multi-currency support.
+  currency                String                  @default("USD") // Wallet settlement currency. Currently always EGP. Reserved for future multi-currency support.
   country                 String?
   bankName                String?
   accountHolderName       String?

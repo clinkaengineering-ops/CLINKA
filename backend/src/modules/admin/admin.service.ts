@@ -603,7 +603,7 @@ export async function updateWithdrawalRequestStatus(
         item.user.id,
         "FUNDS_RELEASED",
         "Withdrawal cancelled",
-        `Your withdrawal of ${item.amount} EGP was cancelled.${input.adminNotes ? ` ${input.adminNotes}` : ""}`,
+        `Your withdrawal of \${item.amount} was cancelled.${input.adminNotes ? ` ${input.adminNotes}` : ""}`,
         "/balance",
       );
       return { ...updated, user: item.user };
@@ -619,7 +619,7 @@ export async function updateWithdrawalRequestStatus(
         item.user.id,
         "FUNDS_RELEASED",
         "Withdrawal completed",
-        `Your withdrawal of ${item.amount} EGP has been confirmed.`,
+        `Your withdrawal of \${item.amount} has been confirmed.`,
         "/balance",
       );
       return { ...updated, user: item.user };
@@ -692,7 +692,7 @@ export async function updateWithdrawalRequestStatus(
       updated.user.id,
       "FUNDS_RELEASED",
       "Withdrawal completed",
-      `Your withdrawal request for ${updated.amount} EGP has been marked completed by the admin.`,
+      `Your withdrawal request for \${updated.amount} has been marked completed by the admin.`,
       "/balance",
     );
   } else if (updated.status === "REJECTED") {
@@ -700,7 +700,7 @@ export async function updateWithdrawalRequestStatus(
       updated.user.id,
       "FUNDS_RELEASED",
       "Withdrawal rejected",
-      `Your withdrawal request for ${updated.amount} EGP was rejected.${updated.adminNotes ? ` Note: ${updated.adminNotes}` : ""}`,
+      `Your withdrawal request for \${updated.amount} was rejected.${updated.adminNotes ? ` Note: ${updated.adminNotes}` : ""}`,
       "/balance",
     );
   } else if (updated.status === "PROCESSING") {
@@ -708,7 +708,7 @@ export async function updateWithdrawalRequestStatus(
       updated.user.id,
       "FUNDS_RELEASED",
       "Withdrawal is processing",
-      `Your withdrawal request for ${updated.amount} EGP is being processed by the admin.`,
+      `Your withdrawal request for \${updated.amount} is being processed by the admin.`,
       "/balance",
     );
   }
@@ -741,7 +741,7 @@ export async function adminCancelWithdrawal(
     item.user.id,
     "FUNDS_RELEASED",
     "Withdrawal cancelled",
-    `Your withdrawal of ${item.amount} EGP was cancelled.${reason ? ` ${reason}` : ""}`,
+    `Your withdrawal of \${item.amount} was cancelled.${reason ? ` ${reason}` : ""}`,
     "/balance",
   );
   return { ...updated, user: item.user };
@@ -772,8 +772,8 @@ export async function adminResolveWithdrawal(
       : "Withdrawal resolved";
   const body =
     action === "mark_completed"
-      ? `Your withdrawal of ${item.amount} EGP has been confirmed after manual review.`
-      : `Your withdrawal of ${item.amount} EGP was resolved after manual review.${reason ? ` ${reason}` : ""}`;
+      ? `Your withdrawal of \${item.amount} has been confirmed after manual review.`
+      : `Your withdrawal of \${item.amount} was resolved after manual review.${reason ? ` ${reason}` : ""}`;
 
   await createNotification(
     item.user.id,
@@ -1388,7 +1388,7 @@ export async function approveInternationalWithdrawal(withdrawalId: number, admin
     updated.userId,
     "FUNDS_HELD",
     "Withdrawal approved",
-    `Your international withdrawal of ${updated.amount} EGP was approved and is awaiting transfer.`,
+    `Your international withdrawal of \${updated.amount} was approved and is awaiting transfer.`,
     "/balance",
   );
 
@@ -1464,7 +1464,7 @@ export async function rejectInternationalWithdrawal(withdrawalId: number, adminI
     updated.userId,
     "FUNDS_RELEASED",
     "Withdrawal rejected",
-    `Your international withdrawal of ${updated.amount} EGP was rejected. ${reason}`,
+    `Your international withdrawal of \${updated.amount} was rejected. ${reason}`,
     "/balance",
   );
 
@@ -1512,7 +1512,7 @@ export async function initiateTransfer(withdrawalId: number, adminId: number, ex
     updated.userId,
     "FUNDS_HELD",
     "Transfer initiated",
-    `Your international withdrawal of ${updated.amount} EGP transfer has been initiated (ref: ${externalReference}).`,
+    `Your international withdrawal of \${updated.amount} transfer has been initiated (ref: ${externalReference}).`,
     "/balance",
   );
 
@@ -1580,7 +1580,7 @@ export async function recordCompletion(withdrawalId: number, adminId: number, no
     updated.userId,
     "FUNDS_RELEASED",
     "Withdrawal completed",
-    `Your international withdrawal of ${updated.amount} EGP has been completed.`,
+    `Your international withdrawal of \${updated.amount} has been completed.`,
     "/balance",
   );
 

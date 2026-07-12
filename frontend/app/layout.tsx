@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Barlow, Montserrat } from "next/font/google";
+import { Barlow, Cairo } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { I18nProvider } from "@/i18n";
@@ -11,19 +11,66 @@ const brandLatin = Barlow({
   variable: "--font-brand-latin",
 });
 
-const brandArabic = Montserrat({
-  subsets: ["latin", "latin-ext"],
+const brandArabic = Cairo({
+  subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-brand-arabic",
 });
 
 export const metadata: Metadata = {
-  title: "CLINKA",
-  description: "CLINKA — Civil Link Architecture",
+  title: {
+    template: "%s | CLINKA — Engineering Marketplace",
+    default: "CLINKA — The Premier Engineering & Architectural Marketplace",
+  },
+  description:
+    "Hire top-tier freelance engineers, architects, and civil engineering experts. Manage projects, escrow payments, and collaborate seamlessly on CLINKA.",
+  keywords: [
+    "engineering marketplace",
+    "freelance engineers",
+    "hire engineers",
+    "civil engineers",
+    "mechanical engineers",
+    "electrical engineers",
+    "architectural engineers",
+    "engineering freelancers",
+    "engineering services",
+    "engineering projects",
+    "engineering platform",
+    "engineering talent",
+    "CAD designers",
+    "structural engineers",
+  ],
+  authors: [{ name: "CLINKA" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://clinka.com",
+    siteName: "CLINKA",
+    title: "CLINKA — The Premier Engineering & Architectural Marketplace",
+    description:
+      "Hire top-tier freelance engineers, architects, and civil engineering experts. Manage projects, escrow payments, and collaborate seamlessly.",
+    images: [
+      {
+        url: "/brand/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "CLINKA Engineering Marketplace",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CLINKA — The Premier Engineering & Architectural Marketplace",
+    description:
+      "Hire top-tier freelance engineers, architects, and civil engineering experts. Manage projects, escrow payments, and collaborate seamlessly.",
+    images: ["/brand/twitter-card.jpg"],
+    creator: "@clinka_hq",
+  },
   icons: {
     icon: "/brand/mark.svg",
     apple: "/brand/mark.png",
   },
+  metadataBase: new URL("https://clinka.com"),
 };
 
 export default function RootLayout({
