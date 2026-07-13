@@ -403,7 +403,7 @@ function CheckoutForm({ projectId }: { projectId: number }) {
         if (!alive) return;
 
         setTitle(session.projectTitle);
-        setAmount(session.amount);
+        setAmount(session.amountUsd);
 
         if (session.paymentId) {
           writeCheckoutReturnStorage({

@@ -36,13 +36,13 @@ export function useEngineerEscrow() {
   const stats = useMemo(() => {
     const inEscrow = payments
       .filter((p) => p.status === "In escrow")
-      .reduce((s, p) => s + p.amount, 0);
+      .reduce((s, p) => s + p.amountUsd, 0);
     const released = payments
       .filter((p) => p.status === "Released")
-      .reduce((s, p) => s + p.amount, 0);
+      .reduce((s, p) => s + p.amountUsd, 0);
     const pending = payments
       .filter((p) => p.status === "Pending")
-      .reduce((s, p) => s + p.amount, 0);
+      .reduce((s, p) => s + p.amountUsd, 0);
     return { inEscrow, released, pending, count: payments.length };
   }, [payments]);
 

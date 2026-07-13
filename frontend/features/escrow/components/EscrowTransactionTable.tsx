@@ -38,7 +38,7 @@ export function EscrowTransactionTable({
           : c.status === "Refunded"
             ? "amber"
             : "slate",
-    amount: formatMoney(c.amount),
+    amount: formatMoney(c.amountUsd),
     status: c.status,
   }));
 
@@ -57,7 +57,7 @@ export function EscrowTransactionTable({
                 new Date(c.updatedAt).toISOString(),
                 c.projectTitle,
                 c.status,
-                c.amount,
+                c.amountUsd,
                 c.status,
               ].join(","),
             );
@@ -82,7 +82,7 @@ export function EscrowTransactionTable({
               <th className="text-start p-4">{t("es.cols.date")}</th>
               <th className="text-start p-4">{t("es.cols.desc")}</th>
               <th className="text-start p-4">{t("es.cols.type")}</th>
-              <th className="text-end p-4">{t("es.cols.amount")}</th>
+              <th className="text-end p-4">{t("es.cols.amountUsd")}</th>
               <th className="text-start p-4">{t("es.cols.status")}</th>
             </tr>
           </thead>

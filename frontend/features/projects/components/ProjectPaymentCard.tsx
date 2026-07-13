@@ -30,7 +30,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
   if (project.status === "OPEN" || project.status === "CANCELLED") return null;
 
   const acceptedBid = project.bids?.find((b) => b.status === "ACCEPTED");
-  const amount = project.payment?.amount ?? acceptedBid?.price ?? project.budget;
+  const amount = project.payment?.amountUsd ?? acceptedBid?.price ?? project.budget;
 
   const handleApprove = async () => {
     if (!confirm(t("es.confirmRelease"))) return;

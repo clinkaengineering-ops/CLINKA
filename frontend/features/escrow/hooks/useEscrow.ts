@@ -45,7 +45,7 @@ function toContractRows(
     projectId: p.projectId,
     projectTitle: p.projectTitle,
     projectStatus: p.projectStatus ?? projectStatusById.get(p.projectId),
-    amount: p.amount,
+    amountUsd: p.amountUsd,
     commission: p.commission,
     status: p.status,
     updatedAt: p.updatedAt,
@@ -60,7 +60,7 @@ function toContractRows(
       projectId: project.id,
       projectTitle: project.title,
       projectStatus: project.status,
-      amount: accepted.price ?? project.budget,
+      amountUsd: accepted.price ?? project.budget,
       commission: 0,
       status: "Pending",
       updatedAt: new Date().toISOString(),
@@ -150,13 +150,13 @@ export function useEscrow() {
   const stats = useMemo(() => {
     const inEscrow = contracts
       .filter((c) => c.status === "In escrow")
-      .reduce((s, c) => s + c.amount, 0);
+      .reduce((s, c) => s + c.amountUsd, 0);
     const released = contracts
       .filter((c) => c.status === "Released")
-      .reduce((s, c) => s + c.amount, 0);
+      .reduce((s, c) => s + c.amountUsd, 0);
     const pending = contracts
       .filter((c) => c.status === "Pending")
-      .reduce((s, c) => s + c.amount, 0);
+      .reduce((s, c) => s + c.amountUsd, 0);
     const refunded = contracts.filter((c) => c.status === "Refunded").length;
     return { inEscrow, released, pending, refunded };
   }, [contracts]);

@@ -42,7 +42,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
   const activeProjects = projects.filter((p) => p.status === "IN_PROGRESS").length;
   const inEscrowTotal = escrow
     .filter((e) => e.status === "In escrow")
-    .reduce((s, e) => s + e.amount, 0);
+    .reduce((s, e) => s + e.amountUsd, 0);
   const engineersHired = projects.filter(
     (p) => p.status === "IN_PROGRESS" || p.status === "COMPLETED",
   ).length;
@@ -67,25 +67,25 @@ export const fetchSpendOverview = async (
     fetchMyProjects().catch(() => []),
   ]);
 
-  const totalRaw = escrow.reduce((s, e) => s + e.amount, 0);
+  const totalRaw = escrow.reduce((s, e) => s + e.amountUsd, 0);
   const inEscrow = escrow
     .filter((e) => e.status === "In escrow")
-    .reduce((s, e) => s + e.amount, 0);
+    .reduce((s, e) => s + e.amountUsd, 0);
   const released = escrow
     .filter((e) => e.status === "Released")
-    .reduce((s, e) => s + e.amount, 0);
+    .reduce((s, e) => s + e.amountUsd, 0);
   const refunded = escrow
     .filter((e) => e.status === "Refunded")
-    .reduce((s, e) => s + e.amount, 0);
+    .reduce((s, e) => s + e.amountUsd, 0);
   const pending = escrow
     .filter((e) => e.status === "Pending")
-    .reduce((s, e) => s + e.amount, 0);
+    .reduce((s, e) => s + e.amountUsd, 0);
 
   const monthlyWindow = lastNMonths(6);
   const monthlyTotals: Record<string, number> = {};
   escrow.forEach((p) => {
     const key = monthKey(new Date(p.createdAt));
-    monthlyTotals[key] = (monthlyTotals[key] ?? 0) + p.amount;
+    monthlyTotals[key] = (monthlyTotals[key] ?? 0) + p.amountUsd;
   });
 
   const monthlyAmounts = monthlyWindow.map((m) => monthlyTotals[m] ?? 0);
@@ -228,7 +228,7 @@ export const fetchEscrowItems = async () => {
         : p.status === "Released"
           ? ("Released" as const)
           : ("Pending" as const),
-    amount: fmt(p.amount),
+    amount: fmt(p.amountUsd),
     dueIn: new Date(p.updatedAt).toLocaleDateString(),
   }));
 };

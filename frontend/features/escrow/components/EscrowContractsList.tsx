@@ -81,7 +81,7 @@ export function EscrowContractsList({
           <h2 className="font-bold">{t("es.milestones")}</h2>
           {selected && (
             <p className="text-xs text-slate-500 mt-0.5">
-              {selected.projectTitle} · {formatMoney(selected.amount)}
+              {selected.projectTitle} · {formatMoney(selected.amountUsd)}
             </p>
           )}
         </div>
@@ -163,7 +163,7 @@ export function EscrowContractsList({
                         </p>
                       </div>
                       <p className="text-lg font-bold text-electric-600 dark:text-electric-400">
-                        {formatMoney(row.amount)}
+                        {formatMoney(row.amountUsd)}
                       </p>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs">

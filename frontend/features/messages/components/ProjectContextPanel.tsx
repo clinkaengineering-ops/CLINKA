@@ -27,7 +27,7 @@ import { formatMoney } from "@/features/escrow/utils/formatMoney";
 interface ProjectPayment {
   id: number;
   status: "PENDING" | "FUNDED" | "RELEASED" | "REFUNDED";
-  amount: number;
+  amountUsd: number;
   commission: number;
 }
 

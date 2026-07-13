@@ -44,7 +44,7 @@ export interface CheckoutSession {
   projectId: number;
   projectTitle: string;
   paymentId: number;
-  amount: number;
+  amountUsd: number;
   commission?: number;
   totalCharged?: number;
 }

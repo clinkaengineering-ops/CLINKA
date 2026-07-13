@@ -80,7 +80,7 @@ export interface EscrowPaymentItem {
   projectId: number;
   projectTitle: string;
   projectStatus?: string;
-  amount: number;
+  amountUsd: number;
   commission: number;
   status: EscrowDisplayStatus;
   createdAt: string;
@@ -93,7 +93,7 @@ export interface EscrowContractRow {
   projectId: number;
   projectTitle: string;
   projectStatus?: string;
-  amount: number;
+  amountUsd: number;
   commission: number;
   status: EscrowDisplayStatus;
   updatedAt: string;
@@ -116,7 +116,7 @@ export interface CheckoutResult {
   payment: {
     id: number;
     projectId: number;
-    amount: number;
+    amountUsd: number;
     commission: number;
     status: string;
     gatewayInvoiceId: string | null;

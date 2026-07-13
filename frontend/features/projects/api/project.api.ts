@@ -56,7 +56,7 @@ export interface Project {
   client?: ProjectClient;
   bids?: ProjectBid[];
   review?: ProjectReview | null;
-  payment?: { id: number; status: string; amount: number; commission: number; } | null;
+  payment?: { id: number; status: string; amountUsd: number; commission: number; } | null;
   submissions?: ProjectSubmission[];
   _count?: { bids: number };
 }

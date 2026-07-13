@@ -25,9 +25,9 @@ export function DashboardEscrowOverview() {
     return <div className="animate-pulse h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>;
   }
 
-  const inEscrow = payments.filter((p) => p.status === "In escrow").reduce((sum, p) => sum + p.amount, 0);
-  const released = payments.filter((p) => p.status === "Released").reduce((sum, p) => sum + p.amount, 0);
-  const pending = payments.filter((p) => p.status === "Pending").reduce((sum, p) => sum + p.amount, 0);
+  const inEscrow = payments.filter((p) => p.status === "In escrow").reduce((sum, p) => sum + p.amountUsd, 0);
+  const released = payments.filter((p) => p.status === "Released").reduce((sum, p) => sum + p.amountUsd, 0);
+  const pending = payments.filter((p) => p.status === "Pending").reduce((sum, p) => sum + p.amountUsd, 0);
 
   const recentPayments = payments.slice(0, 3);
 
@@ -77,7 +77,7 @@ export function DashboardEscrowOverview() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold">{formatMoney(p.amount)}</p>
+                <p className="text-sm font-bold">{formatMoney(p.amountUsd)}</p>
                 <div className="mt-1">
                   <EscrowBadge status={p.status} />
                 </div>

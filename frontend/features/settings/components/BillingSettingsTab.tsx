@@ -12,7 +12,7 @@ export function BillingSettingsTab() {
   const { t } = useI18n();
   const { me } = useAccountSettings();
   const [payments, setPayments] = useState<
-    { projectTitle: string; amount: number; status: string }[]
+    { projectTitle: string; amountUsd: number; status: string }[]
   >([]);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function BillingSettingsTab() {
         setPayments(
           list.map((p) => ({
             projectTitle: p.projectTitle,
-            amount: p.amount,
+            amountUsd: p.amountUsd,
             status: p.status,
           })),
         ),
@@ -56,7 +56,7 @@ export function BillingSettingsTab() {
                 >
                   <span>{p.projectTitle}</span>
                   <span>
-                    {formatMoney(p.amount)} · {p.status}
+                    {formatMoney(p.amountUsd)} · {p.status}
                   </span>
                 </li>
               ))}
