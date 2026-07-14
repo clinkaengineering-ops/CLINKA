@@ -1128,7 +1128,7 @@
   "pm.postModal.submit": "نشر المشروع",
   "bid.signInEngineer": "سجّل الدخول كمهندس لتقديم عرض.",
   "bid.adminNoBid": "حسابات المسؤول يمكنها تصفح المشاريع لكن لا يمكنها تقديم عروض.",
-  "bid.clientNoBid": "المهندسون فقط يمكنهم تقديم عروض على المشاريع المفتوحة.",
+  "bid.clientNoBid": "أنت عميل، لا يمكنك تقديم عرض",
   "bid.closed": "التقديم مغلق لهذا المشروع.",
   "bid.verificationRequired": "التحقق مطلوب",
   "bid.verificationPending": "يجب الموافقة على حسابك من CLINKA قبل تقديم العروض. الحالة:",

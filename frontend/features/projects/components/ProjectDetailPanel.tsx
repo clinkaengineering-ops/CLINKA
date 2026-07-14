@@ -23,18 +23,20 @@ const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
 interface ProjectDetailPanelProps {
   project: Project | null;
   loading: boolean;
+  error?: string | null;
   onRefresh?: () => void;
 }
 
 export function ProjectDetailPanel({
   project,
   loading,
+  error,
   onRefresh,
 }: ProjectDetailPanelProps) {
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
 
-  if (loading || !project) {
+  if (loading) {
     return (
       <Card className="overflow-hidden animate-pulse">
         <div className="h-44 bg-slate-200 dark:bg-slate-800" />
@@ -42,6 +44,16 @@ export function ProjectDetailPanel({
           <div className="h-4 w-3/4 rounded bg-slate-100 dark:bg-slate-800" />
           <div className="h-4 w-full rounded bg-slate-100 dark:bg-slate-800" />
         </div>
+      </Card>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <Card className="p-8 text-center text-slate-500">
+        <p className="font-semibold text-rose-500">Failed to load project details</p>
+        {error && <p className="mt-1 text-sm">{error}</p>}
+        {!error && <p className="mt-1 text-sm">Please select a project.</p>}
       </Card>
     );
   }

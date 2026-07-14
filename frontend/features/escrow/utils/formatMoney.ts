@@ -1,4 +1,4 @@
-const CURRENCY = process.env.NEXT_PUBLIC_PAYMENT_CURRENCY ?? "USD";
+const CURRENCY = "USD";
 
 /** Format amounts as "$1,234" consistently across the app. */
 export function formatMoney(amount: number, currency = CURRENCY): string {

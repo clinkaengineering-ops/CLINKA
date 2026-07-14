@@ -1128,7 +1128,7 @@
   "pm.postModal.submit": "Post project",
   "bid.signInEngineer": "Sign in as an engineer to place a bid.",
   "bid.adminNoBid": "Admin accounts can browse projects but cannot place bids.",
-  "bid.clientNoBid": "Only engineers can submit bids on open projects.",
+  "bid.clientNoBid": "You are a client, you can't bid",
   "bid.closed": "Bidding is closed for this project.",
   "bid.verificationRequired": "Verification required",
   "bid.verificationPending": "Your account must be approved by CLINKA before you can bid. Status:",

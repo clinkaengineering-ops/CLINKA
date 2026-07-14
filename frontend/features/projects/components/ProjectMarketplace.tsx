@@ -83,6 +83,7 @@ export default function ProjectMarketplace() {
   const {
     data: selectedProject,
     loading: detailLoading,
+    error: detailError,
     refetch: refetchDetail,
   } = useProject(effectiveSelected);
 
@@ -259,6 +260,7 @@ export default function ProjectMarketplace() {
           <ProjectDetailPanel
             project={selectedProject ?? null}
             loading={detailLoading && !!effectiveSelected}
+            error={detailError}
             onRefresh={handleRefresh}
           />
         </div>
