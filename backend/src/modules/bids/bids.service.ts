@@ -115,25 +115,27 @@ export async function approveBid(clientId: number, bidId: number) {
     throw new ApiError(400, "Project is not open for bidding");
   }
 
-  // Accept this bid
-  await db.bid.update({
-    where: { id: bidId },
-    data: { status: "ACCEPTED" },
-  });
+  await db.$transaction(async (tx) => {
+    // Accept this bid
+    await tx.bid.update({
+      where: { id: bidId },
+      data: { status: "ACCEPTED" },
+    });
 
-  // Reject all other bids on this project
-  await db.bid.updateMany({
-    where: {
-      projectId: project.id,
-      id: { not: bidId },
-    },
-    data: { status: "REJECTED" },
-  });
+    // Reject all other bids on this project
+    await tx.bid.updateMany({
+      where: {
+        projectId: project.id,
+        id: { not: bidId },
+      },
+      data: { status: "REJECTED" },
+    });
 
-  // Move project to IN_PROGRESS
-  await db.project.update({
-    where: { id: project.id },
-    data: { status: "IN_PROGRESS" },
+    // Move project to IN_PROGRESS
+    await tx.project.update({
+      where: { id: project.id },
+      data: { status: "IN_PROGRESS" },
+    });
   });
 
   // Create conversation between client and engineer for this project

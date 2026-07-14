@@ -5,6 +5,8 @@ import { loadEnv } from "./config/loadEnv";
 import { isAllowedOrigin } from "./config/cors";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 import registerRoutes from "./routes/index";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 loadEnv();
 const app = express();
@@ -12,6 +14,19 @@ const app = express();
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
+
+// Security headers
+app.use(helmet());
+
+// Rate limiting (max 1000 requests per 15 mins per IP)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many requests, please try again later." }
+});
+app.use("/api", apiLimiter);
 
 app.use(
   cors({

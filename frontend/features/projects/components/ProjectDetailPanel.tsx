@@ -48,12 +48,19 @@ export function ProjectDetailPanel({
     );
   }
 
-  if (error || !project) {
+  if (error) {
     return (
       <Card className="p-8 text-center text-slate-500">
         <p className="font-semibold text-rose-500">Failed to load project details</p>
-        {error && <p className="mt-1 text-sm">{error}</p>}
-        {!error && <p className="mt-1 text-sm">Please select a project.</p>}
+        <p className="mt-1 text-sm">{error}</p>
+      </Card>
+    );
+  }
+
+  if (!project) {
+    return (
+      <Card className="p-8 text-center text-slate-500">
+        <p className="mt-1 text-sm">Please select a project.</p>
       </Card>
     );
   }

@@ -13,10 +13,6 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: number }) {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadInvitations();
-  }, [projectId]);
-
   const loadInvitations = async () => {
     try {
       setLoading(true);
@@ -28,6 +24,10 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: number }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadInvitations();
+  }, [projectId]);
 
   const handleCancel = async (id: number) => {
     try {

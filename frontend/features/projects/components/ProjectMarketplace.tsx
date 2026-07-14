@@ -259,7 +259,7 @@ export default function ProjectMarketplace() {
         <div className="lg:sticky lg:top-20 h-fit">
           <ProjectDetailPanel
             project={selectedProject ?? null}
-            loading={detailLoading && !!effectiveSelected}
+            loading={(detailLoading && !!effectiveSelected) || listLoading}
             error={detailError}
             onRefresh={handleRefresh}
           />
