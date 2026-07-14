@@ -34,7 +34,7 @@ export const updateMe = (payload: {
   professionalHeadline?: string | null;
   availabilityStatus?: string;
   hourlyRateUSD?: number | null;
-  startingProjectBudgetUSD?: number | null;
+  startingProjectPriceUSD?: number | null;
   yearsOfExperience?: number | null;
   skillIds?: number[];
   languageIds?: number[];

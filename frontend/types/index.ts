@@ -44,6 +44,11 @@ export interface EngineerProfile {
   bio: string | null;
   specialty: string | null;
   coverImageUrl?: string | null;
+  professionalHeadline?: string | null;
+  hourlyRateUSD?: number | null;
+  startingProjectPriceUSD?: number | null;
+  yearsOfExperience?: number | null;
+  availabilityStatus?: string | null;
   averageRating: number | null;
   totalReviews: number;
   verificationStatus: VerificationStatus;
