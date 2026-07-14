@@ -31,6 +31,13 @@ export const updateMe = (payload: {
   bio?: string;
   coverImageUrl?: string | null;
   nationality?: string | null;
+  professionalHeadline?: string | null;
+  availabilityStatus?: string;
+  hourlyRateUSD?: number | null;
+  startingProjectBudgetUSD?: number | null;
+  yearsOfExperience?: number | null;
+  skillIds?: number[];
+  languageIds?: number[];
 }): Promise<Me> => unwrap(api.put<ApiResponse<Me>>("/users/me", payload));
 
 export const uploadAvatar = (file: File): Promise<Me> => {
@@ -60,8 +67,15 @@ export const getEngineers = (params?: {
   q?: string;
   specialty?: string;
   nationality?: string;
+  disciplineId?: number;
+  skillIds?: number[];
+  serviceAreaId?: number;
+  hourlyRateMax?: number;
+  availabilityStatus?: string;
+  sortBy?: string;
+  page?: number;
 }): Promise<Engineer[]> =>
-  unwrap(api.get<ApiResponse<Engineer[]>>("/users/engineers", { params }));
+  unwrap(api.get<ApiResponse<{engineers: Engineer[]}>>("/users/engineers", { params })).then(d => d.engineers);
 
 /** GET /users/engineers/:id */
 export const getEngineerById = (id: number): Promise<Engineer> =>

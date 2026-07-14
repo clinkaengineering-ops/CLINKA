@@ -10,6 +10,7 @@ import reviewsRouter from "../modules/reviews/reviews.routes";
 import adminRouter from "../modules/admin/admin.routes";
 import publicRouter from "../modules/public/public.routes";
 import notificationsRouter from "../modules/notifications/notifications.routes";
+import taxonomyRouter from "../modules/taxonomy/taxonomy.routes";
 
 export default function registerRoutes(app: Application) {
   app.use("/api/public", publicRouter);
@@ -23,4 +24,5 @@ export default function registerRoutes(app: Application) {
   app.use("/api/users", userRouter);
   app.use("/api/projects", projectRouter);
   app.use("/api/projects", bidRouter);
+  app.use("/api/taxonomy", taxonomyRouter);
 }

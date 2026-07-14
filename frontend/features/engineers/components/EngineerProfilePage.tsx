@@ -167,11 +167,13 @@ export function EngineerProfilePage({ id }: { id: number }) {
           
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{engineer.name}</h1>
-            <p className="mt-1 text-slate-500 flex flex-wrap items-center gap-1">
-              <span>{profile?.specialty}</span>
+            <p className="mt-1 text-slate-500 flex flex-wrap items-center gap-2">
+              <span className="font-medium text-slate-700 dark:text-slate-300">
+                {profile?.professionalHeadline || profile?.specialty}
+              </span>
               {profile?.nationality && (
                 <>
-                  <span>·</span>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
                   <NationalityLabel nationality={profile.nationality} />
                 </>
               )}
@@ -286,13 +288,52 @@ export function EngineerProfilePage({ id }: { id: number }) {
           )}
         </div>
 
-        <Card className="p-5 h-fit space-y-3">
+        <Card className="p-5 h-fit space-y-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Specialty
+              Availability
             </p>
-            <p className="mt-1 font-semibold">{profile?.specialty ?? "—"}</p>
+            <p className="mt-1 font-semibold text-sm">
+              {profile?.availabilityStatus ? profile.availabilityStatus.replace(/_/g, " ") : "AVAILABLE NOW"}
+            </p>
           </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Hourly Rate
+              </p>
+              <p className="mt-1 font-semibold">
+                {profile?.hourlyRateUSD ? `$${profile.hourlyRateUSD}/hr` : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Starting Budget
+              </p>
+              <p className="mt-1 font-semibold">
+                {profile?.startingProjectPriceUSD ? `$${profile.startingProjectPriceUSD}+` : "—"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Experience
+              </p>
+              <p className="mt-1 font-semibold">
+                {profile?.yearsOfExperience ? `${profile.yearsOfExperience} Years` : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Specialty
+              </p>
+              <p className="mt-1 font-semibold">{profile?.specialty ?? "—"}</p>
+            </div>
+          </div>
+
           {profile?.nationality && (
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">

@@ -7,18 +7,30 @@ import { SettingsSidebar, type SettingsTabId } from "../components/SettingsSideb
 import { AccountSettingsTab } from "../components/AccountSettingsTab";
 import { NotificationsSettingsTab } from "../components/NotificationsSettingsTab";
 import { SecuritySettingsTab } from "../components/SecuritySettingsTab";
-// import { BillingSettingsTab } from "../components/BillingSettingsTab";
+import { ProfessionalInfoTab } from "../components/ProfessionalInfoTab";
+
+import { FeatureFlags } from "@/lib/features";
+import useAuthStore from "@/store/authStore";
 
 export function SettingsPage() {
   const { t } = useI18n();
+  const user = useAuthStore((state) => state.user);
   const [tab, setTab] = useState<SettingsTabId>("account");
 
-  const tabs = [
-    { id: "account" as const, label: t("st.account"), icon: IconUser },
-    { id: "notif" as const, label: t("st.notif"), icon: IconBell },
-    { id: "security" as const, label: t("st.security"), icon: IconLock },
-    // { id: "billing" as const, label: t("st.billing"), icon: IconCard },
+  const tabs: { id: SettingsTabId; label: string; icon: any }[] = [
+    { id: "account", label: t("st.account"), icon: IconUser },
   ];
+
+  if (user?.role === "ENGINEER" && FeatureFlags.ENABLE_PROFESSIONAL_PROFILES) {
+    tabs.push(
+      { id: "professional", label: "Professional Info", icon: IconCard }
+    );
+  }
+
+  tabs.push(
+    { id: "notif", label: t("st.notif"), icon: IconBell },
+    { id: "security", label: t("st.security"), icon: IconLock },
+  );
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -30,9 +42,9 @@ export function SettingsPage() {
         <SettingsSidebar tabs={tabs} active={tab} onChange={setTab} />
         <div className="space-y-6">
           {tab === "account" && <AccountSettingsTab />}
+          {tab === "professional" && <ProfessionalInfoTab />}
           {tab === "notif" && <NotificationsSettingsTab />}
           {tab === "security" && <SecuritySettingsTab />}
-          {/* {tab === "billing" && <BillingSettingsTab />} */}
         </div>
       </div>
     </div>

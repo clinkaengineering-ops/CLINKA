@@ -8,10 +8,9 @@ const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
 
 export const fetchAccount = () => getMe();
 
-export const updateAccount = (payload: {
-  name?: string;
-  bio?: string;
-}): Promise<Me> => updateMe(payload);
+export const updateAccount = (
+  payload: Parameters<typeof updateMe>[0]
+): Promise<Me> => updateMe(payload);
 
 export const changePassword = (payload: {
   oldPassword: string;

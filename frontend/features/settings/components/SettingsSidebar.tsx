@@ -4,7 +4,12 @@ import { Card } from "@/components/UI";
 import { cn } from "@/utils/cn";
 import type { ComponentType } from "react";
 
-export type SettingsTabId = "account" | "notif" | "security" | "billing";
+export type SettingsTabId =
+  | "account"
+  | "notif"
+  | "security"
+  | "billing"
+  | "professional";
 
 export type SettingsTab = {
   id: SettingsTabId;

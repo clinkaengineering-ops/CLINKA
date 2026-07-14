@@ -123,7 +123,7 @@ export async function getPendingVerifications() {
       collegeIdUrl: p.collegeIdUrl,
       certificateUrl: p.certificateUrl,
       syndicateCardUrl: p.syndicateCardUrl,
-      portfolios: p.portfolio?.map((item) => item.imageUrl) || [],
+      portfolios: p.portfolio?.map((item) => item.coverImageUrl) || [],
       submittedAt: p.createdAt,
     };
   });

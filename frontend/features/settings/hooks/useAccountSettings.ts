@@ -32,7 +32,7 @@ export function useAccountSettings() {
   }, [refetch]);
 
   const save = useCallback(
-    async (payload: { name?: string; bio?: string; nationality?: string }) => {
+    async (payload: Parameters<typeof updateAccount>[0]) => {
       setSaving(true);
       setError(null);
       try {

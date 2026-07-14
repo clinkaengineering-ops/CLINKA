@@ -51,11 +51,11 @@ export async function getEngineersController(
   next: NextFunction
 ) {
   try {
-    const { q, specialty, nationality } = searchQuerySchema.parse(req.query);
-    const engineers = await getEngineers({ q, specialty, nationality });
+    const query = searchQuerySchema.parse(req.query);
+    const result = await getEngineers(query);
     res
       .status(200)
-      .json(ApiResponse(200, "Engineers fetched successfully", engineers));
+      .json(ApiResponse(200, "Engineers fetched successfully", result));
   } catch (error) {
     next(error);
   }
@@ -67,7 +67,7 @@ export async function getEngineerByIdController(
   next: NextFunction
 ) {
   try {
-    const engineer = await getEngineerById(Number(req.params.id));
+    const engineer = await getEngineerById(String(req.params.id));
     res
       .status(200)
       .json(ApiResponse(200, "Engineer fetched successfully", engineer));
@@ -82,10 +82,21 @@ export async function addPortfolioItemController(
   next: NextFunction
 ) {
   try {
-    const imageUrl =
-      (req.file as Express.Multer.File | undefined)?.path ?? req.body.imageUrl;
-    const description = String(req.body.description ?? "").trim();
-    const validatedData = addPortfolioItemSchema.parse({ imageUrl, description });
+    // We allow coverImageUrl from multer if present, otherwise body
+    const uploadedUrl = (req.file as Express.Multer.File | undefined)?.path;
+    if (uploadedUrl && !req.body.coverImageUrl) {
+      req.body.coverImageUrl = uploadedUrl;
+    }
+    
+    // SkillIds might come as string from form-data
+    if (typeof req.body.skillIds === 'string') {
+      req.body.skillIds = req.body.skillIds.split(',').map(Number);
+    }
+    if (typeof req.body.files === 'string') {
+      req.body.files = JSON.parse(req.body.files);
+    }
+
+    const validatedData = addPortfolioItemSchema.parse(req.body);
     const item = await addPortfolioItem(req.user!.userId, validatedData);
     res
       .status(201)

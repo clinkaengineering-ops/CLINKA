@@ -18,6 +18,7 @@ import {
   passwordResetEmailHtml,
 } from "../../utils/emailTemplate";
 import { cacheDel, cacheGet, cacheSet } from "../../config/redis";
+import { generateProfileSlug } from "../../utils/slug";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
@@ -96,31 +97,40 @@ export async function registerEngineer(
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+  const user = await db.$transaction(async (tx) => {
+    const u = await tx.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "ENGINEER",
+        isVerified: false,
+      },
+    });
 
-  const user = await db.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-      role: "ENGINEER",
-      isVerified: false,
-      profile: {
-        create: {
-          specialty,
-          bio,
-          nationality,
-          [documentType]: fileUrl,
-          portfolio: {
-            create: portfolioUrls.map((imageUrl, index) => ({
-              imageUrl,
-              description: `Portfolio work ${index + 1}`,
-            })),
-          },
+    const slug = await generateProfileSlug(name, u.id);
+
+    await tx.engineerProfile.create({
+      data: {
+        userId: u.id,
+        specialty,
+        bio,
+        nationality,
+        slug,
+        [documentType]: fileUrl,
+        portfolio: {
+          create: portfolioUrls.map((coverImageUrl, index) => ({
+            coverImageUrl,
+            description: `Portfolio work ${index + 1}`,
+          })),
         },
       },
-    },
-    include: { profile: true },
+    });
+
+    return tx.user.findUnique({ where: { id: u.id }, include: { profile: true } });
   });
+
+  if (!user) throw new ApiError(500, "Failed to create user");
 
   try {
     await sendVerificationEmail(user.id, user.email);
@@ -191,10 +201,10 @@ export async function resumeEngineerRegistration(
     );
   }
 
-  await db.portfolioItem.createMany({
-    data: portfolioUrls.slice(0, needed).map((imageUrl, index) => ({
+  await db.portfolioProject.createMany({
+    data: portfolioUrls.slice(0, needed).map((coverImageUrl, index) => ({
       engineerId: user.profile!.id,
-      imageUrl,
+      coverImageUrl,
       description: `Portfolio work ${existingCount + index + 1}`,
     })),
   });
@@ -267,13 +277,13 @@ export async function applyClientAsEngineer(
     throw new ApiError(400, "Your engineer application is already under review");
   }
 
-  const portfolioCreate = portfolioUrls.map((imageUrl, index) => ({
-    imageUrl,
+  const portfolioCreate = portfolioUrls.map((coverImageUrl, index) => ({
+    coverImageUrl,
     description: `Portfolio work ${index + 1}`,
   }));
 
   if (user.profile) {
-    await db.portfolioItem.deleteMany({ where: { engineerId: user.profile.id } });
+    await db.portfolioProject.deleteMany({ where: { engineerId: user.profile.id } });
     await db.engineerProfile.update({
       where: { id: user.profile.id },
       data: {
@@ -289,12 +299,14 @@ export async function applyClientAsEngineer(
       },
     });
   } else {
+    const slug = await generateProfileSlug(user.name, userId);
     await db.engineerProfile.create({
       data: {
         userId,
         specialty,
         bio,
         nationality,
+        slug,
         verificationStatus: "PENDING",
         [documentType]: fileUrl,
         portfolio: { create: portfolioCreate },
@@ -372,7 +384,7 @@ export async function completeGoogleEngineerRegistration(
     throw new ApiError(400, "Your engineer registration is already complete");
   }
 
-  await db.portfolioItem.deleteMany({ where: { engineerId: user.profile.id } });
+  await db.portfolioProject.deleteMany({ where: { engineerId: user.profile.id } });
   await db.engineerProfile.update({
     where: { id: user.profile.id },
     data: {
@@ -385,8 +397,8 @@ export async function completeGoogleEngineerRegistration(
       syndicateCardUrl: null,
       [documentType]: fileUrl,
       portfolio: {
-        create: portfolioUrls.map((imageUrl, index) => ({
-          imageUrl,
+        create: portfolioUrls.map((coverImageUrl, index) => ({
+          coverImageUrl,
           description: `Portfolio work ${index + 1}`,
         })),
       },

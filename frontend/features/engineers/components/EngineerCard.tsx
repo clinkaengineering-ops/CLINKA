@@ -27,10 +27,12 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
             )}
           </div>
           <p className="text-xs text-slate-500 flex flex-wrap items-center gap-1">
-            <span>{engineer.profile?.specialty}</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">
+              {engineer.profile?.professionalHeadline || engineer.profile?.specialty}
+            </span>
             {engineer.profile?.nationality && (
               <>
-                <span>·</span>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
                 <NationalityLabel nationality={engineer.profile.nationality} flagClassName="text-sm" />
               </>
             )}
@@ -43,6 +45,14 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
             <span>
               ({engineer.profile?.totalReviews ?? 0} {t("common.reviews")})
             </span>
+            {engineer.profile?.hourlyRateUSD && (
+              <>
+                <span className="text-slate-300 dark:text-slate-700 mx-1">•</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  ${engineer.profile.hourlyRateUSD}/hr
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
