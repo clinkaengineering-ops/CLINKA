@@ -41,7 +41,7 @@ export function AuthNavSlot({
       return (
         <div className="flex w-full flex-col gap-3">
           <div className="flex items-center justify-center gap-2 py-1">
-            <NavbarActions showInbox={showInbox} />
+            <NavbarActions showInbox={showInbox} stacked={stacked} />
           </div>
           <Button
             variant="secondary"
@@ -60,7 +60,7 @@ export function AuthNavSlot({
 
     return (
       <>
-        <NavbarActions showInbox={showInbox} />
+        <NavbarActions showInbox={showInbox} stacked={stacked} />
         <Button
           variant="secondary"
           size="sm"

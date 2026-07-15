@@ -115,6 +115,8 @@ export function MessagingPage() {
   const [activeParticipantId, setActiveParticipantId] = useState<number | null>(
     null,
   );
+  const [mobileView, setMobileView] = useState<"inbox" | "chat">("inbox");
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [draft, setDraft] = useState("");
@@ -254,6 +256,7 @@ export function MessagingPage() {
           const id = Number(convParam);
           if (!Number.isNaN(id)) {
             setActiveId(id);
+            setMobileView("chat");
             const match = conversations.find((c) => c.id === id);
             if (match) setActiveParticipantId(match.participantId);
           }
@@ -264,6 +267,7 @@ export function MessagingPage() {
             if (group) {
               setActiveParticipantId(engineerId);
               setActiveId(group.conversations[0].id);
+              setMobileView("chat");
             } else {
               setListError(
                 "No conversation yet. Post a project and wait for a bid, or open Messages after they bid on your project.",
@@ -277,6 +281,7 @@ export function MessagingPage() {
             setActiveParticipantId(
               conv.clientId === user!.id ? conv.engineerId : conv.clientId,
             );
+            setMobileView("chat");
             await loadConversations();
           } catch {
             setListError(
@@ -343,6 +348,7 @@ export function MessagingPage() {
     setActiveId(group.conversations[0].id);
     setDraft("");
     setSendError(null);
+    setMobileView("chat");
   };
 
   const handleSelectProject = (conversationId: number) => {
@@ -444,10 +450,10 @@ export function MessagingPage() {
 
   return (
     <div className="max-w-7xl mx-auto h-[calc(100vh-9rem)]">
-      <Card className="h-full overflow-hidden">
+      <Card className="h-full overflow-hidden relative">
         <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] lg:grid-cols-[300px_1fr_280px] h-full">
           {/* Inbox */}
-          <aside className="border-e border-slate-200 dark:border-slate-800 flex flex-col min-h-0">
+          <aside className={cn("border-e border-slate-200 dark:border-slate-800 flex flex-col min-h-0 bg-white dark:bg-slate-950", mobileView === "chat" ? "hidden md:flex" : "flex")}>
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
               <h2 className="font-bold">{t("msg.inbox")}</h2>
               <div className="mt-3 relative">
@@ -524,12 +530,21 @@ export function MessagingPage() {
           </aside>
 
           {/* Chat */}
-          <main className="flex flex-col min-w-0 min-h-0">
+          <main className={cn("flex flex-col min-w-0 min-h-0 bg-white dark:bg-slate-950", mobileView === "inbox" ? "hidden md:flex" : "flex")}>
             {activeConv ? (
               <>
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800 shrink-0 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
+                      <button
+                        onClick={() => setMobileView("inbox")}
+                        className="md:hidden p-2 -ms-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                        aria-label="Back to inbox"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
                       <Avatar name={activeConv.participantName} size={40} />
                       <div className="min-w-0">
                         <p className="font-semibold truncate">
@@ -548,7 +563,8 @@ export function MessagingPage() {
                     </div>
                     <button
                       type="button"
-                      className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center shrink-0"
+                      onClick={() => setShowMobileDetails(true)}
+                      className="h-9 w-9 lg:hidden rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center shrink-0"
                       aria-label="More options"
                     >
                       <IconMore />
@@ -687,6 +703,8 @@ export function MessagingPage() {
 
           <ProjectContextPanel
             conversation={activeConv}
+            isMobileOpen={showMobileDetails}
+            onCloseMobile={() => setShowMobileDetails(false)}
             onProjectUpdated={() => {
               void loadConversations();
             }}

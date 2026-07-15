@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/UI";
+import { cn } from "@/utils/cn";
 import { useI18n } from "@/i18n";
 import type { ConversationListItem } from "../types";
 import useAuthStore from "@/store/authStore";
@@ -34,11 +35,15 @@ interface ProjectPayment {
 interface ProjectContextPanelProps {
   conversation: ConversationListItem | null;
   onProjectUpdated?: () => void | Promise<void>;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export function ProjectContextPanel({
   conversation,
   onProjectUpdated,
+  isMobileOpen = false,
+  onCloseMobile,
 }: ProjectContextPanelProps) {
   const router = useRouter();
   const { t } = useI18n();
@@ -167,18 +172,42 @@ export function ProjectContextPanel({
   const statusLabel = statusLabelKey ? t(statusLabelKey) : projectStatus.replace(/_/g, " ");
 
   return (
-    <aside className="border-s border-slate-200 dark:border-slate-800 hidden lg:flex flex-col">
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-        <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
-          Project
-        </p>
-        <p className="mt-1 font-bold text-sm">{conversation.projectTitle}</p>
-        <div className="mt-2">
-          <Badge color={STATUS_COLORS[projectStatus] ?? "slate"}>
-            {statusLabel}
-          </Badge>
+    <>
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/50 lg:hidden"
+          onClick={onCloseMobile}
+          aria-hidden
+        />
+      )}
+      <aside
+        className={cn(
+          "border-s border-slate-200 dark:border-slate-800 flex flex-col overflow-y-auto",
+          !isMobileOpen && "hidden lg:flex",
+          isMobileOpen && "fixed inset-y-0 end-0 z-[100] w-full max-w-sm bg-white dark:bg-slate-950 shadow-2xl animate-slide-in-right flex lg:static lg:w-auto lg:shadow-none lg:z-auto lg:translate-x-0"
+        )}
+      >
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
+              Project
+            </p>
+            <p className="mt-1 font-bold text-sm">{conversation.projectTitle}</p>
+            <div className="mt-2">
+              <Badge color={STATUS_COLORS[projectStatus] ?? "slate"}>
+                {statusLabel}
+              </Badge>
+            </div>
+          </div>
+          {isMobileOpen && (
+            <button
+              onClick={onCloseMobile}
+              className="lg:hidden p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            >
+              ✕
+            </button>
+          )}
         </div>
-      </div>
 
       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
         <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">
@@ -373,5 +402,6 @@ export function ProjectContextPanel({
         />
       )}
     </aside>
+    </>
   );
 }

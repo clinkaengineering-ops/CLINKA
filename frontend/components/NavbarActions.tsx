@@ -10,7 +10,7 @@ import useAuthStore from "@/store/authStore";
 import { useNotifications } from "@/features/notifications/hooks/useNotifications";
 import { fetchUnreadMessagesCount } from "@/features/messages/api/messages.api";
 
-export function NavbarActions({ showInbox = true }: { showInbox?: boolean }) {
+export function NavbarActions({ showInbox = true, stacked = false }: { showInbox?: boolean, stacked?: boolean }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { items, unread, markRead, markAllRead } = useNotifications();
@@ -72,8 +72,15 @@ export function NavbarActions({ showInbox = true }: { showInbox?: boolean }) {
         </button>
 
         {notifOpen && (
-          <div className="absolute end-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-50">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+          <div
+            className={cn(
+              "mt-2 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-50 origin-top-right",
+              stacked
+                ? "static w-full max-h-[50vh]"
+                : "absolute end-0 top-full w-80 max-h-96"
+            )}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <span className="text-sm font-semibold">Notifications</span>
               {unread > 0 && (
                 <button

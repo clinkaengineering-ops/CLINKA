@@ -359,9 +359,9 @@ export function EngineerBalancePage() {
             <h2 className="font-bold">{t("bal.withdrawHistory")}</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[500px]">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-500 text-xs uppercase">
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-500 text-xs uppercase whitespace-nowrap">
                   <th className="text-start p-3 font-semibold">{t("bal.colDate")}</th>
                   <th className="text-start p-3 font-semibold">{t("bal.colAmount")}</th>
                   <th className="text-start p-3 font-semibold">{t("bal.colMethod")}</th>
@@ -370,7 +370,7 @@ export function EngineerBalancePage() {
               </thead>
               <tbody>
                 {balance.withdrawalRequests.map((req) => (
-                  <tr key={req.id} className="border-b border-slate-50 dark:border-slate-800/50">
+                  <tr key={req.id} className="border-b border-slate-50 dark:border-slate-800/50 whitespace-nowrap">
                     <td className="p-3 text-slate-600 dark:text-slate-400">
                       {new Date(req.createdAt).toLocaleDateString()}
                     </td>
@@ -411,9 +411,9 @@ export function EngineerBalancePage() {
             <p className="text-xs text-slate-500 mt-1">{t("bal.ledgerHint")}</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-500 text-xs uppercase">
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-500 text-xs uppercase whitespace-nowrap">
                   <th className="text-start p-3 font-semibold">{t("bal.colDate")}</th>
                   <th className="text-start p-3 font-semibold">{t("bal.colType")}</th>
                   <th className="text-start p-3 font-semibold">{t("bal.colAmount")}</th>
@@ -423,7 +423,7 @@ export function EngineerBalancePage() {
               <tbody>
                 {balance.walletHistory.map((row) => (
                   <tr key={row.id} className="border-b border-slate-50 dark:border-slate-800/50">
-                    <td className="p-3 text-slate-600 dark:text-slate-400">
+                    <td className="p-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                       {new Date(row.createdAt).toLocaleDateString()}
                     </td>
                     <td className="p-3">
@@ -561,7 +561,7 @@ export function EngineerBalancePage() {
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   {t("bal.withdrawLocation")}
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setRegion("inside_egypt")}
@@ -602,7 +602,7 @@ export function EngineerBalancePage() {
                   <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     {t("bal.withdrawMethod")}
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setChannel("mobile_wallet")}
@@ -755,7 +755,7 @@ export function EngineerBalancePage() {
                       {t("bal.withdrawBankFullNameHint")}
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         {t("bal.withdrawBankName")}
@@ -782,7 +782,7 @@ export function EngineerBalancePage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         {t("bal.withdrawCountry")}
