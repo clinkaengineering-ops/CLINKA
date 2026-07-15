@@ -2,6 +2,27 @@ import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 import type { ExchangeRateProvider, CurrencyConverter, ExchangeRateResult } from "./exchange-rate.interface";
 
+/**
+ * Hardcoded fallback rates — used ONLY when both the exchange rate API and the
+ * database cache are unavailable.  This prevents checkout from being completely
+ * blocked when the external API is down.  The rate should be updated periodically
+ * to stay roughly accurate.
+ */
+const FALLBACK_RATES: Record<string, number> = {
+  USD_EGP: Number(process.env.FALLBACK_USD_EGP_RATE ?? "50.50"),
+};
+
+function getFallbackRate(base: string, target: string): ExchangeRateResult | null {
+  const key = `${base}_${target}`;
+  const rate = FALLBACK_RATES[key];
+  if (!rate || rate <= 0) return null;
+  return {
+    rate,
+    provider: "hardcoded-fallback",
+    timestamp: new Date(),
+  };
+}
+
 export class ExchangeRateService implements CurrencyConverter {
   constructor(private readonly provider: ExchangeRateProvider) {}
 
@@ -41,8 +62,8 @@ export class ExchangeRateService implements CurrencyConverter {
   }
 
   /**
-   * Retrieves the latest rate. Tries to fetch live; falls back to cache.
-   * Caching is primarily managed by the background scheduler, but we can hit the DB directly.
+   * Retrieves the latest rate. Tries to fetch live; falls back to cache;
+   * last resort: hardcoded fallback.
    */
   async getExchangeRate(base: string, target: string): Promise<ExchangeRateResult> {
     const cached = await db.exchangeRateCache.findUnique({
@@ -57,15 +78,25 @@ export class ExchangeRateService implements CurrencyConverter {
         where: { base_target: { base, target } },
       });
 
-      if (!newlyCached) {
-        throw new ApiError(503, `Exchange rate not available for ${base}->${target}. Please try again later.`);
+      if (newlyCached) {
+        return {
+          rate: Number(newlyCached.rate),
+          provider: newlyCached.provider,
+          timestamp: newlyCached.fetchedAt,
+        };
       }
 
-      return {
-        rate: Number(newlyCached.rate),
-        provider: newlyCached.provider,
-        timestamp: newlyCached.fetchedAt,
-      };
+      // Last resort — use hardcoded fallback so checkout is not blocked
+      const fallback = getFallbackRate(base, target);
+      if (fallback) {
+        console.warn(
+          `[ExchangeRateService] WARNING: Using hardcoded fallback rate ${base}->${target}: ${fallback.rate}. ` +
+          `Exchange rate API and DB cache are both unavailable.`,
+        );
+        return fallback;
+      }
+
+      throw new ApiError(503, `Exchange rate not available for ${base}->${target}. Please try again later.`);
     }
 
     return {
