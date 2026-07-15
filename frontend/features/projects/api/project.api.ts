@@ -41,6 +41,13 @@ export interface ProjectReview {
   client?: { id: number; name: string };
 }
 
+export interface ProjectPermissions {
+  canEditContent: boolean;
+  canToggleStatus: boolean;
+  editTier: "FULL" | "STATUS_ONLY" | "LOCKED";
+  lockReason: string | null;
+}
+
 export interface Project {
   id: number;
   title: string;
@@ -59,6 +66,7 @@ export interface Project {
   payment?: { id: number; status: string; amountUsd: number; commission: number; } | null;
   submissions?: ProjectSubmission[];
   _count?: { bids: number };
+  permissions?: ProjectPermissions;
 }
 
 export interface ProjectDeliverable {
@@ -91,6 +99,7 @@ export interface UpdateProjectPayload {
   description?: string;
   budget?: number;
   serviceType?: ServiceType;
+  status?: "OPEN" | "CLOSED";
 }
 
 // ─── Endpoints ────────────────────────────────────────────────────────────────

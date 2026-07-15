@@ -19,6 +19,7 @@ export const updateProjectSchema = z.object({
   description: projectDescriptionField.optional(),
   budget: budgetField.optional(),
   serviceType: serviceTypeField.optional(),
+  status: z.enum(["OPEN", "CLOSED"]).optional(),
 });
 
 export const updateProgressSchema = z.object({

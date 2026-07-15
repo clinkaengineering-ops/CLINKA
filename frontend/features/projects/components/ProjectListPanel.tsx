@@ -51,7 +51,7 @@ export function ProjectListPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {projects.map((p) => (
         <ProjectCard
           key={p.id}

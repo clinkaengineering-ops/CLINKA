@@ -50,10 +50,10 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
         selected && "border-electric-500/60 ring-2 ring-electric-500/20",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-bold truncate">{project.title}</h3>
+      <div className="flex items-start justify-between gap-3 w-full min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="font-bold truncate block w-full">{project.title}</h3>
           </div>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
             {project.description}
@@ -62,7 +62,7 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
         <Badge color={color}>{label}</Badge>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm w-full min-w-0">
         <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
           <IconWallet width={14} height={14} className="text-electric-500 shrink-0" />
           {formatMoney(project.budget)}

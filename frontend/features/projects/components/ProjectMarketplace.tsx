@@ -41,9 +41,9 @@ export default function ProjectMarketplace() {
   const { data: allProjects, loading, error, refetch } = useProjects(
     viewMode === "browse"
       ? {
-          q: search || urlQ || undefined,
-          serviceType: serviceType || undefined,
-        }
+        q: search || urlQ || undefined,
+        serviceType: serviceType || undefined,
+      }
       : undefined,
   );
   const {
@@ -175,7 +175,7 @@ export default function ProjectMarketplace() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("pm.title")}</h1>
@@ -247,7 +247,7 @@ export default function ProjectMarketplace() {
         </p>
       )}
 
-      <div className="grid lg:grid-cols-[1fr_420px] gap-6">
+      <div className="grid lg:grid-cols-[1fr_420px] gap-6 min-w-0 w-full">
         <ProjectListPanel
           projects={filtered}
           loading={listLoading}
@@ -256,7 +256,7 @@ export default function ProjectMarketplace() {
           onSelect={handleSelect}
         />
 
-        <div className="lg:sticky lg:top-20 h-fit">
+        <div className="lg:sticky lg:top-20 h-fit min-w-0 w-full">
           <ProjectDetailPanel
             project={selectedProject ?? null}
             loading={(detailLoading && !!effectiveSelected) || listLoading}

@@ -59,7 +59,7 @@ export async function getAdminStats() {
     db.supportTicket.count({ where: { status: "OPEN" } }),
     db.payment.findMany({
       where: { status: { in: ["FUNDED", "RELEASED", "REFUNDED"] } },
-      select: { amount: true, status: true, commission: true },
+      select: { amountUsd: true, status: true, commission: true },
     }),
     db.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
     db.user.count({
@@ -70,10 +70,10 @@ export async function getAdminStats() {
 
   const gmv = payments
     .filter((p) => p.status === "FUNDED" || p.status === "RELEASED")
-    .reduce((sum, p) => sum + toNumber(p.amount), 0);
+    .reduce((sum, p) => sum + toNumber(p.amountUsd), 0);
   const inEscrow = payments
     .filter((p) => p.status === "FUNDED")
-    .reduce((sum, p) => sum + toNumber(p.amount), 0);
+    .reduce((sum, p) => sum + toNumber(p.amountUsd), 0);
   const totalCommission = payments.reduce(
     (sum, p) => sum + toNumber(p.commission),
     0,
@@ -874,7 +874,7 @@ export async function getAnalyticsData() {
   const users = await db.user.findMany({ select: { createdAt: true } });
   const payments = await db.payment.findMany({
     where: { status: { in: ["FUNDED", "RELEASED"] } },
-    select: { amount: true, commission: true, createdAt: true },
+    select: { amountUsd: true, commission: true, createdAt: true },
   });
 
   const dailySignups: Record<string, number> = {};
@@ -887,7 +887,7 @@ export async function getAnalyticsData() {
   const dailyCommission: Record<string, number> = {};
   payments.forEach((p) => {
     const d = p.createdAt.toISOString().split("T")[0];
-    dailyGmv[d] = (dailyGmv[d] || 0) + toNumber(p.amount);
+    dailyGmv[d] = (dailyGmv[d] || 0) + toNumber(p.amountUsd);
     dailyCommission[d] = (dailyCommission[d] || 0) + toNumber(p.commission);
   });
 
@@ -946,7 +946,7 @@ export async function getAnalyticsData() {
         ? 100
         : 0;
 
-  const totalGmv = payments.reduce((sum, p) => sum + toNumber(p.amount), 0);
+  const totalGmv = payments.reduce((sum, p) => sum + toNumber(p.amountUsd), 0);
   const totalCommission = payments.reduce(
     (sum, p) => sum + toNumber(p.commission),
     0,
@@ -998,7 +998,7 @@ function lastNDays(n: number) {
 
 function computeDailyEscrowHeld(
   payments: Array<{
-    amount: number | { toString(): string };
+    amountUsd: number | { toString(): string };
     status: string;
     updatedAt: Date;
     ledgerEntries: Array<{ type: string; createdAt: Date }>;
@@ -1016,7 +1016,7 @@ function computeDailyEscrowHeld(
       const exitedAt =
         exitEntry?.createdAt ??
         (p.status === "RELEASED" || p.status === "REFUNDED" ? p.updatedAt : null);
-      return { amount: toNumber(p.amount), fundedAt, exitedAt };
+      return { amount: toNumber(p.amountUsd), fundedAt, exitedAt };
     });
 
   return days.map((dateStr) => {
@@ -1036,7 +1036,7 @@ export async function getEscrowOverview() {
 
   const payments = await db.payment.findMany({
     select: {
-      amount: true,
+      amountUsd: true,
       status: true,
       updatedAt: true,
       createdAt: true,
@@ -1050,15 +1050,15 @@ export async function getEscrowOverview() {
 
   const totalInEscrow = payments
     .filter((p) => p.status === "FUNDED")
-    .reduce((sum, p) => sum + toNumber(p.amount), 0);
+    .reduce((sum, p) => sum + toNumber(p.amountUsd), 0);
 
   const released30d = payments
     .filter((p) => p.status === "RELEASED" && p.updatedAt >= thirtyDaysAgo)
-    .reduce((sum, p) => sum + toNumber(p.amount), 0);
+    .reduce((sum, p) => sum + toNumber(p.amountUsd), 0);
 
   const refunded30d = payments
     .filter((p) => p.status === "REFUNDED" && p.updatedAt >= thirtyDaysAgo)
-    .reduce((sum, p) => sum + toNumber(p.amount), 0);
+    .reduce((sum, p) => sum + toNumber(p.amountUsd), 0);
 
   const disputedTickets = await db.supportTicket.findMany({
     where: { status: "OPEN" },
@@ -1068,7 +1068,7 @@ export async function getEscrowOverview() {
   const disputedAmount = payments
     .filter((p) => p.status === "FUNDED")
     .slice(0, disputedTickets.length)
-    .reduce((sum, p) => sum + toNumber(p.amount), 0);
+    .reduce((sum, p) => sum + toNumber(p.amountUsd), 0);
 
   const utilizationPercent =
     totalInEscrow + released30d > 0

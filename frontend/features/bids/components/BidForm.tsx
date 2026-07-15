@@ -27,8 +27,8 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   const user = useAuthStore((s) => s.user);
   const { me } = useMe();
   const verification = me?.profile?.verificationStatus ?? "PENDING";
-  const [price, setPrice] = useState(project.budget.toString());
-  const [weeks, setWeeks] = useState("8");
+  const [price, setPrice] = useState("");
+  const [weeks, setWeeks] = useState("");
   const [cover, setCover] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);

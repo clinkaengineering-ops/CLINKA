@@ -2,6 +2,7 @@ import ApiError from "../../utils/ApiError";
 
 export type ProjectStatus =
   | "OPEN"
+  | "CLOSED"
   | "AWAITING_PAYMENT"
   | "IN_PROGRESS"
   | "AWAITING_APPROVAL"
@@ -23,7 +24,8 @@ export const SUBMITTABLE_STATUSES: ProjectStatus[] = [
 ];
 
 const ALLOWED_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
-  OPEN: ["AWAITING_PAYMENT", "IN_PROGRESS", "CANCELLED"],
+  OPEN: ["CLOSED", "AWAITING_PAYMENT", "IN_PROGRESS", "CANCELLED"],
+  CLOSED: ["OPEN"],
   AWAITING_PAYMENT: ["IN_PROGRESS", "CANCELLED"],
   IN_PROGRESS: ["SUBMITTED_FOR_REVIEW", "CANCELLED"],
   AWAITING_APPROVAL: ["REVISION_REQUESTED", "COMPLETED"],

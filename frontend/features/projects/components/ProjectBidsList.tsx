@@ -29,7 +29,7 @@ export function ProjectBidsList({
   if (!bids.length) {
     return (
       <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-        No bids yet.
+        {t("pm.noBids")}
       </p>
     );
   }
@@ -52,18 +52,18 @@ export function ProjectBidsList({
   return (
     <div className="space-y-3">
       <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-        Bids ({bids.length})
+        {t("stat.bids")} ({bids.length})
       </p>
       {error && <p className="text-xs text-rose-500">{error}</p>}
       {(justApproved || project.status === "IN_PROGRESS") && (
         <div className="rounded-xl border border-electric-500/30 bg-electric-500/5 p-3 text-sm space-y-2">
           <p className="font-semibold text-electric-700 dark:text-electric-300">
-            Bid accepted — next steps
+            {t("pm.bidAcceptedNextSteps")}
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href={`/messages?project=${project.id}`}>
               <Button size="sm" variant="secondary">
-                Open chat
+                {t("bal.openChat")}
               </Button>
             </Link>
           </div>
@@ -91,7 +91,7 @@ export function ProjectBidsList({
                     : "amber"
               }
             >
-              {bid.status}
+              {t(`ed.bid.${bid.status.toLowerCase()}`)}
             </Badge>
           </div>
           {canManage && project.status === "OPEN" && bid.status === "PENDING" && (
@@ -102,7 +102,7 @@ export function ProjectBidsList({
               disabled={approvingId === bid.id}
               onClick={() => handleApprove(bid)}
             >
-              {approvingId === bid.id ? "Approving…" : "Accept bid"}
+              {approvingId === bid.id ? t("pm.approving") : t("pm.acceptBid")}
             </Button>
           )}
         </div>

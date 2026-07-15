@@ -1,7 +1,13 @@
 import { CreateProjectInput, UpdateProjectInput } from "./project.validation";
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
-
+import { assertProjectTransition } from "./project.status";
+import {
+  assertCanEditContent,
+  assertCanToggleStatus,
+  computePermissions,
+  CONTENT_FIELDS,
+} from "./project.editlock";
 
 import { createNotification } from "../../utils/notifications";
 import { assertUserNotBanned } from "../messages/ban.service";
@@ -123,7 +129,18 @@ export async function getProjectById(projectId: number) {
   });
 
   if (!project) throw new ApiError(404, "Project not found");
-  return project;
+
+  // Compute permissions in response mapper — Prisma model stays pure
+  const bidCount = project.bids?.length ?? 0;
+  const hasAcceptedBid =
+    project.bids?.some((b) => b.status === "ACCEPTED") ?? false;
+  const permissions = computePermissions(
+    bidCount,
+    hasAcceptedBid,
+    project.status,
+  );
+
+  return { ...project, permissions };
 }
 
 export async function updateProject(
@@ -131,31 +148,69 @@ export async function updateProject(
   projectId: number,
   data: UpdateProjectInput,
 ) {
-  const project = await db.project.findUnique({ where: { id: projectId } });
-  if (!project) throw new ApiError(404, "Project not found");
+  return db.$transaction(async (tx) => {
+    // 1. AUTHORIZE: Fetch project, verify ownership
+    const project = await tx.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new ApiError(404, "Project not found");
+    if (project.clientId !== clientId) {
+      throw new ApiError(403, "Not your project");
+    }
 
-  if (project.clientId !== clientId) {
-    throw new ApiError(403, "Not your project");
-  }
+    // 2. FRESH STATE: Count bids + check for accepted bid (optimistic concurrency)
+    const [bidCount, acceptedBid] = await Promise.all([
+      tx.bid.count({ where: { projectId } }),
+      tx.bid.findFirst({ where: { projectId, status: "ACCEPTED" } }),
+    ]);
 
-  if (project.status === "AWAITING_PAYMENT") {
-    throw new ApiError(400, "Cannot edit a project that an engineer has already accepted. Complete payment first.");
-  }
+    // 3. COMPUTE PERMISSIONS from latest DB state
+    const permissions = computePermissions(
+      bidCount,
+      !!acceptedBid,
+      project.status,
+    );
 
-  if (project.status !== "OPEN") {
-    throw new ApiError(400, "Cannot edit a project that is no longer open");
-  }
+    // 4. VALIDATE: Check if request contains content fields
+    //    Uses hasOwnProperty to safely handle budget:0 or title:""
+    const hasContentFields = CONTENT_FIELDS.some((field) =>
+      Object.prototype.hasOwnProperty.call(data, field),
+    );
+    if (hasContentFields) {
+      // Fails loudly with 409 — never silently drops forbidden fields
+      assertCanEditContent(permissions);
+    }
 
-  const updated = await db.project.update({
-    where: { id: projectId },
-    data: {
-      ...(data.title && { title: data.title }),
-      ...(data.description && { description: data.description }),
-      ...(data.budget && { budget: data.budget }),
-      ...(data.serviceType && { serviceType: data.serviceType }),
-    },
+    // 5. VALIDATE: Check if request contains status change
+    if (data.status) {
+      assertCanToggleStatus(permissions);
+      assertProjectTransition(project.status, data.status);
+    }
+
+    // 6. APPLY: Build update payload based on permissions
+    const updateData: Record<string, unknown> = {};
+
+    if (permissions.canEditContent) {
+      // FULL tier — apply content fields if present
+      if (Object.prototype.hasOwnProperty.call(data, "title")) updateData.title = data.title;
+      if (Object.prototype.hasOwnProperty.call(data, "description"))
+        updateData.description = data.description;
+      if (Object.prototype.hasOwnProperty.call(data, "budget")) updateData.budget = data.budget;
+      if (Object.prototype.hasOwnProperty.call(data, "serviceType"))
+        updateData.serviceType = data.serviceType;
+    }
+
+    if (data.status) {
+      updateData.status = data.status;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new ApiError(400, "No valid changes provided");
+    }
+
+    return tx.project.update({
+      where: { id: projectId },
+      data: updateData,
+    });
   });
-  return updated;
 }
 
 export async function deleteProject(clientId: number, projectId: number) {
