@@ -1,4 +1,5 @@
 import db from "../../config/db";
+import ApiError from "../../utils/ApiError";
 import type { ExchangeRateProvider, CurrencyConverter, ExchangeRateResult } from "./exchange-rate.interface";
 
 export class ExchangeRateService implements CurrencyConverter {
@@ -12,7 +13,7 @@ export class ExchangeRateService implements CurrencyConverter {
     try {
       const result = await this.provider.getExchangeRate(base, target);
       if (result.rate <= 0) {
-        throw new Error(`Invalid exchange rate <= 0 received: ${result.rate}`);
+        throw new ApiError(502, `Invalid exchange rate received from provider: ${result.rate}`);
       }
 
       await db.exchangeRateCache.upsert({
@@ -57,7 +58,7 @@ export class ExchangeRateService implements CurrencyConverter {
       });
 
       if (!newlyCached) {
-        throw new Error(`CRITICAL: No exchange rate available for ${base}->${target}. Payment cannot proceed.`);
+        throw new ApiError(503, `Exchange rate not available for ${base}->${target}. Please try again later.`);
       }
 
       return {

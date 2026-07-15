@@ -398,7 +398,7 @@ export async function prepareProjectCheckoutSession(
     projectId,
     projectTitle: project.title,
     paymentId: payment.id,
-    amount: amountUsd, // Returning USD to frontend for display
+    amountUsd, // Returning USD to frontend for display
     commission,
     totalCharged: totalChargedUsd, // Returning USD to frontend
   };

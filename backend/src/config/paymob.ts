@@ -1,3 +1,5 @@
+import ApiError from "../utils/ApiError";
+
 export interface PaymobConfig {
   baseUrl: string;
   secretKey: string;
@@ -20,12 +22,12 @@ function parseIntegrationIds(raw: string | undefined): number[] {
 export function getPaymobConfig(): PaymobConfig {
   const secretKey = process.env.PAYMOB_SECRET_KEY;
   if (!secretKey) {
-    throw new Error("PAYMOB_SECRET_KEY is not set");
+    throw new ApiError(503, "Payment gateway is not configured (PAYMOB_SECRET_KEY)");
   }
 
   const integrationIds = parseIntegrationIds(process.env.PAYMOB_INTEGRATION_IDS);
   if (integrationIds.length === 0) {
-    throw new Error("PAYMOB_INTEGRATION_IDS is not set or invalid");
+    throw new ApiError(503, "Payment gateway is not configured (PAYMOB_INTEGRATION_IDS)");
   }
 
   return {
@@ -82,8 +84,9 @@ export function getPaymobPayoutConfig(): PaymobPayoutConfig {
   const password = process.env.PAYMOB_PAYOUT_PASSWORD?.trim();
 
   if (!clientId || !clientSecret || !username || !password) {
-    throw new Error(
-      "Paymob payout OAuth credentials are not fully configured (PAYMOB_PAYOUT_CLIENT_ID, PAYMOB_PAYOUT_CLIENT_SECRET, PAYMOB_PAYOUT_USERNAME, PAYMOB_PAYOUT_PASSWORD)",
+    throw new ApiError(
+      503,
+      "Paymob payout credentials are not fully configured",
     );
   }
 

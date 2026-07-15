@@ -85,10 +85,11 @@ export function AreaChart({
   const chartH = h - padT - padB;
   const max = Math.max(...data, 1) * 1.15;
   const min = 0;
+  const range = max - min || 1; // Avoid division by zero when all values are equal
   const step = data.length > 1 ? chartW / (data.length - 1) : 0;
   const pts = data.map((v, i) => [
     padL + i * step,
-    padT + chartH - ((v - min) / (max - min)) * chartH,
+    padT + chartH - ((v - min) / range) * chartH,
   ]);
   const path = pts
     .map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`))

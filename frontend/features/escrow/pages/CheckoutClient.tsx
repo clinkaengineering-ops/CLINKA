@@ -41,7 +41,17 @@ export default function CheckoutClient() {
   const parsedReturn = parseCheckoutReturn(searchParams);
   const [storedReturn] = useState(() => readCheckoutReturnStorage());
 
-  if (parsedReturn.isReturn || storedReturn) {
+  // Only treat as a return flow when Paymob actually redirected back
+  // (parsedReturn.isReturn) OR when there's stored return data AND no
+  // explicit projectId-only entry (which indicates a fresh checkout).
+  const projectIdOnly =
+    !parsedReturn.isReturn &&
+    searchParams.has("projectId") &&
+    !searchParams.has("status") &&
+    !searchParams.has("success") &&
+    !searchParams.has("pending");
+
+  if (parsedReturn.isReturn || (storedReturn && !projectIdOnly)) {
     if (
       !parsedReturn.status &&
       !parsedReturn.paymentId &&
@@ -83,6 +93,11 @@ export default function CheckoutClient() {
         </p>
       </CheckoutShell>
     );
+  }
+
+  // Fresh checkout entry — clear any stale return data from a previous attempt
+  if (storedReturn) {
+    clearCheckoutReturnStorage();
   }
 
   return <CheckoutForm projectId={projectId} />;
