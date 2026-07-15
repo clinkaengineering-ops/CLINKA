@@ -6,7 +6,6 @@ import { IconStar, IconMessage, IconBriefcase, IconClose, IconArrow } from "@/co
 import { useI18n } from "@/i18n";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchConversations } from "@/features/messages/api/messages.api";
 import useAuthStore from "@/store/authStore";
 import { useEngineerById } from "../hooks/useEngineerById";
 import { HireEngineerModal } from "./HireEngineerModal";
@@ -16,9 +15,6 @@ export function EngineerProfilePage({ id }: { id: number }) {
   const router = useRouter();
   const { engineer, loading, error } = useEngineerById(id);
   const currentUser = useAuthStore((s) => s.user);
-  const [messageConversationId, setMessageConversationId] = useState<
-    number | null
-  >(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const [hireModalOpen, setHireModalOpen] = useState(false);
   const isAdmin = currentUser?.role === "ADMIN";
@@ -56,21 +52,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activePhotoIndex, engineer?.profile?.portfolio]);
 
-  useEffect(() => {
-    if (!currentUser || isAdmin) return;
-    fetchConversations()
-      .then((list) => {
-        const matches = list
-          .filter((c) => c.participantId === id)
-          .sort(
-            (a, b) =>
-              new Date(b.lastMessageAt).getTime() -
-              new Date(a.lastMessageAt).getTime(),
-          );
-        if (matches[0]) setMessageConversationId(matches[0].id);
-      })
-      .catch(() => setMessageConversationId(null));
-  }, [currentUser, id, isAdmin]);
+
 
   if (loading) {
     return (
@@ -138,11 +120,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
                       router.push(`/login?next=/engineers/${id}`);
                       return;
                     }
-                    if (messageConversationId) {
-                      router.push(`/messages?c=${messageConversationId}`);
-                    } else {
-                      router.push(`/messages?engineer=${id}`);
-                    }
+                    router.push(`/messages?user=${id}`);
                   }}
                 >
                   {t("common.message")}

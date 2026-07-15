@@ -10,6 +10,7 @@ import {
   sendMessageController,
   getConversationByProjectController,
   unreadMessagesCountController,
+  getGeneralConversationController,
 } from "./messages.controller";
 
 const router = Router();
@@ -22,6 +23,9 @@ router.get("/unread-count", unreadMessagesCountController);
 
 // GET  /api/messages/conversations/:id?page=1&limit=30
 router.get("/conversations/:id", getMessagesController);
+
+// GET  /api/messages/general/:userId
+router.get("/general/:userId", getGeneralConversationController);
 
 // POST /api/messages/conversations/:id  (JSON text or multipart file + optional caption)
 router.post("/conversations/:id", (req, res, next) => {

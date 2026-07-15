@@ -72,3 +72,11 @@ export const fetchConversationByProject = (
   unwrap(
     api.get<ApiResponse<ConversationDetail>>(`/messages/by-project/${projectId}`),
   );
+
+/** GET /messages/general/:userId */
+export const fetchGeneralConversation = (
+  userId: number,
+): Promise<ConversationDetail> =>
+  unwrap(
+    api.get<ApiResponse<ConversationDetail>>(`/messages/general/${userId}`),
+  );

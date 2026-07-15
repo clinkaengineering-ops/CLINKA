@@ -17,6 +17,7 @@ import {
   fetchConversations,
   fetchMessages,
   fetchConversationByProject,
+  fetchGeneralConversation,
   sendMessage as sendMessageApi,
   sendMessageWithAttachment,
 } from "../api/messages.api";
@@ -243,9 +244,10 @@ export function MessagingPage() {
     const convParam = searchParams.get("c");
     const projectParam = searchParams.get("project");
     const engineerParam = searchParams.get("engineer");
-    if (!convParam && !projectParam && !engineerParam) return;
+    const userParam = searchParams.get("user");
+    if (!convParam && !projectParam && !engineerParam && !userParam) return;
 
-    const navKey = `${convParam ?? ""}|${projectParam ?? ""}|${engineerParam ?? ""}`;
+    const navKey = `${convParam ?? ""}|${projectParam ?? ""}|${engineerParam ?? ""}|${userParam ?? ""}`;
     if (handledNavKeyRef.current === navKey) return;
     handledNavKeyRef.current = navKey;
 
@@ -273,6 +275,18 @@ export function MessagingPage() {
                 "No conversation yet. Post a project and wait for a bid, or open Messages after they bid on your project.",
               );
             }
+          }
+        } else if (userParam) {
+          try {
+            const conv = await fetchGeneralConversation(Number(userParam));
+            setActiveId(conv.id);
+            setActiveParticipantId(
+              conv.clientId === user!.id ? conv.engineerId : conv.clientId,
+            );
+            setMobileView("chat");
+            await loadConversations();
+          } catch {
+            setListError("Failed to start conversation.");
           }
         } else if (projectParam) {
           try {
@@ -310,7 +324,8 @@ export function MessagingPage() {
     if (
       searchParams.get("c") ||
       searchParams.get("project") ||
-      searchParams.get("engineer")
+      searchParams.get("engineer") ||
+      searchParams.get("user")
     ) {
       return;
     }

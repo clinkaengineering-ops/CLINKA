@@ -1,6 +1,6 @@
 export interface ConversationListItem {
   id: number;
-  projectId: number;
+  projectId: number | null;
   projectTitle: string;
   projectStatus: string;
   participantId: number;
@@ -37,11 +37,11 @@ export interface MessagesPage {
 
 export interface ConversationDetail {
   id: number;
-  projectId: number;
+  projectId: number | null;
   clientId: number;
   engineerId: number;
   createdAt: string;
-  project: { id: number; title: string; status: string };
+  project: { id: number; title: string; status: string } | null;
   client: { id: number; name: string };
   engineer: { id: number; name: string };
 }

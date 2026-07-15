@@ -6,6 +6,7 @@ import {
   sendMessage,
   getConversationByProject,
   getUnreadMessagesCount,
+  getOrCreateGeneralConversation,
 } from "./messages.service";
 import { sendMessageSchema } from "./messages.validation";
 import ApiResponse from "../../utils/ApiResponse";
@@ -93,6 +94,20 @@ export async function getConversationByProjectController(
   try {
     const projectId = Number(req.params.projectId);
     const data = await getConversationByProject(projectId, req.user!.userId);
+    res.status(200).json(ApiResponse(200, "Conversation fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getGeneralConversationController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const targetUserId = Number(req.params.userId);
+    const data = await getOrCreateGeneralConversation(req.user!.userId, targetUserId);
     res.status(200).json(ApiResponse(200, "Conversation fetched", data));
   } catch (error) {
     next(error);

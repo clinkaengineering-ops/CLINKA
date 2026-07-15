@@ -68,8 +68,8 @@ export async function getMyConversations(userId: number) {
     return {
       id: conv.id,
       projectId: conv.projectId,
-      projectTitle: conv.project.title,
-      projectStatus: conv.project.status,
+      projectTitle: conv.project?.title ?? "General Chat",
+      projectStatus: conv.project?.status ?? "OPEN",
       participantId: other.id,
       participantName: other.name,
       participantAvatar: other.avatarUrl,
@@ -216,10 +216,12 @@ export async function sendMessage(
 
   const recipientId =
     conv.clientId === senderId ? conv.engineerId : conv.clientId;
-  const project = await db.project.findUnique({
-    where: { id: conv.projectId },
-    select: { title: true },
-  });
+  const project = conv.projectId
+    ? await db.project.findUnique({
+        where: { id: conv.projectId },
+        select: { title: true },
+      })
+    : null;
 
   const preview =
     formatLastMessagePreview(message) ?? "New message";
@@ -229,11 +231,11 @@ export async function sendMessage(
     "NEW_MESSAGE",
     "New message",
     preview.slice(0, 120),
-    `/messages?project=${conv.projectId}`,
+    conv.projectId ? `/messages?project=${conv.projectId}` : `/messages?user=${senderId}`,
     {
       email: {
         senderName: message.sender.name,
-        projectTitle: project?.title ?? "a project",
+        projectTitle: project?.title ?? "General Chat",
       },
     },
   );
@@ -330,6 +332,50 @@ export async function getConversationByProject(
   if (!conv) throw new ApiError(404, "Conversation not found");
   if (conv.clientId !== userId && conv.engineerId !== userId) {
     throw new ApiError(403, "Access denied");
+  }
+
+  return conv;
+}
+
+export async function getOrCreateGeneralConversation(
+  initiatorId: number,
+  targetUserId: number,
+) {
+  // Try to find an existing general conversation between these two
+  let conv = await db.conversation.findFirst({
+    where: {
+      projectId: null,
+      OR: [
+        { clientId: initiatorId, engineerId: targetUserId },
+        { clientId: targetUserId, engineerId: initiatorId },
+      ],
+    },
+    include: {
+      project: { select: { id: true, title: true, status: true } },
+      client: { select: { id: true, name: true } },
+      engineer: { select: { id: true, name: true } },
+    },
+  });
+
+  if (!conv) {
+    const target = await db.user.findUnique({ where: { id: targetUserId } });
+    if (!target) throw new ApiError(404, "User not found");
+    const initiator = await db.user.findUnique({ where: { id: initiatorId } });
+    if (!initiator) throw new ApiError(404, "User not found");
+
+    // Assign clientId to the initiator for simplicity in general chats
+    conv = await db.conversation.create({
+      data: {
+        projectId: null,
+        clientId: initiator.id,
+        engineerId: target.id,
+      },
+      include: {
+        project: { select: { id: true, title: true, status: true } },
+        client: { select: { id: true, name: true } },
+        engineer: { select: { id: true, name: true } },
+      },
+    });
   }
 
   return conv;

@@ -85,16 +85,18 @@ export function ProjectContextPanel({
       setSubmissions([]);
       return;
     }
-    loadContext(conversation.projectId);
+    if (conversation.projectId) {
+      loadContext(conversation.projectId);
+    }
   }, [conversation, loadContext]);
 
   const handlePay = () => {
-    if (!conversation) return;
+    if (!conversation || !conversation.projectId) return;
     router.push(checkoutPath(conversation.projectId));
   };
 
   const handleApprove = async () => {
-    if (!conversation) return;
+    if (!conversation || !conversation.projectId) return;
     setActionLoading(true);
     setActionError(null);
     try {
@@ -110,7 +112,7 @@ export function ProjectContextPanel({
   };
 
   const handleRequestRevision = async () => {
-    if (!conversation || revisionNote.trim().length < 10) {
+    if (!conversation || !conversation.projectId || revisionNote.trim().length < 10) {
       setActionError(t("pay.revisionMinLength"));
       return;
     }
@@ -220,8 +222,10 @@ export function ProjectContextPanel({
         <MessagesPolicyNotice />
       </div>
 
-      {latestSubmission && (
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+      {!conversation.projectId ? null : (
+        <>
+          {latestSubmission && (
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800">
           <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">
             {t("pay.deliverables.title")}
           </p>
@@ -396,10 +400,14 @@ export function ProjectContextPanel({
           isRevision={projectStatus === "REVISION_REQUESTED"}
           onClose={() => setShowSubmitModal(false)}
           onSubmitted={async () => {
-            await loadContext(conversation.projectId);
+            if (conversation.projectId) {
+              await loadContext(conversation.projectId);
+            }
             await onProjectUpdated?.();
           }}
         />
+      )}
+        </>
       )}
     </aside>
     </>

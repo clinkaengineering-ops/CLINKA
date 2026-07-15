@@ -343,7 +343,7 @@ export async function getAllConversations(page = 1, limit = 20) {
       return {
         id: conv.id,
         projectId: conv.projectId,
-        projectTitle: conv.project.title,
+        projectTitle: conv.project?.title ?? "General Chat",
         clientId: conv.clientId,
         clientName: conv.client.name,
         engineerId: conv.engineerId,
