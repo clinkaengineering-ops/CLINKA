@@ -496,8 +496,8 @@ export function EngineerBalancePage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
               <div>
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                   {region === "outside_egypt"
@@ -519,7 +519,7 @@ export function EngineerBalancePage() {
               </button>
             </div>
 
-            <form onSubmit={submitAutoWithdrawal} className="p-6 space-y-4">
+            <form onSubmit={submitAutoWithdrawal} className="p-6 space-y-4 overflow-y-auto">
               {modalError && (
                 <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-red-600 dark:text-red-400">
                   {modalError}

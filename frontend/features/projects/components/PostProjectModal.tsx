@@ -91,8 +91,8 @@ export function PostProjectModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <Card className="w-full max-w-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <Card className="w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <h2 className="text-lg font-bold">{t("pm.postModal.title")}</h2>
           <button
             type="button"
@@ -104,7 +104,8 @@ export function PostProjectModal({
           </button>
         </div>
 
-        {apiError && <p className="text-sm text-rose-500">{apiError}</p>}
+        <div className="p-6 space-y-4 overflow-y-auto">
+          {apiError && <p className="text-sm text-rose-500">{apiError}</p>}
         {fieldErrors._form && (
           <p className="text-sm text-rose-500">{fieldErrors._form}</p>
         )}
@@ -160,7 +161,9 @@ export function PostProjectModal({
           </Field>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        </div>
+
+        <div className="flex justify-end gap-2 p-6 border-t border-slate-100 dark:border-slate-800 shrink-0">
           <Button variant="ghost" onClick={onClose} disabled={loading}>
             {t("common.cancel")}
           </Button>

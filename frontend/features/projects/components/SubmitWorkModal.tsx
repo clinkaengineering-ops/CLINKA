@@ -58,11 +58,15 @@ export function SubmitWorkModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-lg p-5 shadow-xl">
-        <h3 className="font-bold text-lg">
-          {isRevision ? t("pay.submitWork.resubmitTitle") : t("pay.submitWork.title")}
-        </h3>
-        <p className="text-sm text-slate-500 mt-1">{projectTitle}</p>
+      <Card className="w-full max-w-lg flex flex-col max-h-[90vh] shadow-xl overflow-hidden">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <h3 className="font-bold text-lg">
+            {isRevision ? t("pay.submitWork.resubmitTitle") : t("pay.submitWork.title")}
+          </h3>
+          <p className="text-sm text-slate-500 mt-1">{projectTitle}</p>
+        </div>
+
+        <div className="p-5 overflow-y-auto">
 
         <label className="block mt-4 text-xs font-semibold uppercase text-slate-500">
           {t("pay.submitWork.notes")}
@@ -121,7 +125,9 @@ export function SubmitWorkModal({
 
         {error && <p className="mt-3 text-xs text-rose-500">{error}</p>}
 
-        <div className="mt-5 flex justify-end gap-2">
+        </div>
+
+        <div className="p-5 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
           <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
             {t("common.cancel")}
           </Button>
