@@ -9,7 +9,9 @@ import type { ExchangeRateProvider, CurrencyConverter, ExchangeRateResult } from
  * to stay roughly accurate.
  */
 const FALLBACK_RATES: Record<string, number> = {
-  USD_EGP: Number(process.env.FALLBACK_USD_EGP_RATE ?? "50.50"),
+  // Using || instead of ?? so that empty strings (common in Coolify env vars) 
+  // correctly fall back to "50.50" instead of evaluating to 0.
+  USD_EGP: Number(process.env.FALLBACK_USD_EGP_RATE || "50.50"),
 };
 
 function getFallbackRate(base: string, target: string): ExchangeRateResult | null {
