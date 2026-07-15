@@ -16,14 +16,14 @@ FROM node:20-slim
 
 WORKDIR /app/frontend
 ENV NODE_ENV=production
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
 
-RUN mkdir -p /app && printf '{"name":"clinka","private":true}' > /app/package.json
-
-COPY --from=builder /app/frontend/.next ./.next
+# Copy Next.js standalone output
 COPY --from=builder /app/frontend/public ./public
-COPY --from=builder /app/frontend/package*.json ./
-COPY --from=builder /app/frontend/node_modules ./node_modules
+COPY --from=builder /app/frontend/.next/standalone ./
+COPY --from=builder /app/frontend/.next/static ./.next/static
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]
