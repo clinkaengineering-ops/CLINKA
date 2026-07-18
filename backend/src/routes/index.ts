@@ -25,4 +25,35 @@ export default function registerRoutes(app: Application) {
   app.use("/api/projects", projectRouter);
   app.use("/api/projects", bidRouter);
   app.use("/api/taxonomy", taxonomyRouter);
+
+  // Debug endpoints
+  app.get("/api/debug/email", async (req, res) => {
+    if (process.env.NODE_ENV === "production" && req.query.admin !== "true") {
+      return res.status(403).json({ error: "Forbidden in production" });
+    }
+
+    try {
+      const transporter = (await import("../config/mailer")).default;
+      const { getEmailFrom, notificationEmailHtml } = await import("../utils/emailTemplate");
+      const to = req.query.to as string || "test@example.com";
+      
+      const result = await transporter.sendMail({
+        from: getEmailFrom(),
+        to,
+        subject: "CLINKA Test Email",
+        html: notificationEmailHtml({
+          title: "Test Email from CLINKA Debug",
+          body: "If you received this, the email configuration is working correctly.",
+        }),
+      });
+
+      res.json({ success: true, messageId: result.messageId, accepted: result.accepted });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+  });
 }

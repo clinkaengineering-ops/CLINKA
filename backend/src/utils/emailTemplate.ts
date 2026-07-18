@@ -29,7 +29,8 @@ export function getLogoUrl(): string {
 
 export function getEmailFrom(): string {
   const address = process.env.EMAIL_USER?.trim();
-  if (!address) return "CLINKA";
+  if (!address) return "CLINKA <noreply@clinkaeng.com>";
+  if (!address.includes("@")) return `CLINKA <${address}@clinkaeng.com>`;
   return `CLINKA <${address}>`;
 }
 

@@ -92,18 +92,34 @@ const transporter = {
       payload.text = "";
     }
 
-    const { data, error } = await resend.emails.send(payload as any);
+    try {
+      const { data, error } = await resend.emails.send(payload as any);
 
-    if (error) {
-      throw new ApiError(
-        502,
-        typeof error.message === "string"
-          ? error.message
-          : "Failed to send email via Resend",
-      );
+      if (error) {
+        console.error("Email send failed (Resend API Error)", {
+          sender: options.from,
+          recipient: to,
+          subject: options.subject,
+          errorBody: error,
+        });
+        throw new ApiError(
+          502,
+          typeof error.message === "string"
+            ? error.message
+            : "Failed to send email via Resend",
+        );
+      }
+
+      return { messageId: data?.id ?? null, accepted: to };
+    } catch (err) {
+      console.error("Email send failed (Exception)", {
+        sender: options.from,
+        recipient: to,
+        subject: options.subject,
+        error: err instanceof Error ? err.message : err,
+      });
+      throw err;
     }
-
-    return { messageId: data?.id ?? null, accepted: to };
   },
 };
 
