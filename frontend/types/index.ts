@@ -22,7 +22,8 @@ export interface User {
 // ── Portfolio & reviews ───────────────────────────────────────────────────────
 export interface PortfolioItem {
   id: number;
-  imageUrl: string;
+  imageUrl?: string;
+  coverImageUrl?: string | null;
   description: string;
   engineerId: number;
 }

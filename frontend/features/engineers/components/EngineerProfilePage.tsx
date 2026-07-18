@@ -198,7 +198,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
                   >
                     <div className="h-40 relative bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <img
-                        src={item.imageUrl}
+                        src={item.coverImageUrl || item.imageUrl || "/placeholder.png"}
                         alt={item.description}
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                       />
@@ -359,7 +359,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
           <div className="relative max-w-5xl w-full max-h-[85vh] px-4 flex flex-col items-center justify-center gap-4">
             <div className="relative max-w-full max-h-[70vh] rounded-xl overflow-hidden shadow-2xl bg-black/40 border border-white/5">
               <img
-                src={profile.portfolio[activePhotoIndex].imageUrl}
+                src={profile.portfolio[activePhotoIndex].coverImageUrl || profile.portfolio[activePhotoIndex].imageUrl || "/placeholder.png"}
                 alt={profile.portfolio[activePhotoIndex].description}
                 className="max-w-full max-h-[70vh] object-contain select-none transition-all duration-300"
               />
