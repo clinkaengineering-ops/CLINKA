@@ -106,6 +106,7 @@ export interface NotificationPrefs {
   bidAccepted?: boolean;
   fundsReleased?: boolean;
   newMessage?: boolean;
+  newProjectPosted?: boolean;
 }
 
 /** @deprecated use AppNotification */

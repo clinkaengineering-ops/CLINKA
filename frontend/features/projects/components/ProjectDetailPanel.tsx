@@ -142,7 +142,7 @@ export function ProjectDetailPanel({
             </div>
             <div className="rounded-lg bg-white/10 p-2.5">
               <p className="text-white/60 text-[10px] uppercase">{t("common.status")}</p>
-              <p className="font-bold mt-0.5 truncate" title={project.status}>
+              <p className="font-bold mt-0.5" title={project.status}>
                 {t(STATUS_LABEL_KEYS[project.status] ?? "common.status")}
               </p>
             </div>
@@ -152,7 +152,7 @@ export function ProjectDetailPanel({
             </div>
             <div className="rounded-lg bg-white/10 p-2.5">
               <p className="text-white/60 text-[10px] uppercase">{t("common.posted")}</p>
-              <p className="font-bold mt-0.5 truncate">
+              <p className="font-bold mt-0.5">
                 {new Date(project.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
               </p>
             </div>

@@ -50,6 +50,7 @@ const PREF_META: {
   { key: "bidAccepted", label: "Bid accepted", roles: ["ENGINEER"] },
   { key: "fundsReleased", label: "Funds released", roles: ["CLIENT", "ENGINEER"] },
   { key: "newMessage", label: "New message", roles: ["CLIENT", "ENGINEER", "ADMIN"] },
+  { key: "newProjectPosted", label: "New project posted", roles: ["ENGINEER"] },
 ];
 
 export function NotificationsSettingsTab() {

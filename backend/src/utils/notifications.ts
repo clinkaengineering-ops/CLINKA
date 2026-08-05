@@ -89,6 +89,7 @@ export interface NotificationPrefs {
   bidAccepted?: boolean;
   fundsReleased?: boolean;
   newMessage?: boolean;
+  newProjectPosted?: boolean;
 }
 
 export interface CreateNotificationOptions {
@@ -101,9 +102,9 @@ export interface CreateNotificationOptions {
 }
 
 const DEFAULT_PREFS: Record<string, NotificationPrefs> = {
-  CLIENT: { newBid: true, bidAccepted: false, fundsReleased: true, newMessage: true },
-  ENGINEER: { newBid: false, bidAccepted: true, fundsReleased: true, newMessage: true },
-  ADMIN: { newBid: false, bidAccepted: false, fundsReleased: false, newMessage: true },
+  CLIENT: { newBid: true, bidAccepted: false, fundsReleased: true, newMessage: true, newProjectPosted: false },
+  ENGINEER: { newBid: false, bidAccepted: true, fundsReleased: true, newMessage: true, newProjectPosted: true },
+  ADMIN: { newBid: false, bidAccepted: false, fundsReleased: false, newMessage: true, newProjectPosted: false },
 };
 
 const PREF_KEY: Record<NotificationType, keyof NotificationPrefs> = {
@@ -130,7 +131,7 @@ const PREF_KEY: Record<NotificationType, keyof NotificationPrefs> = {
   INVITATION_ACCEPTED: "newMessage",
   INVITATION_DECLINED: "newMessage",
   INVITATION_CANCELLED: "newMessage",
-  NEW_PROJECT_POSTED: "newBid",
+  NEW_PROJECT_POSTED: "newProjectPosted",
 };
 
 export function mergeNotificationPrefs(
