@@ -73,7 +73,7 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
         </span>
         <span className="sm:ms-auto text-xs text-slate-500 shrink-0">
           {bidCount} {t("common.bids")} · {t("common.posted")}{" "}
-          {new Date(project.createdAt).toLocaleDateString()}
+          {new Date(project.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
         </span>
       </div>
 

@@ -135,7 +135,7 @@ export function ProjectDetailPanel({
             {t(SERVICE_TYPE_LABELS[project.serviceType])}
           </Badge>
           <h3 className="mt-3 text-xl font-bold">{project.title}</h3>
-          <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="rounded-lg bg-white/10 p-2.5">
               <p className="text-white/60 text-[10px] uppercase">{t("common.budget")}</p>
               <p className="font-bold mt-0.5">{formatMoney(project.budget)}</p>
@@ -149,6 +149,12 @@ export function ProjectDetailPanel({
             <div className="rounded-lg bg-white/10 p-2.5">
               <p className="text-white/60 text-[10px] uppercase">{t("stat.bids")}</p>
               <p className="font-bold mt-0.5">{bidCount}</p>
+            </div>
+            <div className="rounded-lg bg-white/10 p-2.5">
+              <p className="text-white/60 text-[10px] uppercase">{t("common.posted")}</p>
+              <p className="font-bold mt-0.5 truncate">
+                {new Date(project.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+              </p>
             </div>
           </div>
         </div>

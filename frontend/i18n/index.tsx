@@ -22,7 +22,7 @@ const dicts: Record<Lang, Dict> = {
 type Ctx = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (k: string) => string;
+  t: (k: string, params?: Record<string, string | number>) => string;
   dir: "ltr" | "rtl";
 };
 
@@ -59,7 +59,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       lang,
       setLang: setLangState,
       dir,
-      t: (k: string) => dicts[lang][k] ?? dicts.en[k] ?? k,
+      t: (k: string, params?: Record<string, string | number>) => {
+        let str = dicts[lang][k] ?? dicts.en[k] ?? k;
+        if (params) {
+          for (const [key, value] of Object.entries(params)) {
+            str = str.replace(new RegExp(`{${key}}`, "g"), String(value));
+          }
+        }
+        return str;
+      },
     }),
     [lang, dir],
   );

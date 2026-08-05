@@ -76,7 +76,9 @@ export function ProjectBidsList({
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="font-semibold">{bid.engineer.user.name}</p>
+              <Link href={`/engineers/${bid.engineer.user.id}`} className="font-semibold hover:underline text-electric-600 dark:text-electric-400">
+                {bid.engineer.user.name}
+              </Link>
               <p className="text-xs text-slate-500 mt-0.5">
                 {formatMoney(bid.price)} · {bid.duration}
               </p>

@@ -5,8 +5,22 @@ import {
   createSupportTicket,
   getLandingSnapshot,
   getSupportContactEmail,
+  getPublicConfig,
 } from "./public.service";
 import { createSupportTicketSchema } from "./public.validation";
+
+export async function getPublicConfigController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const data = await getPublicConfig();
+    res.status(200).json(ApiResponse(200, "Public config fetched", data));
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function getLandingSnapshotController(
   _req: Request,

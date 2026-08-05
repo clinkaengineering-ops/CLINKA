@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/UI";
 import { IconArrow } from "@/components/Icons";
@@ -16,6 +16,7 @@ import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { createBid } from "../api/bids.api";
 import useAuthStore from "@/store/authStore";
 import { useMe } from "@/features/auth/hooks/useMe";
+import { getPublicConfig } from "@/lib/config.api";
 
 interface BidFormProps {
   project: Project;
@@ -34,11 +35,18 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [platformFeePercent, setPlatformFeePercent] = useState<number>(8); // Default fallback
+
+  useEffect(() => {
+    getPublicConfig()
+      .then((cfg) => setPlatformFeePercent(cfg.platformFeePercent))
+      .catch(console.error);
+  }, []);
 
   const net = useMemo(() => {
     const p = parseFloat(price) || 0;
-    return p * 0.92;
-  }, [price]);
+    return p * (1 - platformFeePercent / 100);
+  }, [price, platformFeePercent]);
 
   if (!user) {
     return (
@@ -201,7 +209,7 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
         <span>
-          {t("pm.serviceFee")}{" "}
+          {t("pm.serviceFee", { fee: platformFeePercent })}{" "}
           <span className="font-bold text-slate-900 dark:text-white">{formatMoney(net)}</span>
         </span>
       </div>

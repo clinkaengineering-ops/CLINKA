@@ -26,7 +26,8 @@ export type NotificationType =
   | "PROJECT_INVITATION"
   | "INVITATION_ACCEPTED"
   | "INVITATION_DECLINED"
-  | "INVITATION_CANCELLED";
+  | "INVITATION_CANCELLED"
+  | "NEW_PROJECT_POSTED";
 
 const FORCE_DELIVER_TYPES = new Set<NotificationType>(["ACCOUNT_BANNED"]);
 const FORCE_EMAIL_TYPES = new Set<NotificationType>(["ACCOUNT_BANNED"]);
@@ -54,6 +55,7 @@ const EMAIL_NOTIFICATION_TYPES = new Set<NotificationType>([
   "INVITATION_ACCEPTED",
   "INVITATION_DECLINED",
   "INVITATION_CANCELLED",
+  "NEW_PROJECT_POSTED"
 ]);
 
 const EMAIL_ACTION_LABELS: Partial<Record<NotificationType, string>> = {
@@ -79,6 +81,7 @@ const EMAIL_ACTION_LABELS: Partial<Record<NotificationType, string>> = {
   INVITATION_ACCEPTED: "Open Project",
   INVITATION_DECLINED: "Open Project",
   INVITATION_CANCELLED: "View Invitations",
+  NEW_PROJECT_POSTED: "View Project",
 };
 
 export interface NotificationPrefs {
@@ -127,6 +130,7 @@ const PREF_KEY: Record<NotificationType, keyof NotificationPrefs> = {
   INVITATION_ACCEPTED: "newMessage",
   INVITATION_DECLINED: "newMessage",
   INVITATION_CANCELLED: "newMessage",
+  NEW_PROJECT_POSTED: "newBid",
 };
 
 export function mergeNotificationPrefs(

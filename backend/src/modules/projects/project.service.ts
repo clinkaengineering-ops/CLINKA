@@ -35,7 +35,31 @@ export async function createProject(
     },
   });
 
+  notifyEngineersAboutNewProject(project).catch((err) => {
+    console.error("Failed to notify engineers about new project:", err);
+  });
+
   return project;
+}
+
+async function notifyEngineersAboutNewProject(project: { id: number; title: string }) {
+  const engineers = await db.user.findMany({
+    where: {
+      role: "ENGINEER",
+      profile: { verificationStatus: "APPROVED" },
+    },
+    select: { id: true },
+  });
+
+  for (const eng of engineers) {
+    await createNotification(
+      eng.id,
+      "NEW_PROJECT_POSTED",
+      "New Project Posted",
+      `A new project "${project.title}" was just posted. Submit your bid now!`,
+      `/projects/${project.id}`
+    );
+  }
 }
 
 export async function getProjects(query?: { q?: string; serviceType?: string }) {

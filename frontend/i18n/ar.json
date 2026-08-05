@@ -399,7 +399,7 @@
   "pm.yourPrice": "سعرك",
   "pm.deliveryWeeks": "التسليم (أسابيع)",
   "pm.coverLetter": "رسالة التغطية — اشرح منهجك وأعمالك السابقة المشابهة وافتراضاتك…",
-  "pm.serviceFee": "رسوم الخدمة: 8% · الصافي:",
+  "pm.serviceFee": "رسوم الخدمة: {fee}% · الصافي:",
   "pm.submitBid": "إرسال العرض",
   "pm.browse": "تصفح المفتوحة",
   "pm.myProjects": "مشاريعي",

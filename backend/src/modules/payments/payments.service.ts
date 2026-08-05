@@ -210,7 +210,9 @@ export async function initiateProjectCheckout(
   const engineerProfileId = agreement.engineerProfileId;
   const config = getPaymobConfig();
   const amountUsd = toNumber(agreement.amount);
-  const commission = Math.round(amountUsd * config.commissionRate * 100) / 100;
+  const settings = await db.platformSettings.findFirst();
+  const commissionRate = (Number(settings?.platformFeePercent ?? 10)) / 100;
+  const commission = Math.round(amountUsd * commissionRate * 100) / 100;
   // Client is charged amount + commission so the platform fee is actually collected
   const totalChargedUsd = Math.round((amountUsd + commission) * 100) / 100;
 
@@ -318,7 +320,8 @@ export async function prepareProjectCheckoutSession(
   const engineerProfileId = agreement.engineerProfileId;
   const config = getPaymobConfig();
   const amountUsd = toNumber(agreement.amount);
-  const commissionRate = Number(process.env.PLATFORM_COMMISSION_RATE ?? "0.1");
+  const settings = await db.platformSettings.findFirst();
+  const commissionRate = (Number(settings?.platformFeePercent ?? 10)) / 100;
   const commission = Math.round(amountUsd * commissionRate * 100) / 100;
   // Client is charged amount + commission so the platform fee is actually collected
   const totalChargedUsd = Math.round((amountUsd + commission) * 100) / 100;

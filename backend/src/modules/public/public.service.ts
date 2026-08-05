@@ -138,3 +138,10 @@ export async function getLandingSnapshot() {
     testimonials,
   };
 }
+
+export async function getPublicConfig() {
+  const settings = await db.platformSettings.findFirst();
+  return {
+    platformFeePercent: settings?.platformFeePercent ?? 10,
+  };
+}
