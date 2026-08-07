@@ -213,8 +213,8 @@ export async function initiateProjectCheckout(
   const settings = await db.platformSettings.findFirst();
   const commissionRate = (Number(settings?.platformFeePercent ?? 10)) / 100;
   const commission = Math.round(amountUsd * commissionRate * 100) / 100;
-  // Client is charged amount + commission so the platform fee is actually collected
-  const totalChargedUsd = Math.round((amountUsd + commission) * 100) / 100;
+  // Client is charged the exact project amount. Platform fee is deducted from the engineer's payout.
+  const totalChargedUsd = amountUsd;
 
   // Currency Conversion
   const { amountConverted: totalChargedEgp, rateUsed } = await exchangeRateService.convert(
@@ -323,8 +323,8 @@ export async function prepareProjectCheckoutSession(
   const settings = await db.platformSettings.findFirst();
   const commissionRate = (Number(settings?.platformFeePercent ?? 10)) / 100;
   const commission = Math.round(amountUsd * commissionRate * 100) / 100;
-  // Client is charged amount + commission so the platform fee is actually collected
-  const totalChargedUsd = Math.round((amountUsd + commission) * 100) / 100;
+  // Client is charged the exact project amount. Platform fee is deducted from the engineer's payout.
+  const totalChargedUsd = amountUsd;
 
   // Currency Conversion
   const { amountConverted: totalChargedEgp, rateUsed } = await exchangeRateService.convert(
@@ -506,7 +506,7 @@ async function fundPaymentFromVerifiedTransaction(
       await recordPaymentLedger(tx, funded.id, [
         {
           type: "FUNDED",
-          amount: toNumber(funded.amountUsd) + toNumber(funded.commission),
+          amount: toNumber(funded.amountUsd),
           note: ledgerNote,
         },
         {
