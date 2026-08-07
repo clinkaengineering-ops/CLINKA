@@ -57,7 +57,7 @@ async function notifyEngineersAboutNewProject(project: { id: number; title: stri
       "NEW_PROJECT_POSTED",
       "New Project Posted",
       `A new project "${project.title}" was just posted. Submit your bid now!`,
-      `/projects/${project.id}`
+      `/projects?id=${project.id}`
     );
   }
 }
@@ -87,6 +87,7 @@ export async function getProjects(query?: { q?: string; serviceType?: string }) 
         select: { bids: true },
       },
     },
+    orderBy: { createdAt: "desc" },
   });
   return projects;
 }
