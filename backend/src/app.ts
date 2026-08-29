@@ -8,8 +8,23 @@ import registerRoutes from "./routes/index";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
+import path from "path";
+import fs from "fs";
+
 loadEnv();
 const app = express();
+
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "../../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+app.use("/uploads", express.static(uploadDir, {
+  setHeaders: (res, filePath) => {
+    // Unique filenames generated with random UUIDs can be cached indefinitely (immutable)
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  }
+}));
 
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);

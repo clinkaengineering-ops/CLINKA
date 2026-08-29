@@ -1,6 +1,5 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary";
+import { createLocalUpload } from "../config/localUpload";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -12,14 +11,7 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/x-zip-compressed",
 ]);
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "project-deliverables",
-    allowed_formats: ["jpg", "jpeg", "png", "gif", "webp", "pdf", "zip"],
-    resource_type: "auto",
-  } as any,
-});
+const storage = createLocalUpload("project-deliverables");
 
 const deliverableUpload = multer({
   storage,

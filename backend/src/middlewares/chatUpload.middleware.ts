@@ -1,6 +1,5 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary";
+import { createLocalUpload } from "../config/localUpload";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -10,14 +9,7 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "chat-attachments",
-    allowed_formats: ["jpg", "jpeg", "png", "gif", "webp", "pdf"],
-    resource_type: "auto",
-  } as any,
-});
+const storage = createLocalUpload("chat-attachments");
 
 const chatUpload = multer({
   storage,
