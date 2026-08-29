@@ -192,10 +192,10 @@ export async function initiateProjectCheckout(
   if (project.clientId !== clientId) {
     throw new ApiError(403, "Only the project owner can fund escrow");
   }
-  if (project.status !== "IN_PROGRESS" && project.status !== "AWAITING_PAYMENT") {
+  if (project.status !== "IN_PROGRESS") {
     throw new ApiError(
       400,
-      "Escrow payment is only available for in-progress or awaiting payment projects",
+      "Escrow payment is only available for in-progress projects",
     );
   }
 
@@ -303,7 +303,7 @@ export async function prepareProjectCheckoutSession(
   if (project.clientId !== clientId) {
     throw new ApiError(403, "Only the project owner can fund escrow");
   }
-  if (project.status !== "IN_PROGRESS" && project.status !== "AWAITING_PAYMENT") {
+  if (project.status !== "IN_PROGRESS") {
     throw new ApiError(
       400,
       "Escrow payment is only available for in-progress or awaiting payment projects",
@@ -433,25 +433,11 @@ async function fundPaymentFromVerifiedTransaction(
     include: {
       project: { select: { id: true, title: true, clientId: true, status: true } },
       engineer: { include: { user: { select: { id: true } } } },
-      invitation: true,
     },
   });
   if (!payment) throw new ApiError(404, "Payment not found");
 
-  if (payment.invitation) {
-    if (payment.invitation.status !== "ACCEPTED") {
-      throw new ApiError(400, "Invitation is not accepted");
-    }
-    if (payment.project.status !== "AWAITING_PAYMENT") {
-      throw new ApiError(400, "Project is not awaiting payment");
-    }
-    if (payment.invitation.clientId !== payment.clientId) {
-      throw new ApiError(400, "Paying client does not match invitation");
-    }
-    if (payment.invitation.projectId !== payment.projectId) {
-      throw new ApiError(400, "Project mismatch between payment and invitation");
-    }
-  }
+  
 
   if (payment.status === "FUNDED" || payment.status === "RELEASED") {
     return { payment, duplicate: true as const };
