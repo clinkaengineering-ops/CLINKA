@@ -208,10 +208,17 @@ export function AdminPayoutPanel() {
   };
 
   const handleRecordCompletion = async (id: number) => {
+    const ref = prompt("External transfer reference (required):");
+    if (!ref || ref.trim().length < 3) {
+      alert("A transfer reference is required.");
+      return;
+    }
+    const methodStr = prompt("Transfer method (e.g., BANK_TRANSFER, INSTAPAY, MOBILE_WALLET, OTHER) [optional]:");
+    const method = methodStr?.trim() ? methodStr.trim() : undefined;
     const notes = prompt("Completion notes (optional):") ?? undefined;
     setActionLoading(true);
     try {
-      await recordAdminCompletion(id, notes);
+      await recordAdminCompletion(id, notes, method, ref);
       await load();
     } catch (err) {
       alert(axiosMessage(err));
@@ -370,7 +377,7 @@ export function AdminPayoutPanel() {
                         >
                           {t("ad.payoutAudit")}
                         </Button>
-                        {w.method === "IBAN" && (
+                        {["IBAN", "INSTAPAY", "E_WALLET"].includes(w.method) && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -410,7 +417,7 @@ export function AdminPayoutPanel() {
                             Initiate Transfer
                           </Button>
                         )}
-                        {(w.status === "TRANSFER_INITIATED" || w.status === "PROCESSING") && w.method === "IBAN" && (
+                        {(w.status === "TRANSFER_INITIATED" || w.status === "PROCESSING") && ["IBAN", "INSTAPAY", "E_WALLET"].includes(w.method) && (
                           <Button
                             size="sm"
                             onClick={() => handleRecordCompletion(w.id)}
@@ -530,7 +537,7 @@ export function AdminPayoutPanel() {
                 <span className="mt-0.5">⚠️</span>
                 <span>This access has been logged in the audit trail.</span>
               </div>
-              {(["accountHolderName", "iban", "swiftBic", "bankAddress"] as const).map((field) => (
+              {(["accountHolderName", "iban", "swiftBic", "bankAddress", "instapayAccount", "walletProvider", "walletNumber"] as const).map((field) => (
                 bankDetails.data[field] && (
                   <div key={field}>
                     <p className="text-xs font-medium text-slate-500 uppercase">

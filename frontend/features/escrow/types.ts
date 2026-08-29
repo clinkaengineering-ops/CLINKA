@@ -154,7 +154,7 @@ export interface AutoWithdrawalPayload {
 }
 
 export interface UnifiedWithdrawalPayload {
-  payoutMethod: "PAYMOB" | "IBAN";
+  payoutMethod: "PAYMOB" | "IBAN" | "INSTAPAY" | "E_WALLET";
   amount: number;
   // Paymob specific
   channel?: AutoWithdrawalChannel;
@@ -171,4 +171,9 @@ export interface UnifiedWithdrawalPayload {
   bankName?: string;
   bankAddress?: string;
   country?: string;
+  // INSTAPAY specific
+  instapayAccount?: string;
+  // E_WALLET specific
+  walletProvider?: string;
+  walletNumber?: string;
 }

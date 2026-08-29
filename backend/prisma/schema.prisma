@@ -101,6 +101,8 @@ enum WalletTransactionStatus {
 enum PayoutType {
   PAYMOB
   IBAN
+  INSTAPAY
+  E_WALLET
 }
 
 enum AvailabilityStatus {
@@ -357,6 +359,41 @@ model Payment {
 
   invitationId Int?
   invitation   ProjectInvitation? @relation(fields: [invitationId], references: [id])
+  provider     PaymentProvider?
+
+  manualSubmissions ManualPaymentSubmission[]
+}
+
+enum PaymentProvider {
+  PAYMOB
+  MANUAL
+}
+
+enum ManualPaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model ManualPaymentSubmission {
+  id                   Int                 @id @default(autoincrement())
+  paymentId            Int
+  paymentMethod        String // e.g. "bank_transfer", "vodafone_cash", "instapay"
+  transactionReference String
+  amount               Decimal             @db.Decimal(18, 2)
+  currency             String              @default("EGP")
+  receiptUrl           String? // Optional proof image URL (Cloudinary etc.)
+  note                 String? // Optional note from client
+  status               ManualPaymentStatus @default(PENDING)
+  adminNote            String? // Admin's note on verification/rejection
+  verifiedBy           Int? // Admin user ID who verified
+  verifiedAt           DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentMethod, transactionReference])
 }
 
 model ExchangeRateCache {
@@ -467,9 +504,10 @@ model Review {
 }
 
 model PlatformSettings {
-  id                 Int      @id @default(autoincrement())
-  platformFeePercent Decimal  @default(10.0) @db.Decimal(18, 2)
-  updatedAt          DateTime @updatedAt
+  id                    Int      @id @default(autoincrement())
+  platformFeePercent    Decimal  @default(10.0) @db.Decimal(18, 2)
+  manualPaymentSettings Json?
+  updatedAt             DateTime @updatedAt
 }
 
 model SupportTicket {

@@ -81,6 +81,21 @@ export const initiateCheckout = (
     return d;
   });
 
+/** POST /payments/projects/:projectId/manual-submit */
+export const submitManualPayment = (
+  projectId: number,
+  payload: FormData,
+): Promise<unknown> =>
+  unwrap(
+    api.post<ApiResponse<unknown>>(
+      `/payments/projects/${projectId}/manual-submit`,
+      payload,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    ),
+  );
+
 /** POST /payments/:paymentId/release */
 export const releaseEscrowPayment = (paymentId: number): Promise<unknown> =>
   unwrap(api.post<ApiResponse<unknown>>(`/payments/${paymentId}/release`));

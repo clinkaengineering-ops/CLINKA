@@ -14,8 +14,7 @@ import { AdminChatViewer } from "../components/AdminChatViewer";
 import { AdminUserDirectory } from "../components/AdminUserDirectory";
 import { AdminProjectsPanel } from "../components/AdminProjectsPanel";
 import { AdminReviewsPanel } from "../components/AdminReviewsPanel";
-import { AdminFinancialsPanel } from "../components/AdminFinancialsPanel";
-import { AdminPayoutPanel } from "../components/AdminPayoutPanel";
+
 import { AdminAnalytics } from "../components/AdminAnalytics";
 import { AdminSystemLogs } from "../components/AdminSystemLogs";
 import { AdminSupportTicketsPanel } from "../components/AdminSupportTicketsPanel";
@@ -62,7 +61,7 @@ export function AdminPage() {
         </div>
       )}
 
-      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto items-center">
         {(
           [
             ["overview", "Overview"],
@@ -70,8 +69,6 @@ export function AdminPage() {
             ["users", "Directory"],
             ["projects", "Projects"],
             ["reviews", "Reviews"],
-            ["financials", "Financials"],
-            ["payouts", "Payouts"],
             ["bans", "Bans"],
             ["chats", "Chats"],
             ["analytics", "Analytics"],
@@ -84,7 +81,7 @@ export function AdminPage() {
             type="button"
             onClick={() => setTab(id)}
             className={cn(
-              "px-4 py-2 text-sm font-semibold rounded-t-lg transition",
+              "px-4 py-2 text-sm font-semibold rounded-t-lg transition whitespace-nowrap",
               tab === id
                 ? "text-electric-600 dark:text-electric-400 border-b-2 border-electric-500 -mb-px"
                 : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300",
@@ -93,6 +90,12 @@ export function AdminPage() {
             {label}
           </button>
         ))}
+        <div className="flex-1" />
+        <Link href="/admin/finance">
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow">
+            Financial Control Center
+          </Button>
+        </Link>
       </div>
 
       {tab === "verifications" && (
@@ -106,8 +109,6 @@ export function AdminPage() {
       {tab === "users" && <AdminUserDirectory />}
       {tab === "projects" && <AdminProjectsPanel />}
       {tab === "reviews" && <AdminReviewsPanel />}
-      {tab === "financials" && <AdminFinancialsPanel />}
-      {tab === "payouts" && <AdminPayoutPanel />}
       {tab === "bans" && <BanManagementPanel />}
       {tab === "chats" && <AdminChatViewer />}
       {tab === "analytics" && <AdminAnalytics />}

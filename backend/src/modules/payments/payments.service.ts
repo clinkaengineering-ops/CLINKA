@@ -259,6 +259,24 @@ export async function initiateProjectCheckout(
     });
   }
 
+  // ─── Manual Payment (current active path) ─────────────────────────────────
+  const manualPayment = await db.payment.update({
+    where: { id: payment.id },
+    data: {
+      provider: "MANUAL",
+      status: "PENDING",
+    },
+  });
+
+  return {
+    payment: manualPayment,
+    intentionId: null,
+    orderId: undefined,
+    checkoutUrl: null,
+    clientSecret: null,
+  };
+
+  /* PAYMOB_CHECKOUT_START — Paymob checkout flow (preserved for future activation)
   const paymobProvider = new PaymobProvider();
   const intentionResult = await paymobProvider.createPaymentIntention(
     totalChargedEgp,
@@ -275,6 +293,7 @@ export async function initiateProjectCheckout(
     data: {
       gatewayInvoiceId: intentionResult.intentionId,
       gatewayInvoiceKey: intentionResult.intentionId,
+      provider: "PAYMOB",
       status: "PENDING",
     },
   });
@@ -282,10 +301,11 @@ export async function initiateProjectCheckout(
   return {
     payment: updatedPayment,
     intentionId: intentionResult.intentionId,
-    orderId: undefined, // orderId might not be returned directly in the clientSecret
+    orderId: undefined,
     checkoutUrl: intentionResult.checkoutUrl,
     clientSecret: intentionResult.clientSecret,
   };
+  PAYMOB_CHECKOUT_END */
 }
 
 /** Prepare Paymob Unified Checkout — creates pending payment + checkout URL */
@@ -306,7 +326,7 @@ export async function prepareProjectCheckoutSession(
   if (project.status !== "IN_PROGRESS") {
     throw new ApiError(
       400,
-      "Escrow payment is only available for in-progress or awaiting payment projects",
+      "Escrow payment is only available for in-progress projects",
     );
   }
   if (project.payment?.status === "FUNDED") {
@@ -369,6 +389,30 @@ export async function prepareProjectCheckoutSession(
     });
   }
 
+  // ─── Manual Payment (current active path) ─────────────────────────────────
+  await db.payment.update({
+    where: { id: payment.id },
+    data: {
+      provider: "MANUAL",
+      status: "PENDING",
+    },
+  });
+
+  return {
+    checkoutUrl: null,
+    clientSecret: null,
+    intentionId: null,
+    orderId: undefined,
+    currency: "USD", // Manual uses USD or standard config
+    projectId,
+    projectTitle: project.title,
+    paymentId: payment.id,
+    amountUsd, // Returning USD to frontend for display
+    commission,
+    totalCharged: totalChargedUsd, // Returning USD to frontend
+  };
+
+  /* PAYMOB_CHECKOUT_START — Paymob checkout flow (preserved for future activation)
   if (!process.env.PAYMOB_SECRET_KEY?.trim()) {
     throw new ApiError(503, "Payment gateway is not configured (PAYMOB_SECRET_KEY)");
   }
@@ -388,6 +432,7 @@ export async function prepareProjectCheckoutSession(
     data: {
       gatewayInvoiceId: intentionResult.intentionId,
       gatewayInvoiceKey: intentionResult.intentionId,
+      provider: "PAYMOB",
       status: "PENDING",
     },
   });
@@ -405,6 +450,7 @@ export async function prepareProjectCheckoutSession(
     commission,
     totalCharged: totalChargedUsd, // Returning USD to frontend
   };
+  PAYMOB_CHECKOUT_END */
 }
 
 async function isGatewayTransactionAlreadyFunded(
@@ -993,16 +1039,20 @@ export async function listEngineerWithdrawalRequests(engineerUserId: number) {
 
 export async function createWithdrawalRequest(
   engineerUserId: number,
-  payoutMethod: "PAYMOB" | "IBAN",
-  input: import("./payments.validation").AutoWithdrawalInput | import("./payments.validation").InternationalWithdrawalInput,
+  payoutMethod: "PAYMOB" | "IBAN" | "INSTAPAY" | "E_WALLET",
+  input: any,
   idempotencyKey: string,
 ) {
-  const { createPaymobPayout, createIbanPayout } = await import("../payouts/payout.service");
+  const { createPaymobPayout, createIbanPayout, createInstapayPayout, createEWalletPayout } = await import("../payouts/payout.service");
   switch (payoutMethod) {
     case "PAYMOB":
       return createPaymobPayout(engineerUserId, input as import("./payments.validation").AutoWithdrawalInput, { idempotencyKey });
     case "IBAN":
       return createIbanPayout(engineerUserId, input as import("./payments.validation").InternationalWithdrawalInput, { idempotencyKey });
+    case "INSTAPAY":
+      return createInstapayPayout(engineerUserId, input as import("./payments.validation").InstapayWithdrawalInput, { idempotencyKey });
+    case "E_WALLET":
+      return createEWalletPayout(engineerUserId, input as import("./payments.validation").EWalletWithdrawalInput, { idempotencyKey });
     default:
       const ApiError = (await import("../../utils/ApiError")).default;
       throw new ApiError(400, `Unsupported payout method: ${payoutMethod}`);

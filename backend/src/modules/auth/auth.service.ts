@@ -448,6 +448,16 @@ export async function login(data: loginInput) {
     throw new ApiError(403, "Please verify your email before logging in");
   }
 
+  // --- BYPASS OTP FOR SEED ACCOUNTS IN LOCALHOST ---
+  const isLocalHost = process.env.NODE_ENV !== "production";
+  const isSeedAccount = ["admin@clinka.com", "client@clinka.com", "engineer@clinka.com"].includes(user.email);
+  if (isLocalHost && isSeedAccount) {
+    const token = generateToken(user.id, user.role);
+    const { password: _, ...userWithoutPassword } = user;
+    return { token, user: userWithoutPassword };
+  }
+  // -------------------------------------------------
+
   // generate 6 digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 

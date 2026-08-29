@@ -1312,6 +1312,7 @@ export async function revealWithdrawalBankDetails(
       payoutType: true,
       bankName: true,
       country: true,
+      accountNumber: true,
       accountHolderNameEncrypted: true,
       ibanEncrypted: true,
       swiftBicEncrypted: true,
@@ -1319,20 +1320,28 @@ export async function revealWithdrawalBankDetails(
     }
   });
 
-  if (!item || item.payoutType !== "IBAN") {
-    throw new ApiError(404, "International withdrawal request not found");
+  if (!item || !["IBAN", "INSTAPAY", "E_WALLET"].includes(item.payoutType)) {
+    throw new ApiError(404, "Withdrawal request bank details not found or not applicable");
   }
 
   const { decryptSensitiveField } = await import("../../utils/fieldEncryption");
   
-  const decrypted = {
+  const decrypted: any = {
     bankName: item.bankName,
     country: item.country,
     accountHolderName: item.accountHolderNameEncrypted ? decryptSensitiveField(item.accountHolderNameEncrypted) : null,
-    iban: item.ibanEncrypted ? decryptSensitiveField(item.ibanEncrypted) : null,
-    swiftBic: item.swiftBicEncrypted ? decryptSensitiveField(item.swiftBicEncrypted) : null,
-    bankAddress: item.bankAddressEncrypted ? decryptSensitiveField(item.bankAddressEncrypted) : null,
   };
+
+  if (item.payoutType === "IBAN") {
+    decrypted.iban = item.ibanEncrypted ? decryptSensitiveField(item.ibanEncrypted) : null;
+    decrypted.swiftBic = item.swiftBicEncrypted ? decryptSensitiveField(item.swiftBicEncrypted) : null;
+    decrypted.bankAddress = item.bankAddressEncrypted ? decryptSensitiveField(item.bankAddressEncrypted) : null;
+  } else if (item.payoutType === "INSTAPAY") {
+    decrypted.instapayAccount = item.accountNumber;
+  } else if (item.payoutType === "E_WALLET") {
+    decrypted.walletProvider = item.bankName;
+    decrypted.walletNumber = item.accountNumber;
+  }
 
   const { logPayoutEvent } = await import("../payouts/payout.audit");
   await logPayoutEvent(db as any, {
@@ -1519,30 +1528,44 @@ export async function initiateTransfer(withdrawalId: number, adminId: number, ex
   return updated;
 }
 
-export async function recordCompletion(withdrawalId: number, adminId: number, notes?: string) {
+export async function recordCompletion(
+  withdrawalId: number, 
+  adminId: number, 
+  notes?: string,
+  transferMethod?: string,
+  transferReference?: string
+) {
   const updated = await db.$transaction(async (tx) => {
     const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
-    if (!item || item.payoutType !== "IBAN") {
-      throw new ApiError(404, "International withdrawal request not found");
+    if (!item || (item.payoutType !== "IBAN" && item.payoutType !== "INSTAPAY" && item.payoutType !== "E_WALLET")) {
+      throw new ApiError(404, "Manual withdrawal request not found");
     }
     assertPayoutTransition(item.status, "COMPLETED");
+
+    // Require transfer reference if the status was not already TRANSFER_INITIATED which required it.
+    const finalReference = transferReference || item.externalReference;
+    if (!finalReference && item.status !== "TRANSFER_INITIATED") {
+      throw new ApiError(400, "A transfer reference is required to mark as completed.");
+    }
 
     const result = await tx.withdrawalRequest.updateMany({
       where: {
         id: withdrawalId,
-        payoutType: "IBAN",
-        status: { in: ["TRANSFER_INITIATED", "PROCESSING"] },
+        payoutType: { in: ["IBAN", "INSTAPAY", "E_WALLET"] },
+        status: { in: ["TRANSFER_INITIATED", "PROCESSING", "FAILED_NEEDS_MANUAL_REVIEW", "PENDING_REVIEW"] },
       },
       data: {
         status: "COMPLETED",
         completedAt: new Date(),
         completedById: adminId,
+        externalReference: finalReference,
+        method: transferMethod ? transferMethod : item.method,
         internalNotes: appendInternalNotes(item.internalNotes, notes),
         processedAt: new Date(),
       },
     });
     if (result.count === 0) {
-      throw new ApiError(400, "Withdrawal transfer has not been initiated or was already completed");
+      throw new ApiError(400, "Withdrawal cannot be completed from its current state.");
     }
 
     await tx.walletTransaction.updateMany({

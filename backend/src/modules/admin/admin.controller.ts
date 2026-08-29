@@ -638,7 +638,13 @@ export async function adminRecordCompletionController(
   try {
     const input = recordCompletionSchema.parse(req.body ?? {});
     const withdrawalId = Number(req.params.withdrawalId);
-    const data = await recordCompletion(withdrawalId, req.user!.userId, input.notes);
+    const data = await recordCompletion(
+      withdrawalId, 
+      req.user!.userId, 
+      input.notes,
+      input.transferMethod,
+      input.transferReference
+    );
     res.status(200).json(ApiResponse(200, "Transfer marked as completed", data));
   } catch (error) {
     next(error);

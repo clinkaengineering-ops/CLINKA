@@ -15,6 +15,14 @@ export function useLogin() {
     setError("");
     try {
       const res = await authApi.login({ email, password });
+      
+      // Bypass OTP if token is directly returned (e.g. for local test accounts)
+      if (res.data.data?.token) {
+        const next = searchParams.get("next");
+        window.location.href = next ? decodeURIComponent(next) : "/";
+        return;
+      }
+      
       const userId = res.data.data.userId;
       sessionStorage.setItem("pendingUserId", String(userId));
       const next = searchParams.get("next");

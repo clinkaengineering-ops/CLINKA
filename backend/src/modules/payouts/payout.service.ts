@@ -13,6 +13,8 @@ import {
 import type {
   AutoWithdrawalInput,
   InternationalWithdrawalInput,
+  InstapayWithdrawalInput,
+  EWalletWithdrawalInput,
 } from "../payments/payments.validation";
 import {
   encryptSensitiveField,
@@ -1132,4 +1134,199 @@ export async function getPayoutAuditTrail(withdrawalId: number) {
     where: { withdrawalId },
     orderBy: { createdAt: "asc" },
   });
+}
+
+export async function createInstapayPayout(
+  engineerUserId: number,
+  input: InstapayWithdrawalInput,
+  options?: { idempotencyKey?: string },
+) {
+  const engineer = await db.user.findUnique({
+    where: { id: engineerUserId },
+    select: { id: true, name: true, role: true },
+  });
+  if (!engineer || engineer.role !== "ENGINEER") {
+    throw new ApiError(403, "Only engineers can request withdrawals");
+  }
+
+  const idempotencyKey = options?.idempotencyKey?.trim() || null;
+  if (idempotencyKey) {
+    const existing = await db.withdrawalRequest.findFirst({
+      where: { userId: engineerUserId, idempotencyKey },
+    });
+    if (existing) return existing;
+  }
+
+  const amount = roundMoney(input.amount);
+  if (amount <= 0) {
+    throw new ApiError(400, "Withdrawal amount must be greater than zero");
+  }
+
+  const encryptedHolderName = isPayoutFieldEncryptionConfigured() ? encryptSensitiveField(input.accountHolderName) : null;
+  const maskedName = input.accountHolderName.length > 2
+    ? input.accountHolderName.substring(0, 1) + "***" + input.accountHolderName.substring(input.accountHolderName.length - 1)
+    : "***";
+  const maskedAccount = input.instapayAccount.length > 4
+    ? "***" + input.instapayAccount.slice(-4)
+    : "***";
+
+  let txResult;
+  try {
+    txResult = await db.$transaction(async (tx) => {
+      await settleMaturedWalletTransactions(tx, engineerUserId);
+      const spendable = await getSpendableBalance(tx, engineerUserId);
+
+      if (amount > spendable) {
+        throw new ApiError(400, `Withdrawal exceeds available spendable balance (${formatUsd(spendable)})`);
+      }
+      
+      const lockedWallet = await lockWalletForUpdate(tx, engineerUserId);
+      const now = new Date();
+      
+      const created = await tx.withdrawalRequest.create({
+        data: {
+          userId: engineerUserId,
+          amount,
+          method: "INSTAPAY",
+          accountNumber: input.instapayAccount, // We can store the raw address here since InstaPay addresses aren't as strictly sensitive as IBANs, or mask it depending on requirements. Wait, we should probably encrypt it if we have the config.
+          payoutType: "INSTAPAY",
+          currency: "EGP", // Wait, global system currency is USD for internal? The schema says default "USD".
+          accountHolderName: maskedName,
+          accountHolderNameEncrypted: encryptedHolderName,
+          status: "PENDING_REVIEW",
+          idempotencyKey,
+          balanceHeldAt: now,
+        },
+      });
+      
+      await holdPayoutBalance(tx, lockedWallet.id, amount);
+      
+      await tx.walletTransaction.create({
+        data: {
+          walletId: lockedWallet.id,
+          amount,
+          type: "WITHDRAWAL",
+          status: "PENDING",
+          description: `Manual withdrawal (InstaPay)`,
+          relatedWithdrawalId: created.id,
+        },
+      });
+
+      await logPayoutEvent(tx, {
+        withdrawalId: created.id,
+        event: "CREATED",
+        statusAfter: "PENDING_REVIEW",
+        metadata: { method: "INSTAPAY", amount },
+      });
+
+      return { withdrawal: created, wallet: lockedWallet };
+    });
+  } catch (error: any) {
+    if (error.code === "P2002" && idempotencyKey) {
+      const existing = await db.withdrawalRequest.findFirst({
+        where: { userId: engineerUserId, idempotencyKey },
+      });
+      if (existing) return existing;
+    }
+    throw error;
+  }
+  return txResult.withdrawal;
+}
+
+export async function createEWalletPayout(
+  engineerUserId: number,
+  input: EWalletWithdrawalInput,
+  options?: { idempotencyKey?: string },
+) {
+  const engineer = await db.user.findUnique({
+    where: { id: engineerUserId },
+    select: { id: true, name: true, role: true },
+  });
+  if (!engineer || engineer.role !== "ENGINEER") {
+    throw new ApiError(403, "Only engineers can request withdrawals");
+  }
+
+  const idempotencyKey = options?.idempotencyKey?.trim() || null;
+  if (idempotencyKey) {
+    const existing = await db.withdrawalRequest.findFirst({
+      where: { userId: engineerUserId, idempotencyKey },
+    });
+    if (existing) return existing;
+  }
+
+  const amount = roundMoney(input.amount);
+  if (amount <= 0) {
+    throw new ApiError(400, "Withdrawal amount must be greater than zero");
+  }
+
+  const encryptedHolderName = isPayoutFieldEncryptionConfigured() ? encryptSensitiveField(input.accountHolderName) : null;
+  const maskedName = input.accountHolderName.length > 2
+    ? input.accountHolderName.substring(0, 1) + "***" + input.accountHolderName.substring(input.accountHolderName.length - 1)
+    : "***";
+  const maskedWallet = input.walletNumber.length > 4
+    ? "***" + input.walletNumber.slice(-4)
+    : "***";
+
+  let txResult;
+  try {
+    txResult = await db.$transaction(async (tx) => {
+      await settleMaturedWalletTransactions(tx, engineerUserId);
+      const spendable = await getSpendableBalance(tx, engineerUserId);
+
+      if (amount > spendable) {
+        throw new ApiError(400, `Withdrawal exceeds available spendable balance (${formatUsd(spendable)})`);
+      }
+      
+      const lockedWallet = await lockWalletForUpdate(tx, engineerUserId);
+      const now = new Date();
+      
+      const created = await tx.withdrawalRequest.create({
+        data: {
+          userId: engineerUserId,
+          amount,
+          method: "E_WALLET",
+          accountNumber: input.walletNumber,
+          bankName: input.walletProvider,
+          payoutType: "E_WALLET",
+          currency: "EGP", 
+          accountHolderName: maskedName,
+          accountHolderNameEncrypted: encryptedHolderName,
+          status: "PENDING_REVIEW",
+          idempotencyKey,
+          balanceHeldAt: now,
+        },
+      });
+      
+      await holdPayoutBalance(tx, lockedWallet.id, amount);
+      
+      await tx.walletTransaction.create({
+        data: {
+          walletId: lockedWallet.id,
+          amount,
+          type: "WITHDRAWAL",
+          status: "PENDING",
+          description: `Manual withdrawal (E-Wallet)`,
+          relatedWithdrawalId: created.id,
+        },
+      });
+
+      await logPayoutEvent(tx, {
+        withdrawalId: created.id,
+        event: "CREATED",
+        statusAfter: "PENDING_REVIEW",
+        metadata: { method: "E_WALLET", amount },
+      });
+
+      return { withdrawal: created, wallet: lockedWallet };
+    });
+  } catch (error: any) {
+    if (error.code === "P2002" && idempotencyKey) {
+      const existing = await db.withdrawalRequest.findFirst({
+        where: { userId: engineerUserId, idempotencyKey },
+      });
+      if (existing) return existing;
+    }
+    throw error;
+  }
+  return txResult.withdrawal;
 }

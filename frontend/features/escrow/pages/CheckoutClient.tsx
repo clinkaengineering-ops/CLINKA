@@ -14,6 +14,8 @@ import {
   readCheckoutReturnStorage,
   writeCheckoutReturnStorage,
 } from "../utils/checkoutReturnStorage";
+import { submitManualPayment } from "../api/payments.api";
+import { ManualPaymentModal } from "../components/ManualPaymentModal";
 import { useI18n } from "@/i18n";
 import { useAuthHydration } from "@/hooks/useAuthHydration";
 import { cn } from "@/utils/cn";
@@ -403,6 +405,8 @@ function CheckoutForm({ projectId }: { projectId: number }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState(0);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [submittingManual, setSubmittingManual] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -428,7 +432,10 @@ function CheckoutForm({ projectId }: { projectId: number }) {
         }
 
         if (!session.checkoutUrl) {
-          throw new Error("Missing checkout URL from server.");
+          // Manual payment flow!
+          setStatus("form");
+          setManualModalOpen(true);
+          return;
         }
 
         window.location.href = session.checkoutUrl;
@@ -452,38 +459,76 @@ function CheckoutForm({ projectId }: { projectId: number }) {
     };
   }, [projectId, t]);
 
+  const handleManualSubmit = async (formData: FormData) => {
+    setSubmittingManual(true);
+    try {
+      await submitManualPayment(projectId, formData);
+      setManualModalOpen(false);
+      // Wait for the modal to close visually before redirecting
+      setTimeout(() => {
+        router.push(`/projects?id=${projectId}`);
+      }, 500);
+    } catch (err) {
+      throw err; // Handled by modal
+    } finally {
+      setSubmittingManual(false);
+    }
+  };
+
   return (
-    <CheckoutShell amount={amount > 0 ? amount : undefined}>
-      {title ? (
-        <p className="px-4 sm:px-5 py-3 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 animate-fade-in">
-          {title}
-        </p>
-      ) : null}
-
-      {status === "loading" && (
-        <div className="flex flex-col items-center gap-4 py-16 px-6 animate-fade-in">
-          <Spinner size="lg" />
-          <p className="text-sm text-slate-500">{t("checkout.loading")}</p>
-        </div>
-      )}
-
-      {status === "error" && (
-        <div className="flex flex-col items-center gap-3 py-12 px-6 text-center animate-fade-up">
-          <StatusIcon variant="error" />
-          <p className="text-base font-semibold text-slate-900 dark:text-white">
-            {t("checkout.unavailable")}
+    <>
+      <CheckoutShell amount={amount > 0 ? amount : undefined}>
+        {title ? (
+          <p className="px-4 sm:px-5 py-3 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 animate-fade-in">
+            {title}
           </p>
-          <p className="text-sm text-slate-500">{errorMsg}</p>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => router.push("/projects")}
-            className="mt-2 min-h-11"
-          >
-            {t("side.findProjects")}
-          </Button>
-        </div>
-      )}
-    </CheckoutShell>
+        ) : null}
+
+        {status === "loading" && (
+          <div className="flex flex-col items-center gap-4 py-16 px-6 animate-fade-in">
+            <Spinner size="lg" />
+            <p className="text-sm text-slate-500">{t("checkout.loading")}</p>
+          </div>
+        )}
+
+        {status === "form" && (
+          <div className="flex flex-col items-center gap-4 py-12 px-6 animate-fade-in text-center">
+            <p className="text-base font-medium text-slate-700 dark:text-slate-300">
+              You have chosen manual payment.
+            </p>
+            <Button onClick={() => setManualModalOpen(true)}>
+              View Instructions
+            </Button>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="flex flex-col items-center gap-3 py-12 px-6 text-center animate-fade-up">
+            <StatusIcon variant="error" />
+            <p className="text-base font-semibold text-slate-900 dark:text-white">
+              {t("checkout.unavailable")}
+            </p>
+            <p className="text-sm text-slate-500">{errorMsg}</p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => router.push("/projects")}
+              className="mt-2 min-h-11"
+            >
+              {t("side.findProjects")}
+            </Button>
+          </div>
+        )}
+      </CheckoutShell>
+
+      <ManualPaymentModal
+        open={manualModalOpen}
+        onClose={() => setManualModalOpen(false)}
+        projectTitle={title}
+        amount={amount}
+        loading={submittingManual}
+        onConfirm={handleManualSubmit}
+      />
+    </>
   );
 }

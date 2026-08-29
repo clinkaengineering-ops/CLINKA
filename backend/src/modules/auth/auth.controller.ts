@@ -206,6 +206,12 @@ export async function loginController(req: Request, res: Response, next: NextFun
   try {
     const validatedData = loginSchema.parse(req.body);
     const result = await login(validatedData);
+
+    if ("token" in result) {
+      res.cookie("token", result.token, authCookieOptions(req.headers.origin));
+      return res.status(200).json(ApiResponse(200, "Logged in successfully", result));
+    }
+
     res.status(200).json(ApiResponse(200, result.message, { userId: result.userId }));
   } catch (error) {
     next(error);

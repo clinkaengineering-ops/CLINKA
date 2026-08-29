@@ -533,10 +533,15 @@ export const initiateAdminTransfer = (withdrawalId: number, externalReference: s
     ),
   );
 
-export const recordAdminCompletion = (withdrawalId: number, notes?: string) =>
+export const recordAdminCompletion = (
+  withdrawalId: number,
+  notes?: string,
+  transferMethod?: string,
+  transferReference?: string,
+) =>
   unwrap(
     api.post<ApiResponse<AdminWithdrawalRequest>>(
       `/admin/withdrawals/${withdrawalId}/record-completion`,
-      { notes },
+      { notes, transferMethod, transferReference },
     ),
   );

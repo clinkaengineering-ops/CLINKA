@@ -76,20 +76,25 @@ export function EngineerBalancePage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [channel, setChannel] = useState<AutoWithdrawalChannel>("mobile_wallet");
-  const [msisdn, setMsisdn] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [bankCode, setBankCode] = useState("CIB");
+  const [method, setMethod] = useState<"IBAN" | "INSTAPAY" | "E_WALLET">("INSTAPAY");
+  
+  // IBAN Fields
   const [fullName, setFullName] = useState("");
-  const [nationalId, setNationalId] = useState("");
-  const [modalError, setModalError] = useState("");
-  const [modalSuccess, setModalSuccess] = useState("");
-
-  const [region, setRegion] = useState<"inside_egypt" | "outside_egypt">("inside_egypt");
+  const [accountNumber, setAccountNumber] = useState(""); // Used for IBAN
   const [ibanBankName, setIbanBankName] = useState("");
   const [swiftBic, setSwiftBic] = useState("");
   const [bankAddress, setBankAddress] = useState("");
   const [country, setCountry] = useState("");
+
+  // InstaPay Fields
+  const [instapayAccount, setInstapayAccount] = useState("");
+
+  // E-Wallet Fields
+  const [walletProvider, setWalletProvider] = useState("");
+  const [walletNumber, setWalletNumber] = useState("");
+
+  const [modalError, setModalError] = useState("");
+  const [modalSuccess, setModalSuccess] = useState("");
 
   const statusLabel = (status: EngineerPaymentStatus) => {
     const key = `bal.status.${status}` as const;
@@ -105,19 +110,18 @@ export function EngineerBalancePage() {
 
   const openWithdrawalModal = () => {
     setAmount(String(spendable));
-    setChannel("mobile_wallet");
-    setMsisdn("");
-    setAccountNumber("");
-    setBankCode("CIB");
+    setMethod("INSTAPAY");
     setFullName("");
-    setNationalId("");
-    setModalError("");
-    setModalSuccess("");
-    setRegion("inside_egypt");
+    setAccountNumber("");
     setIbanBankName("");
     setSwiftBic("");
     setBankAddress("");
     setCountry("");
+    setInstapayAccount("");
+    setWalletProvider("");
+    setWalletNumber("");
+    setModalError("");
+    setModalSuccess("");
     setIsModalOpen(true);
   };
 
@@ -133,78 +137,49 @@ export function EngineerBalancePage() {
       return;
     }
 
-    if (region === "inside_egypt") {
-      if (!nationalId.trim()) {
-        setModalError(t("bal.withdrawNationalIdRequired"));
-        return;
-      }
-      if (!/^\d{14}$/.test(nationalId.trim())) {
-        setModalError(t("bal.withdrawNationalIdInvalid"));
-        return;
-      }
-      if (channel === "mobile_wallet") {
-        const phone = msisdn.trim();
-        if (!phone) {
-          setModalError(t("bal.withdrawWalletRequired"));
-          return;
-        }
-        if (!/^01[012]\d{8}$/.test(phone.replace(/\D/g, ""))) {
-          setModalError(t("bal.withdrawWalletInvalid"));
-          return;
-        }
-      }
-      if (channel === "bank_transfer") {
-        if (withdrawAmount < PAYMOB_BANK_MIN_USD) {
-          setModalError(t("bal.withdrawBankMin"));
-          return;
-        }
-        if (!accountNumber.trim()) {
-          setModalError(t("bal.withdrawEgyptIbanRequired"));
-          return;
-        }
-        const normalizedAccount = accountNumber.trim().replace(/\s+/g, "").toUpperCase();
-        if (normalizedAccount.length < 15 || normalizedAccount.length > 34) {
-          setModalError(t("bal.withdrawEgyptIbanLength"));
-          return;
-        }
-        if (!normalizedAccount.startsWith("EG")) {
-          setModalError(t("bal.withdrawEgyptIbanPrefix"));
-          return;
-        }
-        if (!isValidIban(normalizedAccount)) {
-          setModalError(t("bal.withdrawEgyptIbanInvalid"));
-          return;
-        }
-        if (!isValidAccountHolderName(fullName)) {
-          setModalError(t("bal.withdrawAccountNameInvalid"));
-          return;
-        }
-      }
-    } else {
-      const iban = accountNumber.trim().replace(/\s+/g, "");
-      if (!iban) {
-        setModalError(t("bal.withdrawIbanRequired"));
-        return;
-      }
-      if (!isValidIban(iban)) {
-        setModalError(t("bal.withdrawIbanInvalid"));
+    if (method === "INSTAPAY") {
+      if (!instapayAccount.trim()) {
+        setModalError("InstaPay account is required");
         return;
       }
       if (!isValidAccountHolderName(fullName)) {
-        setModalError(t("bal.withdrawAccountNameInvalid"));
+        setModalError("Invalid account holder name");
+        return;
+      }
+    } else if (method === "E_WALLET") {
+      if (!walletProvider.trim()) {
+        setModalError("Wallet provider is required");
+        return;
+      }
+      if (!walletNumber.trim()) {
+        setModalError("Wallet number is required");
+        return;
+      }
+      if (!isValidAccountHolderName(fullName)) {
+        setModalError("Invalid account holder name");
+        return;
+      }
+    } else if (method === "IBAN") {
+      const iban = accountNumber.trim().replace(/\s+/g, "");
+      if (!iban) {
+        setModalError("IBAN is required");
+        return;
+      }
+      if (!isValidIban(iban)) {
+        setModalError("Invalid IBAN");
+        return;
+      }
+      if (!isValidAccountHolderName(fullName)) {
+        setModalError("Invalid account holder name");
         return;
       }
       if (!ibanBankName.trim()) {
-        setModalError(t("bal.withdrawBankNameRequired"));
+        setModalError("Bank name is required");
         return;
       }
       const normalizedCountry = normalizeCountryCode(country);
       if (!isValidCountryCode(normalizedCountry)) {
-        setModalError(t("bal.withdrawCountryInvalid"));
-        return;
-      }
-      if (swiftBic.trim() && !isValidSwiftBic(swiftBic.trim())) {
-        setModalError(t("bal.withdrawSwiftInvalid"));
+        setModalError("Invalid country code");
         return;
       }
     }
@@ -216,48 +191,30 @@ export function EngineerBalancePage() {
         ? crypto.randomUUID()
         : `wd-${Date.now()}`;
     try {
-      const payload = region === "inside_egypt" 
-        ? {
-            payoutMethod: "PAYMOB" as const,
-            amount: withdrawAmount,
-            channel,
-            msisdn: channel === "mobile_wallet" ? msisdn.trim() : undefined,
-            accountNumber: channel === "bank_transfer" ? accountNumber.trim().replace(/\s+/g, "").toUpperCase() : undefined,
-            bankCode: channel === "bank_transfer" ? bankCode : undefined,
-            fullName: channel === "bank_transfer" ? normalizeAccountHolderName(fullName) : undefined,
-            nationalId: nationalId.trim(),
-          }
-        : {
-            payoutMethod: "IBAN" as const,
-            amount: withdrawAmount,
-            accountHolderName: normalizeAccountHolderName(fullName),
-            iban: accountNumber.trim().replace(/\s+/g, ""),
-            bankName: ibanBankName.trim(),
-            country: normalizeCountryCode(country),
-            swiftBic: swiftBic.trim() || undefined,
-            bankAddress: bankAddress.trim() || undefined,
-          };
+      const payload: any = {
+        payoutMethod: method,
+        amount: withdrawAmount,
+      };
+
+      if (method === "INSTAPAY") {
+        payload.instapayAccount = instapayAccount.trim();
+        payload.accountHolderName = fullName.trim();
+      } else if (method === "E_WALLET") {
+        payload.walletProvider = walletProvider.trim();
+        payload.walletNumber = walletNumber.trim();
+        payload.accountHolderName = fullName.trim();
+      } else if (method === "IBAN") {
+        payload.accountHolderName = fullName.trim();
+        payload.iban = accountNumber.trim().replace(/\s+/g, "");
+        payload.bankName = ibanBankName.trim();
+        payload.country = normalizeCountryCode(country);
+        payload.swiftBic = swiftBic.trim() || undefined;
+        payload.bankAddress = bankAddress.trim() || undefined;
+      }
 
       const result = await createEngineerWithdrawal(payload, idempotencyKey);
 
-      if (result.status === "COMPLETED") {
-        setModalSuccess(t("bal.withdrawSuccessInstant"));
-      } else if (result.status === "PROCESSING") {
-        setModalSuccess(t("bal.withdrawSuccessProcessing"));
-      } else if (["PENDING", "PENDING_REVIEW", "SUBMITTED"].includes(result.status)) {
-        setModalSuccess(
-          result.status === "PENDING_REVIEW"
-            ? t("bal.withdrawSuccessInternational")
-            : t("bal.withdrawSuccess"),
-        );
-      } else {
-        setModalError(
-          result.paymobStatusDescription ??
-            result.failureReason ??
-            t("bal.withdrawError"),
-        );
-        return;
-      }
+      setModalSuccess("Withdrawal request submitted for review.");
 
       setTimeout(() => {
         setIsModalOpen(false);
@@ -500,14 +457,10 @@ export function EngineerBalancePage() {
             <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
               <div>
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">
-                  {region === "outside_egypt"
-                    ? t("bal.withdrawTitleInternational")
-                    : t("bal.withdrawTitle")}
+                  {t("bal.withdrawTitle")}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {region === "outside_egypt"
-                    ? t("bal.withdrawSubInternational")
-                    : t("bal.withdrawSubAuto")}
+                  {t("bal.withdrawSubAuto")}
                 </p>
               </div>
               <button
@@ -557,270 +510,238 @@ export function EngineerBalancePage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {t("bal.withdrawLocation")}
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRegion("inside_egypt")}
-                    className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
-                      region === "inside_egypt"
-                        ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
-                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                    }`}
-                  >
-                    <span className="text-xs font-bold text-slate-950 dark:text-white">
-                      {t("bal.withdrawInsideEgypt")}
-                    </span>
-                    <span className="text-[10px] text-slate-500">
-                      {t("bal.withdrawInsideEgyptHint")}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegion("outside_egypt")}
-                    className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
-                      region === "outside_egypt"
-                        ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
-                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                    }`}
-                  >
-                    <span className="text-xs font-bold text-slate-950 dark:text-white">
-                      {t("bal.withdrawOutsideEgypt")}
-                    </span>
-                    <span className="text-[10px] text-slate-500">
-                      {t("bal.withdrawOutsideEgyptHint")}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {region === "inside_egypt" && (
-                <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    {t("bal.withdrawMethod")}
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setChannel("mobile_wallet")}
-                      className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
-                        channel === "mobile_wallet"
-                          ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                      }`}
-                    >
-                      <span className="text-xs font-bold text-slate-950 dark:text-white">
-                        {t("bal.withdrawMobileWallet")}
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        Vodafone / Etisalat / Orange
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setChannel("bank_transfer")}
-                      className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
-                        channel === "bank_transfer"
-                          ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                      }`}
-                    >
-                      <span className="text-xs font-bold text-slate-950 dark:text-white">
-                        {t("bal.withdrawBankTransfer")}
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        {t("bal.withdrawBankTransferHint")}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {region === "inside_egypt" && (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    {t("bal.withdrawNationalId")}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={nationalId}
-                    onChange={(e) => setNationalId(e.target.value)}
-                    placeholder={t("bal.withdrawNationalIdPh")}
-                    maxLength={14}
-                    required
-                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                  />
-                </div>
-              )}
-
-              {region === "inside_egypt" ? (
-                channel === "mobile_wallet" ? (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/60">
                     <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {t("bal.withdrawWalletNumber")}
+                      Withdrawal Method
                     </label>
-                    <input
-                      type="text"
-                      value={msisdn}
-                      onChange={(e) => setMsisdn(e.target.value)}
-                      placeholder="010xxxxxxxx"
-                      required
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {t("bal.withdrawFullName")}
-                      </label>
-                      <input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder={t("bal.withdrawBankFullNamePh")}
-                        required
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                      />
-                      <p className="text-[10px] text-slate-500">
-                        {t("bal.withdrawBankFullNameHint")}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {t("bal.withdrawBank")}
-                      </label>
-                      <select
-                        value={bankCode}
-                        onChange={(e) => setBankCode(e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setMethod("INSTAPAY")}
+                        className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
+                          method === "INSTAPAY"
+                            ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
+                            : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                        }`}
                       >
-                        {BANK_OPTIONS.map((bank) => (
-                          <option key={bank.code} value={bank.code}>
-                            {bank.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {t("bal.withdrawEgyptIban")}
-                      </label>
-                      <input
-                        type="text"
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value.toUpperCase())}
-                        placeholder={t("bal.withdrawEgyptIbanPh")}
-                        required
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                      />
-                      <p className="text-[10px] text-slate-500">
-                        {t("bal.withdrawEgyptIbanHint")}
-                      </p>
-                    </div>
-                  </>
-                )
-              ) : (
-                <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {t("bal.withdrawIban")}
-                    </label>
-                    <input
-                      type="text"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value.toUpperCase())}
-                      placeholder={t("bal.withdrawIbanPh")}
-                      required
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {t("bal.withdrawFullName")}
-                    </label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder={t("bal.withdrawBankFullNamePh")}
-                      required
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                    />
-                    <p className="text-[10px] text-slate-500">
-                      {t("bal.withdrawBankFullNameHint")}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {t("bal.withdrawBankName")}
-                      </label>
-                      <input
-                        type="text"
-                        value={ibanBankName}
-                        onChange={(e) => setIbanBankName(e.target.value)}
-                        placeholder={t("bal.withdrawBankNamePh")}
-                        required
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {t("bal.withdrawSwift")}
-                      </label>
-                      <input
-                        type="text"
-                        value={swiftBic}
-                        onChange={(e) => setSwiftBic(e.target.value.toUpperCase())}
-                        placeholder={t("bal.withdrawSwiftPh")}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {t("bal.withdrawCountry")}
-                      </label>
-                      <select
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                        required
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        <span className="text-xs font-bold text-slate-950 dark:text-white">
+                          InstaPay
+                        </span>
+                        <span className="text-[10px] text-slate-500">Instant Transfer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMethod("E_WALLET")}
+                        className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
+                          method === "E_WALLET"
+                            ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
+                            : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                        }`}
                       >
-                        <option value="">{t("bal.withdrawCountrySelect")}</option>
-                        {ALL_COUNTRIES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.label} ({c.code})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {t("bal.withdrawBankAddress")}
-                      </label>
-                      <input
-                        type="text"
-                        value={bankAddress}
-                        onChange={(e) => setBankAddress(e.target.value)}
-                        placeholder={t("bal.withdrawBankAddressPh")}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
-                      />
+                        <span className="text-xs font-bold text-slate-950 dark:text-white">
+                          E-Wallet
+                        </span>
+                        <span className="text-[10px] text-slate-500">Vodafone / Etisalat</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMethod("IBAN")}
+                        className={`p-3 rounded-lg border text-start transition-all flex flex-col gap-1 ${
+                          method === "IBAN"
+                            ? "border-electric-500 bg-electric-50/10 ring-2 ring-electric-500/20"
+                            : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                        }`}
+                      >
+                        <span className="text-xs font-bold text-slate-950 dark:text-white">
+                          Bank Transfer
+                        </span>
+                        <span className="text-[10px] text-slate-500">IBAN / Swift</span>
+                      </button>
                     </div>
                   </div>
-                </div>
-              )}
+
+                  {method === "INSTAPAY" && (
+                    <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          InstaPay Account / Mobile
+                        </label>
+                        <input
+                          type="text"
+                          value={instapayAccount}
+                          onChange={(e) => setInstapayAccount(e.target.value)}
+                          placeholder="e.g. yourname@instapay"
+                          required
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          {t("bal.withdrawFullName")}
+                        </label>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder={t("bal.withdrawBankFullNamePh")}
+                          required
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        />
+                        <p className="text-[10px] text-slate-500">
+                          {t("bal.withdrawBankFullNameHint")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {method === "E_WALLET" && (
+                    <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          Wallet Provider
+                        </label>
+                        <select
+                          value={walletProvider}
+                          onChange={(e) => setWalletProvider(e.target.value)}
+                          required
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        >
+                          <option value="">Select Provider</option>
+                          <option value="Vodafone Cash">Vodafone Cash</option>
+                          <option value="Etisalat Cash">Etisalat Cash</option>
+                          <option value="Orange Cash">Orange Cash</option>
+                          <option value="WE Pay">WE Pay</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          Wallet Mobile Number
+                        </label>
+                        <input
+                          type="text"
+                          value={walletNumber}
+                          onChange={(e) => setWalletNumber(e.target.value)}
+                          placeholder="01xxxxxxxxx"
+                          required
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          {t("bal.withdrawFullName")}
+                        </label>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder={t("bal.withdrawBankFullNamePh")}
+                          required
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        />
+                        <p className="text-[10px] text-slate-500">
+                          {t("bal.withdrawBankFullNameHint")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {method === "IBAN" && (
+                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          {t("bal.withdrawIban")}
+                        </label>
+                        <input
+                          type="text"
+                          value={accountNumber}
+                          onChange={(e) => setAccountNumber(e.target.value.toUpperCase())}
+                          placeholder={t("bal.withdrawIbanPh")}
+                          required
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          {t("bal.withdrawFullName")}
+                        </label>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder={t("bal.withdrawBankFullNamePh")}
+                          required
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                        />
+                        <p className="text-[10px] text-slate-500">
+                          {t("bal.withdrawBankFullNameHint")}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {t("bal.withdrawBankName")}
+                          </label>
+                          <input
+                            type="text"
+                            value={ibanBankName}
+                            onChange={(e) => setIbanBankName(e.target.value)}
+                            placeholder={t("bal.withdrawBankNamePh")}
+                            required
+                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {t("bal.withdrawSwift")}
+                          </label>
+                          <input
+                            type="text"
+                            value={swiftBic}
+                            onChange={(e) => setSwiftBic(e.target.value.toUpperCase())}
+                            placeholder={t("bal.withdrawSwiftPh")}
+                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {t("bal.withdrawCountry")}
+                          </label>
+                          <select
+                            value={country}
+                            onChange={(e) => setCountry(e.target.value)}
+                            required
+                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                          >
+                            <option value="">{t("bal.withdrawCountrySelect")}</option>
+                            {ALL_COUNTRIES.map((c) => (
+                              <option key={c.code} value={c.code}>
+                                {c.label} ({c.code})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {t("bal.withdrawBankAddress")}
+                          </label>
+                          <input
+                            type="text"
+                            value={bankAddress}
+                            onChange={(e) => setBankAddress(e.target.value)}
+                            placeholder={t("bal.withdrawBankAddressPh")}
+                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
               <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 p-3 flex items-start gap-2">
                 <span className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">ℹ️</span>
                 <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
-                  {region === "outside_egypt"
+                  {method === "IBAN"
                     ? t("bal.withdrawNoticeInternational")
                     : t("bal.withdrawNoticeAuto")}
                 </p>

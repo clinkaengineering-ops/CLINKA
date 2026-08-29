@@ -106,5 +106,7 @@ export const initiateTransferSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
 });
 export const recordCompletionSchema = z.object({
+  transferMethod: z.enum(["BANK_TRANSFER", "INSTAPAY", "MOBILE_WALLET", "OTHER"]).optional(),
+  transferReference: z.string().trim().min(3).max(255).optional(),
   notes: z.string().trim().max(1000).optional(),
 });

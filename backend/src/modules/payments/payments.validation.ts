@@ -212,3 +212,32 @@ export const internationalWithdrawalSchema = z.object({
 export type InternationalWithdrawalInput = z.infer<
   typeof internationalWithdrawalSchema
 >;
+
+export const instapayWithdrawalSchema = z.object({
+  amount: z.coerce.number().positive(),
+  instapayAccount: z.string().trim().min(2, "InstaPay account is required"),
+  accountHolderName: accountHolderNameField("Account holder name"),
+});
+
+export type InstapayWithdrawalInput = z.infer<typeof instapayWithdrawalSchema>;
+
+export const ewalletWithdrawalSchema = z.object({
+  amount: z.coerce.number().positive(),
+  walletProvider: z.string().trim().min(2, "Wallet provider is required"),
+  walletNumber: z.string().trim().min(5, "Wallet number is required"),
+  accountHolderName: accountHolderNameField("Account holder name"),
+});
+
+export type EWalletWithdrawalInput = z.infer<typeof ewalletWithdrawalSchema>;
+
+export const submitManualPaymentSchema = z.object({
+  paymentMethod: z.enum(["bank_transfer", "instapay", "ewallet"]),
+  transactionReference: z.string().trim().min(2, "Transaction reference is required"),
+  amount: z.coerce.number().positive(),
+  currency: z.string().trim().toUpperCase(),
+  proofUrl: z.string().url("Must be a valid URL").optional(),
+  proofPublicId: z.string().optional(),
+  note: z.string().optional(),
+});
+
+export type SubmitManualPaymentInput = z.infer<typeof submitManualPaymentSchema>;
