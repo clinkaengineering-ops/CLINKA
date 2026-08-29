@@ -19,6 +19,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV UPLOAD_DIR=/app/uploads
+
+RUN mkdir -p /app/uploads
 
 COPY package*.json ./
 # --ignore-scripts: skip postinstall's `prisma generate` here —

@@ -31,7 +31,7 @@ import { verifyOtpSchema } from "./auth.validation";
 import ApiResponse from "../../utils/ApiResponse";
 import ApiError from "../../utils/ApiError";
 import { authCookieOptions } from "../../config/cookies";
-import multer from "multer";
+import { getStoredUploadPath } from "../../config/upload";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import {
   getGoogleAuthRedirectUrl,
@@ -39,6 +39,15 @@ import {
   completeGoogleRegistration,
 } from "./google.service";
 import { isGoogleAuthEnabled } from "../../config/google";
+
+function mapUploadedPaths(
+  files: Express.Multer.File[] | undefined,
+  category: "documents" | "images",
+): string[] {
+  return (files ?? []).map(
+    (file) => getStoredUploadPath(file, category)!,
+  );
+}
 
 export async function checkRegistrationEmailController(
   req: Request,
@@ -87,12 +96,17 @@ export async function registerEngineerController(
         }
       | undefined;
     const documentFile = files?.document?.[0] ?? req.file;
-    const fileUrl = documentFile?.path ?? "";
+    const fileUrl = documentFile
+      ? getStoredUploadPath(documentFile as Express.Multer.File, "documents") ?? ""
+      : "";
     const documentType = req.body.documentType as
       | "collegeIdUrl"
       | "certificateUrl"
       | "syndicateCardUrl";
-    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const portfolioUrls = mapUploadedPaths(
+      files?.portfolio as Express.Multer.File[] | undefined,
+      "images",
+    );
     const user = await registerEngineer(
       validatedData,
       fileUrl,
@@ -115,7 +129,10 @@ export async function resumeEngineerRegistrationController(
   try {
     const validatedData = clientRegisterSchema.parse(req.body);
     const files = req.files as { portfolio?: { path: string }[] } | undefined;
-    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const portfolioUrls = mapUploadedPaths(
+      files?.portfolio as Express.Multer.File[] | undefined,
+      "images",
+    );
     const user = await resumeEngineerRegistration(
       validatedData,
       portfolioUrls,
@@ -142,7 +159,9 @@ export async function applyClientAsEngineerController(
         }
       | undefined;
     const documentFile = files?.document?.[0] ?? req.file;
-    const fileUrl = documentFile?.path ?? "";
+    const fileUrl = documentFile
+      ? getStoredUploadPath(documentFile as Express.Multer.File, "documents") ?? ""
+      : "";
     if (!fileUrl) {
       throw new ApiError(400, "Verification document is required");
     }
@@ -150,7 +169,10 @@ export async function applyClientAsEngineerController(
       | "collegeIdUrl"
       | "certificateUrl"
       | "syndicateCardUrl";
-    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const portfolioUrls = mapUploadedPaths(
+      files?.portfolio as Express.Multer.File[] | undefined,
+      "images",
+    );
     const user = await applyClientAsEngineer(
       req.user!.userId,
       validatedData,
@@ -180,7 +202,9 @@ export async function completeGoogleEngineerController(
         }
       | undefined;
     const documentFile = files?.document?.[0] ?? req.file;
-    const fileUrl = documentFile?.path ?? "";
+    const fileUrl = documentFile
+      ? getStoredUploadPath(documentFile as Express.Multer.File, "documents") ?? ""
+      : "";
     if (!fileUrl) {
       throw new ApiError(400, "Verification document is required");
     }
@@ -188,7 +212,10 @@ export async function completeGoogleEngineerController(
       | "collegeIdUrl"
       | "certificateUrl"
       | "syndicateCardUrl";
-    const portfolioUrls = (files?.portfolio ?? []).map((file) => file.path);
+    const portfolioUrls = mapUploadedPaths(
+      files?.portfolio as Express.Multer.File[] | undefined,
+      "images",
+    );
     const user = await completeGoogleEngineerRegistration(
       req.user!.userId,
       validatedData,

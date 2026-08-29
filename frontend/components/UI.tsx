@@ -13,6 +13,7 @@ import { AuthShellAside } from "./AuthShellAside";
 import { ThemeToggle } from "./theme";
 import Link from "next/link";
 import Image from "next/image";
+import { resolveMediaUrl } from "@/lib/mediaUrl";
 /* ---------- Button ---------- */
 export const Button = forwardRef<
   HTMLButtonElement,
@@ -192,6 +193,7 @@ export const Avatar = ({
     "from-indigo-500 to-purple-600",
   ];
   const idx = name.charCodeAt(0) % colors.length;
+  const resolvedSrc = resolveMediaUrl(src);
   return (
     <div
       className={cn(
@@ -201,9 +203,9 @@ export const Avatar = ({
       )}
       style={{ width: size, height: size, fontSize: size * 0.4 }}
     >
-      {src ? (
+      {resolvedSrc ? (
         <Image
-          src={src}
+          src={resolvedSrc}
           className="rounded-full object-cover"
           alt={name}
           width={size}

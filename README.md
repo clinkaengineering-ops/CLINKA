@@ -18,7 +18,7 @@ CLINKA is built using a modern, robust, and highly scalable stack designed to su
 | **Database** | **PostgreSQL** | Relational data persistence. |
 | **ORM** | **Prisma (v7)** | Type-safe database queries, schema management, and migrations. |
 | **Caching / Store** | **Redis (ioredis)** | Session store, Google OAuth state caching, and disbursement tokens. |
-| **File Storage** | **Cloudinary** | Secure media/document storage (Portfolios, Deliverables, Chat Attachments). |
+| **File Storage** | **Local server storage** | Persistent `/uploads` directory, CDN-ready via `UPLOAD_BASE_URL`. |
 | **Payments** | **Stripe** & **Paymob** | Escrow payments (Stripe/Paymob) and local wallet payouts (Paymob disbursements). |
 | **Validation** | **Zod** | End-to-end schema validation on both client and server. |
 | **Mailing** | **Nodemailer** | Custom transactional HTML emails (verification, alerts, password resets). |
@@ -58,7 +58,7 @@ graph TD
     
     API <--> |Prisma ORM| DB[(PostgreSQL)]
     API <--> |ioredis| Redis[(Redis Cache)]
-    API <--> |SDK| Cloudinary[Cloudinary Storage]
+    API --> |Static /uploads| Uploads[Persistent Upload Volume]
     API <--> |API| Paymob[Paymob Gateway]
     API <--> |API| Stripe[Stripe Gateway]
 ```
@@ -138,4 +138,4 @@ npm run dev
 
 ## 🌐 Deployment Configuration
 
-Refer to [DEPLOY.md](file:///home/mohamedtalal/Documents/CLINKA/DEPLOY.md) for full production deployment instructions on Vercel (Frontend), Coolify/Dokploy (Backend & WebSocket), PostgreSQL, and third-party setups (Google OAuth, Paymob, Stripe, Cloudinary).
+Refer to [DEPLOY.md](file:///home/mohamedtalal/Documents/CLINKA/DEPLOY.md) for full production deployment instructions on Vercel (Frontend), Coolify/Dokploy (Backend & WebSocket), PostgreSQL, persistent upload storage, and third-party setups (Google OAuth, Paymob).

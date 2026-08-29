@@ -8,5 +8,8 @@ node_modules
 # build output
 /dist
 
+# local uploads (never commit user files)
+/uploads
+
 # logs
 *.log

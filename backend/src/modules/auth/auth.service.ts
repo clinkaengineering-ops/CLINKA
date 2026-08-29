@@ -18,10 +18,25 @@ import {
   passwordResetEmailHtml,
 } from "../../utils/emailTemplate";
 import { cacheDel, cacheGet, cacheSet } from "../../config/redis";
+import { deleteUploadFiles } from "../../config/upload";
 import { generateProfileSlug } from "../../utils/slug";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
+}
+
+async function deleteEngineerPortfolioFiles(engineerId: number) {
+  const items = await db.portfolioProject.findMany({
+    where: { engineerId },
+    include: { files: true },
+  });
+
+  deleteUploadFiles(
+    items.flatMap((item) => [
+      item.coverImageUrl,
+      ...item.files.map((file) => file.fileUrl),
+    ]),
+  );
 }
 
 export async function checkRegistrationEmail(email: string) {
@@ -283,6 +298,7 @@ export async function applyClientAsEngineer(
   }));
 
   if (user.profile) {
+    await deleteEngineerPortfolioFiles(user.profile.id);
     await db.portfolioProject.deleteMany({ where: { engineerId: user.profile.id } });
     await db.engineerProfile.update({
       where: { id: user.profile.id },
@@ -384,6 +400,7 @@ export async function completeGoogleEngineerRegistration(
     throw new ApiError(400, "Your engineer registration is already complete");
   }
 
+  await deleteEngineerPortfolioFiles(user.profile.id);
   await db.portfolioProject.deleteMany({ where: { engineerId: user.profile.id } });
   await db.engineerProfile.update({
     where: { id: user.profile.id },

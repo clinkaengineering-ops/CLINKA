@@ -1,14 +1,15 @@
 import { z } from "zod";
 import { nameField, optionalBioField } from "../../utils/fields";
+import { optionalStoredMediaPathSchema, storedMediaPathSchema } from "../../utils/mediaUrl";
 
 export const updateProfileSchema = z.object({
   name: nameField.optional(),
   bio: optionalBioField,
-  coverImageUrl: z.string().url("Cover image must be a valid URL").optional().nullable(),
+  coverImageUrl: optionalStoredMediaPathSchema,
   nationality: z.string().optional().nullable(),
   
   // New Professional Profile fields
-  coverBannerUrl: z.string().url().optional().nullable(),
+  coverBannerUrl: optionalStoredMediaPathSchema,
   professionalHeadline: z.string().max(100).optional().nullable(),
   currentPosition: z.string().max(100).optional().nullable(),
   currentCompany: z.string().max(100).optional().nullable(),
@@ -67,7 +68,7 @@ export const searchQuerySchema = z.object({
 export const addPortfolioItemSchema = z.object({
   title: z.string().trim().max(100).optional(),
   description: z.string().trim().min(3).max(2000),
-  coverImageUrl: z.string().url("Invalid image URL").optional(),
+  coverImageUrl: storedMediaPathSchema.optional(),
   disciplineId: z.coerce.number().int().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("PUBLISHED"),
   year: z.coerce.number().int().min(1900).max(new Date().getFullYear() + 1).optional(),
@@ -75,7 +76,7 @@ export const addPortfolioItemSchema = z.object({
   country: z.string().trim().max(100).optional(),
   skillIds: z.array(z.coerce.number().int()).optional(),
   files: z.array(z.object({
-    fileUrl: z.string().url(),
+    fileUrl: storedMediaPathSchema,
     fileType: z.enum(["IMAGE", "PDF", "LINK"]),
     title: z.string().max(100).optional()
   })).optional()

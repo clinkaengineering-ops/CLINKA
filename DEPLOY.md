@@ -10,7 +10,7 @@ Recommended stack:
 | API + WebSockets | [Coolify](https://coolify.io) or [Dokploy](https://dokploy.com) on your VPS | Full control, WebSocket support |
 | Database | Coolify/Dokploy Postgres, Neon, or Supabase | Managed PostgreSQL |
 | Redis (optional) | Coolify/Dokploy Redis or Upstash | OAuth state + payout token cache |
-| Files | Cloudinary | Already integrated |
+| Files | Server storage (`/uploads` volume) | CDN-compatible via `UPLOAD_BASE_URL` |
 
 ## 1. Database
 
@@ -36,7 +36,9 @@ Both platforms deploy Node.js apps on your VPS **without you writing a Dockerfil
 6. Add env vars from `backend/.env.example` (`NODE_ENV=production`, etc.).
 7. Set `API_URL` to your API domain (e.g. `https://api.clinka.com`).
 8. Set `CLIENT_URL` to your frontend domain.
-9. Enable **WebSocket** support in the proxy settings (required for messaging).
+9. Set `UPLOAD_DIR=/app/uploads` and mount a **persistent volume** at `/app/uploads`.
+10. Set `UPLOAD_BASE_URL` to your public file origin (usually the same as `API_URL`; later you can point this to a CDN domain without changing stored paths).
+11. Enable **WebSocket** support in the proxy settings (required for messaging).
 
 ### Dokploy
 
@@ -45,7 +47,7 @@ Both platforms deploy Node.js apps on your VPS **without you writing a Dockerfil
 3. **Build:** `npm ci && npm run build`
 4. **Start:** `npm run start:prod`
 5. **Port:** `5000`
-6. Add the same environment variables as above.
+6. Add the same environment variables as above, including `UPLOAD_DIR` and a persistent volume on `/app/uploads`.
 7. Ensure the reverse proxy forwards WebSocket upgrades.
 
 ### Health check

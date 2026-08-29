@@ -8,22 +8,24 @@ import registerRoutes from "./routes/index";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
-import path from "path";
-import fs from "fs";
+import { ensureUploadRoot, getUploadRoot } from "./config/upload";
 
 loadEnv();
 const app = express();
 
-const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "../../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+ensureUploadRoot();
+const uploadDir = getUploadRoot();
 
 app.use("/uploads", express.static(uploadDir, {
   setHeaders: (res, filePath) => {
-    // Unique filenames generated with random UUIDs can be cached indefinitely (immutable)
+    const normalized = filePath.replace(/\\/g, "/");
+    if (normalized.includes("/documents/")) {
+      res.setHeader("Cache-Control", "private, no-store");
+      return;
+    }
+    // Unique filenames can be cached immutably behind a CDN.
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  }
+  },
 }));
 
 if (process.env.NODE_ENV === "production") {

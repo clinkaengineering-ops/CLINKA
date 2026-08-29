@@ -11,6 +11,7 @@ import {
   adminVerifyManualPayment,
   adminRejectManualPayment,
 } from "./manual-payment.service";
+import { getStoredUploadPath } from "../../config/upload";
 import { submitManualPaymentSchema } from "./payments.validation";
 import upload from "../../middlewares/upload.middleware";
 
@@ -30,7 +31,7 @@ router.post(
       
       let proofUrl = input.proofUrl;
       if (req.file) {
-        proofUrl = req.file.path;
+        proofUrl = getStoredUploadPath(req.file, "documents");
       }
 
       const submission = await submitManualPayment(req.user!.userId, projectId, {

@@ -6,7 +6,7 @@ import {
   searchQuerySchema,
   updateProfileSchema,
 } from "./user.validation";
-import { getRelativeUploadUrl } from "../../config/localUpload";
+import { getStoredUploadPath } from "../../config/upload";
 import ApiResponse from "../../utils/ApiResponse";
 import {
   addPortfolioItem,
@@ -83,7 +83,7 @@ export async function addPortfolioItemController(
   next: NextFunction
 ) {
   try {
-    const uploadedUrl = getRelativeUploadUrl(req.file as Express.Multer.File);
+    const uploadedUrl = getStoredUploadPath(req.file as Express.Multer.File, "images");
     if (uploadedUrl && !req.body.coverImageUrl) {
       req.body.coverImageUrl = uploadedUrl;
     }
@@ -112,7 +112,7 @@ export async function uploadAvatarController(
   next: NextFunction,
 ) {
   try {
-    const imageUrl = getRelativeUploadUrl(req.file as Express.Multer.File);
+    const imageUrl = getStoredUploadPath(req.file as Express.Multer.File, "avatars");
     if (!imageUrl) throw new Error("No image uploaded");
     const user = await updateAvatar(req.user!.userId, imageUrl);
     res.status(200).json(ApiResponse(200, "Avatar updated", user));
@@ -127,7 +127,7 @@ export async function uploadCoverController(
   next: NextFunction,
 ) {
   try {
-    const imageUrl = getRelativeUploadUrl(req.file as Express.Multer.File);
+    const imageUrl = getStoredUploadPath(req.file as Express.Multer.File, "images");
     if (!imageUrl) throw new Error("No image uploaded");
     const user = await updateCoverImage(req.user!.userId, imageUrl);
     res.status(200).json(ApiResponse(200, "Cover updated", user));

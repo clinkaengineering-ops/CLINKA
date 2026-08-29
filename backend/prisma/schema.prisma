@@ -382,7 +382,7 @@ model ManualPaymentSubmission {
   transactionReference String
   amount               Decimal             @db.Decimal(18, 2)
   currency             String              @default("EGP")
-  receiptUrl           String? // Optional proof image URL (Cloudinary etc.)
+  receiptUrl           String? // Optional proof image URL
   note                 String? // Optional note from client
   status               ManualPaymentStatus @default(PENDING)
   adminNote            String? // Admin's note on verification/rejection

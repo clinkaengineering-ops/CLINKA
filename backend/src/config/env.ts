@@ -15,8 +15,20 @@ const REQUIRED_IN_PRODUCTION = [
   "UPLOAD_DIR",
 ] as const;
 
+function applyProductionUploadDefaults(): void {
+  if (!process.env.UPLOAD_DIR?.trim()) {
+    process.env.UPLOAD_DIR = "/app/uploads";
+  }
+
+  if (!process.env.UPLOAD_BASE_URL?.trim() && process.env.API_URL?.trim()) {
+    process.env.UPLOAD_BASE_URL = process.env.API_URL.replace(/\/$/, "");
+  }
+}
+
 export function validateProductionEnv(): void {
   if (process.env.NODE_ENV !== "production") return;
+
+  applyProductionUploadDefaults();
 
   const missing = REQUIRED_IN_PRODUCTION.filter((key) => !process.env[key]?.trim());
   if (missing.length > 0) {

@@ -1,19 +1,15 @@
-import multer from "multer";
-import { createLocalUpload } from "../config/localUpload";
+import { createUploadMiddleware } from "../config/upload";
 
-const storage = createLocalUpload("engineer-docs");
+const DOCUMENT_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (_req, file, cb) => {
-    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
-    if (allowedTypes.has(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("FILE_FORMAT_NOT_ALLOWED"));
-    }
-  },
+const upload = createUploadMiddleware("documents", {
+  allowedMimeTypes: DOCUMENT_MIME_TYPES,
+  maxFileSize: 10 * 1024 * 1024,
 });
 
 export default upload;

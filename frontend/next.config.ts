@@ -7,10 +7,28 @@ const backendOrigin = (
   "http://127.0.0.1:5000"
 ).replace(/\/$/, "");
 
+function backendHostname(): string | undefined {
+  try {
+    return new URL(backendOrigin).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+const uploadHost = backendHostname();
+
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
     remotePatterns: [
+      ...(uploadHost
+        ? [
+            {
+              protocol: backendOrigin.startsWith("https") ? "https" : "http",
+              hostname: uploadHost,
+            } as const,
+          ]
+        : []),
       {
         protocol: "https",
         hostname: "res.cloudinary.com",

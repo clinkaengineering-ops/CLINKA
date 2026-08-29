@@ -1,4 +1,5 @@
 import type { ChatMessage } from "../types";
+import { resolveMediaUrl } from "@/lib/mediaUrl";
 
 interface MessageAttachmentProps {
   message: ChatMessage;
@@ -8,20 +9,23 @@ interface MessageAttachmentProps {
 export function MessageAttachment({ message, side }: MessageAttachmentProps) {
   if (!message.attachmentUrl) return null;
 
+  const attachmentUrl = resolveMediaUrl(message.attachmentUrl);
+  if (!attachmentUrl) return null;
+
   const isImage = message.attachmentMime?.startsWith("image/");
   const name = message.attachmentName ?? "Attachment";
 
   if (isImage) {
     return (
       <a
-        href={message.attachmentUrl}
+        href={attachmentUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="block mb-1"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={message.attachmentUrl}
+          src={attachmentUrl}
           alt={name}
           className="max-w-[240px] max-h-[200px] rounded-lg object-cover"
         />
@@ -31,7 +35,7 @@ export function MessageAttachment({ message, side }: MessageAttachmentProps) {
 
   return (
     <a
-      href={message.attachmentUrl}
+      href={attachmentUrl}
       target="_blank"
       rel="noopener noreferrer"
       download={name}

@@ -22,6 +22,7 @@ import {
   googleCompleteRegistrationController,
 } from "./auth.controller";
 import upload from "../../middlewares/upload.middleware";
+import imageUpload from "../../middlewares/imageUpload.middleware";
 import { authenticate } from "../../middlewares/auth.middleware";
 
 const router = Router();
@@ -30,33 +31,27 @@ router.get("/register/status", checkRegistrationEmailController);
 router.post("/register/client", registerClientController);
 router.post(
   "/register/engineer",
-  upload.fields([
-    { name: "document", maxCount: 1 },
-    { name: "portfolio", maxCount: 10 },
-  ]),
+  upload.fields([{ name: "document", maxCount: 1 }]),
+  imageUpload.array("portfolio", 10),
   registerEngineerController,
 );
 router.post(
   "/register/engineer/resume",
-  upload.array("portfolio", 10),
+  imageUpload.array("portfolio", 10),
   resumeEngineerRegistrationController,
 );
 router.post(
   "/apply-engineer",
   authenticate,
-  upload.fields([
-    { name: "document", maxCount: 1 },
-    { name: "portfolio", maxCount: 10 },
-  ]),
+  upload.fields([{ name: "document", maxCount: 1 }]),
+  imageUpload.array("portfolio", 10),
   applyClientAsEngineerController,
 );
 router.post(
   "/register/engineer/google-complete",
   authenticate,
-  upload.fields([
-    { name: "document", maxCount: 1 },
-    { name: "portfolio", maxCount: 10 },
-  ]),
+  upload.fields([{ name: "document", maxCount: 1 }]),
+  imageUpload.array("portfolio", 10),
   completeGoogleEngineerController,
 );
 router.post("/login", loginController);

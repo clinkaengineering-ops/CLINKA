@@ -1,6 +1,6 @@
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
-import { createNotification } from "../../utils/notifications";
+import { getStoredUploadPath } from "../../config/upload";
 import {
   netEngineerAmount,
   recordPaymentLedger,
@@ -15,6 +15,7 @@ import {
   isReviewableStatus,
   isSubmittableStatus,
 } from "./project.status";
+import { createNotification } from "../../utils/notifications";
 import {
   RequestRevisionInput,
   SubmitWorkInput,
@@ -140,8 +141,10 @@ export async function submitProjectWork(
     }> = [];
 
     for (const file of files) {
-      const url =
-        (file as Express.Multer.File & { path?: string }).path ?? file.filename;
+      const url = getStoredUploadPath(
+        file as Express.Multer.File,
+        "projects",
+      ) ?? file.filename;
       deliverableRows.push({
         submissionId: submission.id,
         type: "FILE",

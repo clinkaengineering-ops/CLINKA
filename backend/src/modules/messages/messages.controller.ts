@@ -11,6 +11,7 @@ import {
 import { sendMessageSchema } from "./messages.validation";
 import ApiResponse from "../../utils/ApiResponse";
 import ApiError from "../../utils/ApiError";
+import { getStoredUploadPath } from "../../config/upload";
 import { broadcastNewMessage } from "../../socket";
 
 export async function getMyConversationsController(
@@ -55,7 +56,7 @@ export async function sendMessageController(
     const payload = {
       ...validatedData,
       ...(file && {
-        attachmentUrl: file.path,
+        attachmentUrl: getStoredUploadPath(file, "documents"),
         attachmentName: file.originalname,
         attachmentMime: file.mimetype,
       }),

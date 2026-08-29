@@ -11,18 +11,19 @@ import {
   uploadCoverController,
 } from "./user.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
-import upload from "../../middlewares/upload.middleware";
+import imageUpload from "../../middlewares/imageUpload.middleware";
+import avatarUpload from "../../middlewares/avatarUpload.middleware";
 
 const router = Router();
 
 // Identity
 router.get("/me", authenticate, getMeController);
 router.put("/me", authenticate, updateMeController);
-router.post("/me/avatar", authenticate, upload.single("image"), uploadAvatarController);
+router.post("/me/avatar", authenticate, avatarUpload.single("image"), uploadAvatarController);
 router.post(
   "/me/cover",
   authenticate,
-  upload.single("image"),
+  imageUpload.single("image"),
   uploadCoverController,
 );
 
@@ -34,7 +35,7 @@ router.get("/engineers/:id", getEngineerByIdController);
 router.post(
   "/portfolio",
   authenticate,
-  upload.single("image"),
+  imageUpload.single("image"),
   addPortfolioItemController,
 );
 router.delete("/portfolio/:id", authenticate, deletePortfolioItemController);

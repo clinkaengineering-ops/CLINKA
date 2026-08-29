@@ -1,7 +1,6 @@
-import multer from "multer";
-import { createLocalUpload } from "../config/localUpload";
+import { createUploadMiddleware } from "../config/upload";
 
-const ALLOWED_MIME_TYPES = new Set([
+const CHAT_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/gif",
@@ -9,18 +8,9 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
-const storage = createLocalUpload("chat-attachments");
-
-const chatUpload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      cb(null, true);
-      return;
-    }
-    cb(new Error("FILE_FORMAT_NOT_ALLOWED"));
-  },
+const chatUpload = createUploadMiddleware("documents", {
+  allowedMimeTypes: CHAT_MIME_TYPES,
+  maxFileSize: 10 * 1024 * 1024,
 });
 
 export default chatUpload;

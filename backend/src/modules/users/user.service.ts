@@ -1,7 +1,8 @@
-import ApiError from "../../utils/ApiError";
+import { deleteUploadFile, deleteUploadFiles } from "../../config/upload";
 import { searchQuerySchema, type updateProfileInput } from "./user.validation";
 import db from "../../config/db";
 import { calculateProfessionalScore } from "../../utils/ranking";
+import ApiError from "../../utils/ApiError";
 import { z } from "zod";
 
 // ── Helper: strip password from any user object ───────────────────────────────
@@ -140,6 +141,11 @@ export async function updateMe(userId: number, data: updateProfileInput) {
 }
 
 export async function updateAvatar(userId: number, avatarUrl: string) {
+  const existing = await db.user.findUnique({
+    where: { id: userId },
+    select: { avatarUrl: true },
+  });
+
   const user = await db.user.update({
     where: { id: userId },
     data: { avatarUrl },
@@ -155,16 +161,27 @@ export async function updateAvatar(userId: number, avatarUrl: string) {
       },
     },
   });
+
+  if (existing?.avatarUrl && existing.avatarUrl !== avatarUrl) {
+    deleteUploadFile(existing.avatarUrl);
+  }
+
   return stripPassword(user);
 }
 
 export async function updateCoverImage(userId: number, coverImageUrl: string) {
   const profile = await db.engineerProfile.findUnique({ where: { userId } });
   if (!profile) throw new ApiError(404, "Engineer profile not found");
+
   await db.engineerProfile.update({
     where: { userId },
     data: { coverImageUrl },
   });
+
+  if (profile.coverImageUrl && profile.coverImageUrl !== coverImageUrl) {
+    deleteUploadFile(profile.coverImageUrl);
+  }
+
   return getMe(userId);
 }
 
@@ -391,7 +408,10 @@ export async function addPortfolioItem(
 // ── deletePortfolioItem ───────────────────────────────────────────────────────
 export async function deletePortfolioItem(userId: number, itemId: number) {
   const [item, profile] = await Promise.all([
-    db.portfolioProject.findUnique({ where: { id: itemId } }),
+    db.portfolioProject.findUnique({
+      where: { id: itemId },
+      include: { files: true },
+    }),
     db.engineerProfile.findUnique({ where: { userId } }),
   ]);
 
@@ -401,4 +421,9 @@ export async function deletePortfolioItem(userId: number, itemId: number) {
     throw new ApiError(403, "Not your portfolio item");
 
   await db.portfolioProject.delete({ where: { id: itemId } });
+
+  deleteUploadFiles([
+    item.coverImageUrl,
+    ...item.files.map((file) => file.fileUrl),
+  ]);
 }
