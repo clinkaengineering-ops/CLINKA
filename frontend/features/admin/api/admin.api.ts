@@ -509,14 +509,6 @@ export const revealAdminWithdrawalBankDetails = (withdrawalId: number) =>
     ),
   );
 
-export const approveAdminWithdrawal = (withdrawalId: number, notes?: string) =>
-  unwrap(
-    api.post<ApiResponse<AdminWithdrawalRequest>>(
-      `/admin/withdrawals/${withdrawalId}/approve`,
-      { notes },
-    ),
-  );
-
 export const rejectAdminWithdrawal = (withdrawalId: number, reason: string, notes?: string) =>
   unwrap(
     api.post<ApiResponse<AdminWithdrawalRequest>>(
@@ -525,23 +517,24 @@ export const rejectAdminWithdrawal = (withdrawalId: number, reason: string, note
     ),
   );
 
-export const initiateAdminTransfer = (withdrawalId: number, externalReference: string, notes?: string) =>
-  unwrap(
-    api.post<ApiResponse<AdminWithdrawalRequest>>(
-      `/admin/withdrawals/${withdrawalId}/initiate-transfer`,
-      { externalReference, notes },
-    ),
-  );
-
 export const recordAdminCompletion = (
   withdrawalId: number,
-  notes?: string,
+  transferReference: string,
   transferMethod?: string,
-  transferReference?: string,
-) =>
-  unwrap(
+  notes?: string,
+  proofFile?: File,
+) => {
+  const formData = new FormData();
+  formData.append("transferReference", transferReference);
+  if (transferMethod) formData.append("transferMethod", transferMethod);
+  if (notes) formData.append("notes", notes);
+  if (proofFile) formData.append("proof", proofFile);
+
+  return unwrap(
     api.post<ApiResponse<AdminWithdrawalRequest>>(
       `/admin/withdrawals/${withdrawalId}/record-completion`,
-      { notes, transferMethod, transferReference },
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
     ),
   );
+};

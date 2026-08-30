@@ -1355,65 +1355,16 @@ export async function revealWithdrawalBankDetails(
   return decrypted;
 }
 
-export async function approveInternationalWithdrawal(withdrawalId: number, adminId: number, notes?: string) {
-  const updated = await db.$transaction(async (tx) => {
-    const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
-    if (!item || item.payoutType !== "IBAN") {
-      throw new ApiError(404, "International withdrawal request not found");
-    }
-    assertPayoutTransition(item.status, "APPROVED");
-
-    const result = await tx.withdrawalRequest.updateMany({
-      where: { id: withdrawalId, payoutType: "IBAN", status: "PENDING_REVIEW" },
-      data: {
-        status: "APPROVED",
-        approvedAt: new Date(),
-        approvedById: adminId,
-        internalNotes: appendInternalNotes(item.internalNotes, notes),
-      },
-    });
-    if (result.count === 0) {
-      throw new ApiError(400, "Withdrawal is not pending review or was already processed");
-    }
-
-    const updatedRow = await tx.withdrawalRequest.findUniqueOrThrow({
-      where: { id: withdrawalId },
-    });
-
-    const { logPayoutEvent } = await import("../payouts/payout.audit");
-    await logPayoutEvent(tx as any, {
-      withdrawalId,
-      event: "ADMIN_APPROVED",
-      statusBefore: "PENDING_REVIEW",
-      statusAfter: "APPROVED",
-      actorId: adminId,
-      message: notes,
-    });
-
-    return updatedRow;
-  });
-
-  await createNotification(
-    updated.userId,
-    "FUNDS_HELD",
-    "Withdrawal approved",
-    `Your international withdrawal of \${updated.amount} was approved and is awaiting transfer.`,
-    "/balance",
-  );
-
-  return updated;
-}
-
 export async function rejectInternationalWithdrawal(withdrawalId: number, adminId: number, reason: string, notes?: string) {
   const updated = await db.$transaction(async (tx) => {
     const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
-    if (!item || item.payoutType !== "IBAN") {
-      throw new ApiError(404, "International withdrawal request not found");
+    if (!item) {
+      throw new ApiError(404, "Withdrawal request not found");
     }
     assertPayoutTransition(item.status, "REJECTED");
 
     const result = await tx.withdrawalRequest.updateMany({
-      where: { id: withdrawalId, payoutType: "IBAN", status: "PENDING_REVIEW" },
+      where: { id: withdrawalId, status: "PENDING_REVIEW" },
       data: {
         status: "REJECTED",
         rejectedAt: new Date(),
@@ -1472,56 +1423,8 @@ export async function rejectInternationalWithdrawal(withdrawalId: number, adminI
   await createNotification(
     updated.userId,
     "FUNDS_RELEASED",
-    "Withdrawal rejected",
-    `Your international withdrawal of \${updated.amount} was rejected. ${reason}`,
-    "/balance",
-  );
-
-  return updated;
-}
-
-export async function initiateTransfer(withdrawalId: number, adminId: number, externalReference: string, notes?: string) {
-  const updated = await db.$transaction(async (tx) => {
-    const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
-    if (!item || item.payoutType !== "IBAN") {
-      throw new ApiError(404, "International withdrawal request not found");
-    }
-    assertPayoutTransition(item.status, "TRANSFER_INITIATED");
-
-    const result = await tx.withdrawalRequest.updateMany({
-      where: { id: withdrawalId, payoutType: "IBAN", status: "APPROVED" },
-      data: {
-        status: "TRANSFER_INITIATED",
-        externalReference,
-        internalNotes: appendInternalNotes(item.internalNotes, notes),
-      },
-    });
-    if (result.count === 0) {
-      throw new ApiError(400, "Withdrawal is not approved or was already processed");
-    }
-
-    const updatedRow = await tx.withdrawalRequest.findUniqueOrThrow({
-      where: { id: withdrawalId },
-    });
-
-    const { logPayoutEvent } = await import("../payouts/payout.audit");
-    await logPayoutEvent(tx as any, {
-      withdrawalId,
-      event: "TRANSFER_INITIATED",
-      statusBefore: "APPROVED",
-      statusAfter: "TRANSFER_INITIATED",
-      actorId: adminId,
-      metadata: { externalReference, notes },
-    });
-
-    return updatedRow;
-  });
-
-  await createNotification(
-    updated.userId,
-    "FUNDS_HELD",
-    "Transfer initiated",
-    `Your international withdrawal of \${updated.amount} transfer has been initiated (ref: ${externalReference}).`,
+    "Withdrawal Rejected",
+    `Your withdrawal request of $${updated.amount} has been rejected.\n\nReason:\n${reason}\n\nNote:\n${notes || "Please update your receiving account and submit a new request."}`,
     "/balance",
   );
 
@@ -1533,26 +1436,31 @@ export async function recordCompletion(
   adminId: number, 
   notes?: string,
   transferMethod?: string,
-  transferReference?: string
+  transferReference?: string,
+  proofUrl?: string,
+  proofOriginalName?: string
 ) {
   const updated = await db.$transaction(async (tx) => {
     const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
-    if (!item || (item.payoutType !== "IBAN" && item.payoutType !== "INSTAPAY" && item.payoutType !== "E_WALLET")) {
-      throw new ApiError(404, "Manual withdrawal request not found");
+    if (!item) {
+      throw new ApiError(404, "Withdrawal request not found");
     }
+    
+    if (item.status === "COMPLETED") {
+      throw new ApiError(400, "Withdrawal is already completed.");
+    }
+    
     assertPayoutTransition(item.status, "COMPLETED");
 
-    // Require transfer reference if the status was not already TRANSFER_INITIATED which required it.
     const finalReference = transferReference || item.externalReference;
-    if (!finalReference && item.status !== "TRANSFER_INITIATED") {
+    if (!finalReference) {
       throw new ApiError(400, "A transfer reference is required to mark as completed.");
     }
 
     const result = await tx.withdrawalRequest.updateMany({
       where: {
         id: withdrawalId,
-        payoutType: { in: ["IBAN", "INSTAPAY", "E_WALLET"] },
-        status: { in: ["TRANSFER_INITIATED", "PROCESSING", "FAILED_NEEDS_MANUAL_REVIEW", "PENDING_REVIEW"] },
+        status: { in: ["PENDING_REVIEW", "TRANSFER_INITIATED", "PROCESSING", "FAILED_NEEDS_MANUAL_REVIEW"] },
       },
       data: {
         status: "COMPLETED",
@@ -1562,6 +1470,8 @@ export async function recordCompletion(
         method: transferMethod ? transferMethod : item.method,
         internalNotes: appendInternalNotes(item.internalNotes, notes),
         processedAt: new Date(),
+        proofUrl,
+        proofOriginalName
       },
     });
     if (result.count === 0) {
@@ -1594,6 +1504,7 @@ export async function recordCompletion(
       statusAfter: "COMPLETED",
       actorId: adminId,
       message: notes,
+      metadata: { transferReference: finalReference, proofUrl },
     });
 
     return updatedRow;
@@ -1602,12 +1513,13 @@ export async function recordCompletion(
   await createNotification(
     updated.userId,
     "FUNDS_RELEASED",
-    "Withdrawal completed",
-    `Your international withdrawal of \${updated.amount} has been completed.`,
+    "Withdrawal Paid",
+    `Your withdrawal request of $${updated.amount} has been sent.\n\nPayment Method:\n${transferMethod || updated.method}\n\nTransaction Reference:\n${transferReference || updated.externalReference}\n\nNote:\n${notes || "Please allow your bank/payment provider to process the transfer."}`,
     "/balance",
   );
 
   return updated;
 }
+
 
 

@@ -61,6 +61,8 @@ export interface WithdrawalRequest {
   failureReason?: string | null;
   processedAt: string | null;
   createdAt: string;
+  proofUrl?: string | null;
+  externalReference?: string | null;
 }
 
 export interface EngineerBalanceSummary {

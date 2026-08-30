@@ -600,6 +600,8 @@ model WithdrawalRequest {
   paymobStatusDescription    String?
   paymobClientReference      String?                 @unique
   externalReference          String?
+  proofUrl                   String?
+  proofOriginalName          String?
   idempotencyKey             String?
   retryCount                 Int                     @default(0)
   failureReason              String?

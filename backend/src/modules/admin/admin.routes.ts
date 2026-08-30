@@ -38,11 +38,23 @@ import {
   adminReconcilePayoutsController,
   getPayoutStatsController,
   adminRevealBankDetailsController,
-  adminApproveWithdrawalController,
   adminRejectWithdrawalController,
-  adminInitiateTransferController,
   adminRecordCompletionController,
 } from "./admin.controller";
+import { createUploadMiddleware } from "../../config/upload";
+
+const PROOF_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
+
+const proofUpload = createUploadMiddleware("documents", {
+  allowedMimeTypes: PROOF_MIME_TYPES,
+  maxFileSize: 5 * 1024 * 1024, // 5 MB
+  maxFiles: 1,
+});
 
 const router = Router();
 
@@ -94,10 +106,8 @@ router.patch("/withdrawals/:withdrawalId", updateWithdrawalRequestStatusControll
 router.post("/withdrawals/:withdrawalId/cancel", adminCancelWithdrawalController);
 router.post("/withdrawals/:withdrawalId/resolve", adminResolveWithdrawalController);
 router.post("/withdrawals/:withdrawalId/reveal-bank-details", adminRevealBankDetailsController);
-router.post("/withdrawals/:withdrawalId/approve", adminApproveWithdrawalController);
 router.post("/withdrawals/:withdrawalId/reject", adminRejectWithdrawalController);
-router.post("/withdrawals/:withdrawalId/initiate-transfer", adminInitiateTransferController);
-router.post("/withdrawals/:withdrawalId/record-completion", adminRecordCompletionController);
+router.post("/withdrawals/:withdrawalId/record-completion", proofUpload.single("proof"), adminRecordCompletionController);
 router.post("/payouts/reconcile", adminReconcilePayoutsController);
 
 export default router;

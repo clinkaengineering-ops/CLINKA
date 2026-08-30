@@ -13,14 +13,14 @@ import {
   resolveAdminWithdrawal,
   triggerPayoutReconciliation,
   revealAdminWithdrawalBankDetails,
-  approveAdminWithdrawal,
   rejectAdminWithdrawal,
-  initiateAdminTransfer,
   recordAdminCompletion,
   type AdminWithdrawalRequest,
   type PayoutAuditEntry,
   type PayoutStats,
 } from "../api/admin.api";
+import { CompletePayoutModal } from "./CompletePayoutModal";
+import { RejectPayoutModal } from "./RejectPayoutModal";
 
 function formatTimestamp(value: string | Date | null | undefined): string {
   if (!value) return "—";
@@ -78,6 +78,8 @@ export function AdminPayoutPanel() {
   const [auditOpen, setAuditOpen] = useState<number | null>(null);
   const [auditEntries, setAuditEntries] = useState<PayoutAuditEntry[]>([]);
   const [bankDetails, setBankDetails] = useState<{ withdrawalId: number; data: any } | null>(null);
+  const [completeModalOpen, setCompleteModalOpen] = useState<AdminWithdrawalRequest | null>(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState<AdminWithdrawalRequest | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,68 +170,23 @@ export function AdminPayoutPanel() {
     }
   };
 
-  const handleApprove = async (id: number) => {
-    const notes = prompt("Approval notes (optional):") ?? undefined;
+  const handleSubmitReject = async (data: { reason: string; notes?: string }) => {
+    if (!rejectModalOpen) return;
     setActionLoading(true);
     try {
-      await approveAdminWithdrawal(id, notes);
+      await rejectAdminWithdrawal(rejectModalOpen.id, data.reason, data.notes);
       await load();
-    } catch (err) {
-      alert(axiosMessage(err));
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleReject = async (id: number) => {
-    const reason = prompt("Rejection reason (required):");
-    if (!reason || reason.trim().length < 3) {
-      alert("A reason of at least 3 characters is required.");
-      return;
-    }
+  const handleSubmitComplete = async (data: { transferReference: string; transferMethod?: string; notes?: string; proofFile?: File }) => {
+    if (!completeModalOpen) return;
     setActionLoading(true);
     try {
-      await rejectAdminWithdrawal(id, reason);
+      await recordAdminCompletion(completeModalOpen.id, data.transferReference, data.transferMethod, data.notes, data.proofFile);
       await load();
-    } catch (err) {
-      alert(axiosMessage(err));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleInitiateTransfer = async (id: number) => {
-    const ref = prompt("External transfer reference (required):");
-    if (!ref || ref.trim().length < 3) {
-      alert("A reference of at least 3 characters is required.");
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await initiateAdminTransfer(id, ref);
-      await load();
-    } catch (err) {
-      alert(axiosMessage(err));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRecordCompletion = async (id: number) => {
-    const ref = prompt("External transfer reference (required):");
-    if (!ref || ref.trim().length < 3) {
-      alert("A transfer reference is required.");
-      return;
-    }
-    const methodStr = prompt("Transfer method (e.g., BANK_TRANSFER, INSTAPAY, MOBILE_WALLET, OTHER) [optional]:");
-    const method = methodStr?.trim() ? methodStr.trim() : undefined;
-    const notes = prompt("Completion notes (optional):") ?? undefined;
-    setActionLoading(true);
-    try {
-      await recordAdminCompletion(id, notes, method, ref);
-      await load();
-    } catch (err) {
-      alert(axiosMessage(err));
     } finally {
       setActionLoading(false);
     }
@@ -347,7 +304,7 @@ export function AdminPayoutPanel() {
                     </td>
                     <td className="p-3">
                       <Badge color={w.method === "IBAN" ? "blue" : "slate"}>
-                        {w.method === "IBAN" ? "International" : "Paymob"}
+                        {w.method === "IBAN" ? "International" : "Local"}
                       </Badge>
                     </td>
                     <td className="p-3">
@@ -385,7 +342,7 @@ export function AdminPayoutPanel() {
                         >
                           {t("ad.payoutAudit")}
                         </Button>
-                        {["IBAN", "INSTAPAY", "E_WALLET"].includes(w.method) && (
+                        {["IBAN", "INSTAPAY", "E_WALLET"].includes(w.method) && (w.status === "PENDING_REVIEW" || w.status === "COMPLETED") && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -400,39 +357,22 @@ export function AdminPayoutPanel() {
                           <>
                             <Button
                               size="sm"
-                              onClick={() => handleApprove(w.id)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                              onClick={() => setCompleteModalOpen(w)}
                               disabled={actionLoading}
                             >
-                              Approve
+                              Money Sent
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-rose-500"
-                              onClick={() => handleReject(w.id)}
+                              className="text-rose-500 hover:bg-rose-50"
+                              onClick={() => setRejectModalOpen(w)}
                               disabled={actionLoading}
                             >
                               Reject
                             </Button>
                           </>
-                        )}
-                        {w.status === "APPROVED" && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleInitiateTransfer(w.id)}
-                            disabled={actionLoading}
-                          >
-                            Initiate Transfer
-                          </Button>
-                        )}
-                        {(w.status === "TRANSFER_INITIATED" || w.status === "PROCESSING") && ["IBAN", "INSTAPAY", "E_WALLET"].includes(w.method) && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleRecordCompletion(w.id)}
-                            disabled={actionLoading}
-                          >
-                            Mark Completed
-                          </Button>
                         )}
                         {w.status === "FAILED_NEEDS_MANUAL_REVIEW" && (
                           <>
@@ -560,6 +500,24 @@ export function AdminPayoutPanel() {
             </div>
           </Card>
         </div>
+      )}
+
+      {completeModalOpen && (
+        <CompletePayoutModal
+          isOpen={true}
+          amount={completeModalOpen.amount}
+          onClose={() => setCompleteModalOpen(null)}
+          onSubmit={handleSubmitComplete}
+        />
+      )}
+
+      {rejectModalOpen && (
+        <RejectPayoutModal
+          isOpen={true}
+          amount={rejectModalOpen.amount}
+          onClose={() => setRejectModalOpen(null)}
+          onSubmit={handleSubmitReject}
+        />
       )}
     </div>
   );

@@ -11,14 +11,9 @@ export const TERMINAL_PAYOUT_STATUSES: WithdrawalRequestStatus[] = [
   "FAILED_NEEDS_MANUAL_REVIEW",
 ];
 
-/** Statuses where balance is held (deducted from available). */
 export const BALANCE_HELD_STATUSES: WithdrawalRequestStatus[] = [
   "PENDING",
   "PENDING_REVIEW",
-  "APPROVED",
-  "TRANSFER_INITIATED",
-  "SUBMITTED",
-  "PROCESSING",
 ];
 
 /** Statuses eligible for Paymob inquiry reconciliation. */
@@ -32,7 +27,7 @@ const ALLOWED_TRANSITIONS: Record<
   WithdrawalRequestStatus[]
 > = {
   PENDING: ["SUBMITTED", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED", "FAILED_NEEDS_MANUAL_REVIEW"],
-  PENDING_REVIEW: ["APPROVED", "REJECTED", "CANCELLED"],
+  PENDING_REVIEW: ["COMPLETED", "REJECTED", "CANCELLED"],
   APPROVED: ["TRANSFER_INITIATED", "COMPLETED", "CANCELLED", "FAILED"],
   TRANSFER_INITIATED: ["PROCESSING", "COMPLETED", "FAILED", "CANCELLED"],
   SUBMITTED: ["PROCESSING", "COMPLETED", "FAILED", "CANCELLED", "FAILED_NEEDS_MANUAL_REVIEW"],

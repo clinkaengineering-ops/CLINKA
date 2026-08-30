@@ -36,9 +36,7 @@ import {
   adminTriggerPayoutReconciliation,
   getPayoutStats,
   revealWithdrawalBankDetails,
-  approveInternationalWithdrawal,
   rejectInternationalWithdrawal,
-  initiateTransfer,
   recordCompletion,
 } from "./admin.service";
 import {
@@ -53,9 +51,7 @@ import {
   resolveWithdrawalSchema,
   cancelWithdrawalSchema,
   withdrawalListQuerySchema,
-  approveWithdrawalSchema,
   rejectWithdrawalSchema,
-  initiateTransferSchema,
   recordCompletionSchema,
 } from "./admin.validation";
 
@@ -585,21 +581,6 @@ export async function adminRevealBankDetailsController(
   }
 }
 
-export async function adminApproveWithdrawalController(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    const input = approveWithdrawalSchema.parse(req.body ?? {});
-    const withdrawalId = Number(req.params.withdrawalId);
-    const data = await approveInternationalWithdrawal(withdrawalId, req.user!.userId, input.notes);
-    res.status(200).json(ApiResponse(200, "Withdrawal approved", data));
-  } catch (error) {
-    next(error);
-  }
-}
-
 export async function adminRejectWithdrawalController(
   req: AuthRequest,
   res: Response,
@@ -615,35 +596,35 @@ export async function adminRejectWithdrawalController(
   }
 }
 
-export async function adminInitiateTransferController(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    const input = initiateTransferSchema.parse(req.body);
-    const withdrawalId = Number(req.params.withdrawalId);
-    const data = await initiateTransfer(withdrawalId, req.user!.userId, input.externalReference, input.notes);
-    res.status(200).json(ApiResponse(200, "Transfer initiated", data));
-  } catch (error) {
-    next(error);
-  }
-}
-
 export async function adminRecordCompletionController(
   req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) {
   try {
+    const { getStoredUploadPath } = await import("../../config/upload");
+    
+    // Parse form-data body
     const input = recordCompletionSchema.parse(req.body ?? {});
     const withdrawalId = Number(req.params.withdrawalId);
+    
+    // Extract proof file metadata if uploaded
+    let proofUrl: string | undefined;
+    let proofOriginalName: string | undefined;
+
+    if (req.file) {
+      proofUrl = getStoredUploadPath(req.file, "documents");
+      proofOriginalName = req.file.originalname;
+    }
+
     const data = await recordCompletion(
       withdrawalId, 
       req.user!.userId, 
       input.notes,
       input.transferMethod,
-      input.transferReference
+      input.transferReference,
+      proofUrl,
+      proofOriginalName
     );
     res.status(200).json(ApiResponse(200, "Transfer marked as completed", data));
   } catch (error) {

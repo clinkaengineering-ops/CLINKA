@@ -9,6 +9,7 @@ import { useEngineerBalance } from "../hooks/useEngineerBalance";
 import { formatMoney } from "../utils/formatMoney";
 import { createEngineerWithdrawal } from "../api/payments.api";
 import type { AutoWithdrawalChannel, EngineerPaymentStatus, WithdrawalRequestStatus } from "../types";
+import { resolveMediaUrl } from "@/lib/mediaUrl";
 import { getApiErrorMessage } from "@/lib/apiErrors";
 import {
   isValidIban,
@@ -337,21 +338,36 @@ export function EngineerBalancePage() {
                     <td className="p-3">
                       <p>{req.method}</p>
                       <p className="text-xs text-slate-500">{req.accountNumber}</p>
-                      {req.paymobTransactionId && (
+                      {req.paymobTransactionId || req.externalReference ? (
                         <p className="text-[10px] text-slate-400 mt-1">
-                          Ref: {req.paymobTransactionId}
+                          Ref: {req.paymobTransactionId || req.externalReference}
                         </p>
-                      )}
+                      ) : null}
                     </td>
                     <td className="p-3">
-                      <Badge color={withdrawalBadgeColor(req.status)}>
-                        {withdrawalStatusLabel(req.status)}
-                      </Badge>
-                      {(req.paymobStatusDescription || req.adminNotes || req.failureReason) && (
-                        <p className="text-xs mt-1 text-slate-500">
-                          {req.paymobStatusDescription ?? req.failureReason ?? req.adminNotes}
-                        </p>
-                      )}
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge color={withdrawalBadgeColor(req.status)}>
+                          {withdrawalStatusLabel(req.status)}
+                        </Badge>
+                        {(req.paymobStatusDescription || req.adminNotes || req.failureReason) && (
+                          <p className="text-xs text-slate-500 max-w-[200px] truncate" title={req.paymobStatusDescription ?? req.failureReason ?? req.adminNotes ?? ""}>
+                            {req.paymobStatusDescription ?? req.failureReason ?? req.adminNotes}
+                          </p>
+                        )}
+                        {req.proofUrl && (
+                          <a 
+                            href={resolveMediaUrl(req.proofUrl)} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="mt-1 inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                          >
+                            <svg className="mr-1 h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm3.646 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75z" />
+                            </svg>
+                            View Receipt
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
