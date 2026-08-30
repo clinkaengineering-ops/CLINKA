@@ -153,7 +153,9 @@ export function ProjectDetailPanel({
             <div className="rounded-lg bg-white/10 p-2.5">
               <p className="text-white/60 text-[10px] uppercase">{t("common.posted")}</p>
               <p className="font-bold mt-0.5">
-                {new Date(project.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                {project.createdAt && !isNaN(new Date(project.createdAt).getTime())
+                  ? new Date(project.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+                  : "Recently"}
               </p>
             </div>
           </div>

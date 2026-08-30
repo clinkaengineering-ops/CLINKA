@@ -167,7 +167,7 @@ export function AdminOperationsOverview({
               <p className="text-sm text-slate-500 mt-0.5">{t("ad.feeSub")}</p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Badge color="slate">Service fee {analytics.platformFeePercent}%</Badge>
+              <Badge color="slate">Service fee {Number(analytics.platformFeePercent)}%</Badge>
               <Badge color="violet">{t("ad.subscription")}</Badge>
             </div>
           </div>

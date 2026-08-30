@@ -133,9 +133,6 @@ function CheckoutShell({
           </div>
         </div>
         {children}
-        <div className="px-4 sm:px-5 py-3 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-slate-800">
-          {t("checkout.securedBy")}
-        </div>
       </div>
     </div>
   );

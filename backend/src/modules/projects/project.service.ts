@@ -144,7 +144,11 @@ export async function getProjectById(projectId: number) {
           client: { select: { id: true, name: true } },
         },
       },
-      payment: true,
+      payment: {
+        include: {
+          manualSubmissions: true,
+        },
+      },
       submissions: {
         include: { deliverables: true },
         orderBy: { createdAt: "desc" },

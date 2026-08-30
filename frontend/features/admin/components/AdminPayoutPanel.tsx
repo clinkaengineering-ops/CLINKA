@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, StatCard } from "@/components/UI";
 import { IconWallet } from "@/components/Icons";
 import { useI18n } from "@/i18n";
+import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import {
   cancelAdminWithdrawal,
   fetchAdminWithdrawalRequests,
@@ -20,6 +21,13 @@ import {
   type PayoutAuditEntry,
   type PayoutStats,
 } from "../api/admin.api";
+
+function formatTimestamp(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString();
+}
 
 function axiosMessage(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } }; message?: string };
@@ -331,11 +339,11 @@ export function AdminPayoutPanel() {
                       <p className="font-semibold">{w.user.name}</p>
                       <p className="text-xs text-slate-500">{w.user.email}</p>
                       <p className="text-xs text-slate-400 mt-1">
-                        {new Date(w.createdAt).toLocaleString()}
+                        {formatTimestamp(w.createdAt)}
                       </p>
                     </td>
                     <td className="p-3 font-semibold text-emerald-600 dark:text-emerald-400">
-                      ${Number(w.amount).toLocaleString()}
+                      {formatMoney(w.amount)}
                     </td>
                     <td className="p-3">
                       <Badge color={w.method === "IBAN" ? "blue" : "slate"}>
@@ -496,7 +504,7 @@ export function AdminPayoutPanel() {
                     <div className="flex justify-between gap-2">
                       <span className="font-semibold">{entry.event}</span>
                       <span className="text-xs text-slate-500">
-                        {new Date(entry.createdAt).toLocaleString()}
+                        {formatTimestamp(entry.createdAt)}
                       </span>
                     </div>
                     {entry.statusBefore || entry.statusAfter ? (

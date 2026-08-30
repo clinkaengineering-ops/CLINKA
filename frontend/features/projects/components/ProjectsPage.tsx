@@ -151,7 +151,7 @@ export function ProjectsPage() {
                     <span>·</span>
                     <span>{p._count?.bids ?? 0} {t("common.bids")}</span>
                     <span>·</span>
-                    <span>{t("common.posted")} {new Date(p.createdAt).toLocaleDateString()}</span>
+                    <span>{t("common.posted")} {p.createdAt && !isNaN(new Date(p.createdAt).getTime()) ? new Date(p.createdAt).toLocaleDateString() : "Recently"}</span>
                     {p.client && (
                       <>
                         <span>·</span>

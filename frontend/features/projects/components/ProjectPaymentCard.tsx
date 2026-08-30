@@ -48,6 +48,8 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
 
   let card: React.ReactNode = null;
 
+  const hasPendingPayment = project.payment?.manualSubmissions?.some(s => s.status === "PENDING");
+
   if ((project.status === "IN_PROGRESS" || project.status === "AWAITING_PAYMENT") && project.payment?.status !== "FUNDED") {
     card = (
       <Card className="p-5 border-s-4 border-s-slate-400 bg-slate-50 dark:bg-slate-900/50">
@@ -58,13 +60,21 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
               <h4 className="font-bold">{t("pay.status.needsPayment")}</h4>
             </div>
             <p className="text-sm text-slate-500 mt-1">
-              {isClient ? (project.status === "AWAITING_PAYMENT" ? "Engineer accepted. Fund the escrow to start the project." : "Fund the escrow to start the project.") : t("pay.waitingClient")}
+              {isClient ? 
+                (hasPendingPayment ? "Your payment was submitted and is waiting for admin verification." :
+                (project.status === "AWAITING_PAYMENT" ? "Engineer accepted. Fund the escrow to start the project." : "Fund the escrow to start the project.")) 
+                : t("pay.waitingClient")}
             </p>
           </div>
-          {isClient && (
+          {isClient && !hasPendingPayment && (
             <Link href={checkoutPath(project.id)}>
               <Button size="sm">{t("pay.action.payToStart")}</Button>
             </Link>
+          )}
+          {isClient && hasPendingPayment && (
+            <div className="shrink-0">
+              <Badge color="slate">Awaiting Admin Verification</Badge>
+            </div>
           )}
         </div>
       </Card>

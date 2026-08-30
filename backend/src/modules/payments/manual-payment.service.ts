@@ -15,8 +15,26 @@ export interface SubmitManualPaymentInput {
   transactionReference: string;
   amount: number;
   currency?: string;
-  receiptUrl?: string;
   note?: string;
+
+  // Proof file metadata (populated from uploaded file)
+  proofUrl?: string;
+  proofOriginalName?: string;
+  proofMimeType?: string;
+  proofFileSize?: number;
+
+  // Receiving destination snapshot
+  receivingMethod?: string;
+  receivingCountry?: string;
+  receivingAccountName?: string;
+  receivingBankName?: string;
+  receivingAccountNumber?: string;
+  receivingIban?: string;
+  receivingSwift?: string;
+  receivingCurrency?: string;
+  receivingWalletProvider?: string;
+  receivingWalletNumber?: string;
+  receivingInstapayAccount?: string;
 }
 
 export async function submitManualPayment(
@@ -52,6 +70,11 @@ export async function submitManualPayment(
     throw new ApiError(400, "You already have a pending payment submission. Wait for admin review.");
   }
 
+  // Require proof upload
+  if (!input.proofUrl) {
+    throw new ApiError(400, "Payment proof screenshot is required.");
+  }
+
   const submission = await db.manualPaymentSubmission.create({
     data: {
       paymentId: payment.id,
@@ -59,9 +82,28 @@ export async function submitManualPayment(
       transactionReference: input.transactionReference,
       amount: input.amount,
       currency: input.currency ?? "EGP",
-      receiptUrl: input.receiptUrl ?? null,
+      receiptUrl: input.proofUrl ?? null, // backward compat
       note: input.note ?? null,
       status: "PENDING",
+
+      // Proof metadata
+      proofUrl: input.proofUrl ?? null,
+      proofOriginalName: input.proofOriginalName ?? null,
+      proofMimeType: input.proofMimeType ?? null,
+      proofFileSize: input.proofFileSize ?? null,
+
+      // Receiving destination snapshot
+      receivingMethod: input.receivingMethod ?? input.paymentMethod,
+      receivingCountry: input.receivingCountry ?? null,
+      receivingAccountName: input.receivingAccountName ?? null,
+      receivingBankName: input.receivingBankName ?? null,
+      receivingAccountNumber: input.receivingAccountNumber ?? null,
+      receivingIban: input.receivingIban ?? null,
+      receivingSwift: input.receivingSwift ?? null,
+      receivingCurrency: input.receivingCurrency ?? null,
+      receivingWalletProvider: input.receivingWalletProvider ?? null,
+      receivingWalletNumber: input.receivingWalletNumber ?? null,
+      receivingInstapayAccount: input.receivingInstapayAccount ?? null,
     },
   });
 
@@ -112,7 +154,9 @@ export async function listAdminManualPayments(
   limit = 20,
   status?: string,
   method?: string,
-  search?: string
+  search?: string,
+  currency?: string,
+  country?: string,
 ) {
   const skip = (page - 1) * limit;
 
@@ -122,6 +166,12 @@ export async function listAdminManualPayments(
   }
   if (method && method !== "ALL") {
     where.paymentMethod = method;
+  }
+  if (currency && currency !== "ALL") {
+    where.currency = currency;
+  }
+  if (country && country !== "ALL") {
+    where.receivingCountry = country;
   }
   if (search) {
     where.OR = [
@@ -317,4 +367,80 @@ export async function adminRejectManualPayment(
   }
 
   return submission;
+}
+
+// ─── Client: Fetch manual payment settings (configured destinations) ───────
+
+export async function getManualPaymentSettingsForClient() {
+  const settings = await db.platformSettings.findFirst();
+  if (!settings || !settings.manualPaymentSettings) {
+    return { bankAccounts: [], instapayAccounts: [], walletAccounts: [] };
+  }
+
+  const raw = settings.manualPaymentSettings as any;
+
+  // Build structured lists from the settings JSON
+  const bankAccounts: any[] = [];
+  const instapayAccounts: any[] = [];
+  const walletAccounts: any[] = [];
+
+  // Support both legacy single-account format and new multi-account arrays
+  if (raw.bankTransfer?.enabled !== false) {
+    if (Array.isArray(raw.bankAccounts)) {
+      bankAccounts.push(
+        ...raw.bankAccounts.filter((a: any) => a.enabled !== false),
+      );
+    } else if (raw.bankTransfer && (raw.bankTransfer.bankName || raw.bankTransfer.iban || raw.bankTransfer.accountNumber)) {
+      // Legacy single-account format
+      bankAccounts.push({
+        id: "legacy-bank",
+        country: raw.bankTransfer.country || "EG",
+        bankName: raw.bankTransfer.bankName || "",
+        accountHolder: raw.bankTransfer.accountHolder || "",
+        accountNumber: raw.bankTransfer.accountNumber || "",
+        iban: raw.bankTransfer.iban || "",
+        swift: raw.bankTransfer.swift || "",
+        currency: raw.bankTransfer.currency || "EGP",
+        enabled: true,
+      });
+    }
+  }
+
+  if (raw.instapay?.enabled !== false) {
+    if (Array.isArray(raw.instapayAccounts)) {
+      instapayAccounts.push(
+        ...raw.instapayAccounts.filter((a: any) => a.enabled !== false),
+      );
+    } else if (raw.instapay?.account) {
+      instapayAccounts.push({
+        id: "legacy-instapay",
+        account: raw.instapay.account,
+        accountHolder: raw.instapay.accountHolder || "",
+        enabled: true,
+      });
+    }
+  }
+
+  if (raw.mobileWallet?.enabled !== false) {
+    if (Array.isArray(raw.walletAccounts)) {
+      walletAccounts.push(
+        ...raw.walletAccounts.filter((a: any) => a.enabled !== false),
+      );
+    } else if (raw.mobileWallet?.number) {
+      walletAccounts.push({
+        id: "legacy-wallet",
+        provider: raw.mobileWallet.provider || "",
+        number: raw.mobileWallet.number || "",
+        accountHolder: raw.mobileWallet.accountHolder || "",
+        enabled: true,
+      });
+    }
+  }
+
+  return {
+    bankAccounts,
+    instapayAccounts,
+    walletAccounts,
+    processingNotice: raw.processingNotice || null,
+  };
 }

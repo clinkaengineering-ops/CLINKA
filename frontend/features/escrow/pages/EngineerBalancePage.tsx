@@ -339,7 +339,7 @@ export function EngineerBalancePage() {
                       <p className="text-xs text-slate-500">{req.accountNumber}</p>
                       {req.paymobTransactionId && (
                         <p className="text-[10px] text-slate-400 mt-1">
-                          Paymob: {req.paymobTransactionId}
+                          Ref: {req.paymobTransactionId}
                         </p>
                       )}
                     </td>

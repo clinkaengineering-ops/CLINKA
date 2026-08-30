@@ -81,6 +81,46 @@ export const initiateCheckout = (
     return d;
   });
 
+/** GET /payments/manual-settings — Fetch admin-configured payment destinations */
+export interface ManualPaymentSettings {
+  bankAccounts: ManualBankAccount[];
+  instapayAccounts: ManualInstapayAccount[];
+  walletAccounts: ManualWalletAccount[];
+  processingNotice?: string | null;
+}
+
+export interface ManualBankAccount {
+  id: string;
+  country: string;
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  iban: string;
+  swift?: string;
+  currency: string;
+  enabled: boolean;
+}
+
+export interface ManualInstapayAccount {
+  id: string;
+  account: string;
+  accountHolder?: string;
+  enabled: boolean;
+}
+
+export interface ManualWalletAccount {
+  id: string;
+  provider: string;
+  number: string;
+  accountHolder?: string;
+  enabled: boolean;
+}
+
+export const fetchManualPaymentSettings = (): Promise<ManualPaymentSettings> =>
+  unwrap(
+    api.get<ApiResponse<ManualPaymentSettings>>("/payments/manual-settings"),
+  );
+
 /** POST /payments/projects/:projectId/manual-submit */
 export const submitManualPayment = (
   projectId: number,
@@ -95,6 +135,7 @@ export const submitManualPayment = (
       }
     ),
   );
+
 
 /** POST /payments/:paymentId/release */
 export const releaseEscrowPayment = (paymentId: number): Promise<unknown> =>

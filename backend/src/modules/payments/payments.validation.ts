@@ -235,9 +235,20 @@ export const submitManualPaymentSchema = z.object({
   transactionReference: z.string().trim().min(2, "Transaction reference is required"),
   amount: z.coerce.number().positive(),
   currency: z.string().trim().toUpperCase(),
-  proofUrl: z.string().url("Must be a valid URL").optional(),
-  proofPublicId: z.string().optional(),
   note: z.string().optional(),
+
+  // Receiving destination snapshot — sent by the client from the selected account
+  receivingMethod: z.string().optional(),
+  receivingCountry: z.string().optional(),
+  receivingAccountName: z.string().optional(),
+  receivingBankName: z.string().optional(),
+  receivingAccountNumber: z.string().optional(),
+  receivingIban: z.string().optional(),
+  receivingSwift: z.string().optional(),
+  receivingCurrency: z.string().optional(),
+  receivingWalletProvider: z.string().optional(),
+  receivingWalletNumber: z.string().optional(),
+  receivingInstapayAccount: z.string().optional(),
 });
 
 export type SubmitManualPaymentInput = z.infer<typeof submitManualPaymentSchema>;

@@ -378,11 +378,11 @@ enum ManualPaymentStatus {
 model ManualPaymentSubmission {
   id                   Int                 @id @default(autoincrement())
   paymentId            Int
-  paymentMethod        String // e.g. "bank_transfer", "vodafone_cash", "instapay"
+  paymentMethod        String // e.g. "bank_transfer", "ewallet", "instapay"
   transactionReference String
   amount               Decimal             @db.Decimal(18, 2)
   currency             String              @default("EGP")
-  receiptUrl           String? // Optional proof image URL
+  receiptUrl           String? // Legacy field kept for backward compat
   note                 String? // Optional note from client
   status               ManualPaymentStatus @default(PENDING)
   adminNote            String? // Admin's note on verification/rejection
@@ -390,6 +390,25 @@ model ManualPaymentSubmission {
   verifiedAt           DateTime?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
+
+  // ─── Proof file metadata ──────────────────────────────────
+  proofUrl          String? // Server-stored path e.g. /uploads/documents/uuid.jpg
+  proofOriginalName String? // Original file name from client
+  proofMimeType     String? // Validated MIME type e.g. image/jpeg
+  proofFileSize     Int? // File size in bytes
+
+  // ─── Receiving destination snapshot (immutable at submission time) ───
+  receivingMethod          String? // "bank_transfer" | "instapay" | "ewallet"
+  receivingCountry         String? // ISO country code e.g. "SA", "EG"
+  receivingAccountName     String? // Account holder name
+  receivingBankName        String? // Bank name
+  receivingAccountNumber   String? // Account number
+  receivingIban            String? // IBAN
+  receivingSwift           String? // SWIFT/BIC code
+  receivingCurrency        String? // Account currency e.g. "SAR", "EGP"
+  receivingWalletProvider  String? // E-Wallet provider e.g. "Vodafone Cash"
+  receivingWalletNumber    String? // E-Wallet number
+  receivingInstapayAccount String? // InstaPay account handle
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 

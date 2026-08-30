@@ -50,9 +50,17 @@ export async function updateManualPaymentSettings(manualPaymentSettings: any) {
   return data.data;
 }
 
-export async function fetchAdminManualPayments(page = 1, limit = 20, status?: string, method?: string, search?: string) {
+export async function fetchAdminManualPayments(
+  page = 1,
+  limit = 20,
+  status?: string,
+  method?: string,
+  search?: string,
+  currency?: string,
+  country?: string,
+) {
   const { data } = await api.get("/payments/admin/manual-payments", {
-    params: { page, limit, status, method, search }
+    params: { page, limit, status, method, search, currency, country }
   });
   return data;
 }

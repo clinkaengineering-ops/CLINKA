@@ -235,11 +235,17 @@ export async function createEngineerWithdrawalController(
       input = internationalWithdrawalSchema.parse(req.body);
     } else if (payoutMethod === "PAYMOB") {
       input = autoWithdrawalSchema.parse(req.body);
+    } else if (payoutMethod === "E_WALLET") {
+      const { ewalletWithdrawalSchema } = await import("./payments.validation");
+      input = ewalletWithdrawalSchema.parse(req.body);
+    } else if (payoutMethod === "INSTAPAY") {
+      const { instapayWithdrawalSchema } = await import("./payments.validation");
+      input = instapayWithdrawalSchema.parse(req.body);
     } else {
       throw new ApiError(400, "Invalid or missing payoutMethod");
     }
 
-    const item = await createWithdrawalRequest(req.user!.userId, payoutMethod as "PAYMOB" | "IBAN", input, idempotencyKey);
+    const item = await createWithdrawalRequest(req.user!.userId, payoutMethod as "PAYMOB" | "IBAN" | "INSTAPAY" | "E_WALLET", input, idempotencyKey);
     const { sanitizeWithdrawalForEngineer } = await import("../payouts/payout.presenter");
     res
       .status(201)

@@ -10,12 +10,42 @@ import {
   getAdminManualPaymentDetails,
   adminVerifyManualPayment,
   adminRejectManualPayment,
+  getManualPaymentSettingsForClient,
 } from "./manual-payment.service";
 import { getStoredUploadPath } from "../../config/upload";
 import { submitManualPaymentSchema } from "./payments.validation";
-import upload from "../../middlewares/upload.middleware";
+import { createUploadMiddleware } from "../../config/upload";
+
+// Dedicated upload middleware for payment proofs — 5MB limit, images + PDF
+const PROOF_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
+
+const proofUpload = createUploadMiddleware("documents", {
+  allowedMimeTypes: PROOF_MIME_TYPES,
+  maxFileSize: 5 * 1024 * 1024, // 5 MB
+  maxFiles: 1,
+});
 
 const router = Router();
+
+// ─── Client: Get configured payment destinations ────────────────────────────
+
+router.get(
+  "/manual-settings",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const settings = await getManualPaymentSettingsForClient();
+      res.status(200).json(ApiResponse(200, "Manual payment settings retrieved", settings));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // ─── Client: Submit manual payment proof ────────────────────────────────────
 
@@ -23,15 +53,23 @@ router.post(
   "/projects/:projectId/manual-submit",
   authenticate,
   authorize("CLIENT"),
-  upload.single("proof"),
+  proofUpload.single("proof"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const projectId = Number(req.params.projectId);
       const input = submitManualPaymentSchema.parse(req.body);
       
-      let proofUrl = input.proofUrl;
+      // Extract proof file metadata
+      let proofUrl: string | undefined;
+      let proofOriginalName: string | undefined;
+      let proofMimeType: string | undefined;
+      let proofFileSize: number | undefined;
+
       if (req.file) {
         proofUrl = getStoredUploadPath(req.file, "documents");
+        proofOriginalName = req.file.originalname;
+        proofMimeType = req.file.mimetype;
+        proofFileSize = req.file.size;
       }
 
       const submission = await submitManualPayment(req.user!.userId, projectId, {
@@ -39,8 +77,26 @@ router.post(
         transactionReference: input.transactionReference,
         amount: input.amount,
         currency: input.currency,
-        receiptUrl: proofUrl,
         note: input.note,
+
+        // Proof
+        proofUrl,
+        proofOriginalName,
+        proofMimeType,
+        proofFileSize,
+
+        // Destination snapshot
+        receivingMethod: input.receivingMethod,
+        receivingCountry: input.receivingCountry,
+        receivingAccountName: input.receivingAccountName,
+        receivingBankName: input.receivingBankName,
+        receivingAccountNumber: input.receivingAccountNumber,
+        receivingIban: input.receivingIban,
+        receivingSwift: input.receivingSwift,
+        receivingCurrency: input.receivingCurrency,
+        receivingWalletProvider: input.receivingWalletProvider,
+        receivingWalletNumber: input.receivingWalletNumber,
+        receivingInstapayAccount: input.receivingInstapayAccount,
       });
 
       res.status(201).json(ApiResponse(201, "Manual payment submitted", submission));
@@ -75,8 +131,10 @@ router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), async (re
     const status = (req.query.status as string) || undefined;
     const method = (req.query.method as string) || undefined;
     const search = (req.query.search as string) || undefined;
+    const currency = (req.query.currency as string) || undefined;
+    const country = (req.query.country as string) || undefined;
 
-    const result = await listAdminManualPayments(page, limit, status, method, search);
+    const result = await listAdminManualPayments(page, limit, status, method, search, currency, country);
     res.json(result);
   } catch (err) {
     next(err);

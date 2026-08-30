@@ -5,6 +5,7 @@ type JsonValue =
   | number
   | boolean
   | null
+  | Date
   | JsonValue[]
   | { [key: string]: JsonValue };
 
@@ -22,6 +23,11 @@ const MEDIA_FIELD_NAMES = new Set([
   "url",
 ]);
 
+function isPlainObject(value: object): value is Record<string, unknown> {
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
 export function serializeMediaUrls<T>(value: T): T {
   return transformMediaUrls(value) as T;
 }
@@ -38,10 +44,19 @@ function transformMediaUrls(value: unknown): JsonValue {
   }
 
   if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
+    if (value instanceof Date) {
+      return value;
+    }
+
+    // Prisma Decimal, Buffer, and other class instances must stay intact so
+    // JSON serialization can use toJSON() instead of { s, e, d } / {}.
+    if (!isPlainObject(value)) {
+      return value as JsonValue;
+    }
+
     const next: Record<string, JsonValue> = {};
 
-    for (const [key, nestedValue] of Object.entries(record)) {
+    for (const [key, nestedValue] of Object.entries(value)) {
       if (
         typeof nestedValue === "string" &&
         MEDIA_FIELD_NAMES.has(key) &&
