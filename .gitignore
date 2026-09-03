@@ -3,6 +3,7 @@
 /.claude
 /.wolf
 *.pdf
+*.zip
 ngrok.yml
 CLAUDE.md
 CLINKA_AI_PROJECT_BRIEF.md
