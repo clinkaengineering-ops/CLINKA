@@ -6,7 +6,7 @@
 const FRONTEND =
   process.env.CLINKA_FRONTEND_URL ?? "http://localhost:3000";
 const BACKEND =
-  process.env.CLINKA_BACKEND_URL ?? "http://localhost:5000";
+  process.env.CLINKA_BACKEND_URL ?? "http://127.0.0.1:5000";
 
 type Result = { name: string; ok: boolean; detail: string };
 

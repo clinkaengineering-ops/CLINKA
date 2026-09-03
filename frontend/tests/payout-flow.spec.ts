@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-const API_BASE = process.env.CLINKA_BACKEND_URL ?? "http://localhost:5000";
+const API_BASE = process.env.CLINKA_BACKEND_URL ?? "http://127.0.0.1:5000";
 
 test.describe("Payout Flow Security", () => {
   test("create withdrawal requires auth", async ({ request }) => {
-    const res = await request.post(`${API_BASE}/api/users/me/withdrawals/create`, {
+    const res = await request.post(`${API_BASE}/api/payments/engineer/withdrawals`, {
       data: { amount: 100, method: "INSTAPAY", accountNumber: "123" },
     });
     expect(res.status()).toBe(401);

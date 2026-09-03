@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { gotoApp } from "./helpers/devtunnel";
 
 const API_BASE =
-  process.env.CLINKA_BACKEND_URL ?? "http://localhost:5000";
+  process.env.CLINKA_BACKEND_URL ?? "http://127.0.0.1:5000";
 
 test.describe("Backend API smoke tests", () => {
   test("health endpoint", async ({ request }) => {
