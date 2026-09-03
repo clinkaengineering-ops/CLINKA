@@ -342,17 +342,15 @@ export function AdminPayoutPanel() {
                         >
                           {t("ad.payoutAudit")}
                         </Button>
-                        {["IBAN", "INSTAPAY", "E_WALLET"].includes(w.method) && (w.status === "PENDING_REVIEW" || w.status === "COMPLETED") && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-indigo-500"
-                            onClick={() => handleRevealBankDetails(w.id)}
-                            disabled={actionLoading}
-                          >
-                            View Details
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-indigo-500"
+                          onClick={() => handleRevealBankDetails(w.id)}
+                          disabled={actionLoading}
+                        >
+                          View Details
+                        </Button>
                         {w.status === "PENDING_REVIEW" && (
                           <>
                             <Button
@@ -485,7 +483,7 @@ export function AdminPayoutPanel() {
                 <span className="mt-0.5">⚠️</span>
                 <span>This access has been logged in the audit trail.</span>
               </div>
-              {(["accountHolderName", "iban", "swiftBic", "bankAddress", "instapayAccount", "walletProvider", "walletNumber"] as const).map((field) => (
+              {(["accountHolderName", "iban", "swiftBic", "bankAddress", "instapayAccount", "walletProvider", "walletNumber", "accountNumber"] as const).map((field) => (
                 bankDetails.data[field] && (
                   <div key={field}>
                     <p className="text-xs font-medium text-slate-500 uppercase">

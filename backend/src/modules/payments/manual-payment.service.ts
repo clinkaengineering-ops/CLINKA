@@ -3,6 +3,7 @@ import ApiError from "../../utils/ApiError";
 import { recordPaymentLedger, netEngineerAmount } from "../../utils/paymentLedger";
 import { ensureWallet, walletHoldReleaseDate } from "../../utils/wallet";
 import { createNotification } from "../../utils/notifications";
+import { logSystemEvent } from "../../utils/auditLogger";
 
 function toNumber(value: number | { toString(): string }) {
   return typeof value === "number" ? value : Number(value.toString());
@@ -60,6 +61,19 @@ export async function submitManualPayment(
   }
   if (payment.status === "RELEASED") {
     throw new ApiError(400, "Payment has already been released");
+  }
+
+  // Validate amount exactly matches expected payment amount
+  if (input.currency === "EGP") {
+    if (Math.abs(Number(input.amount) - Number(payment.amountEgp)) > 0.01) {
+      throw new ApiError(400, `Submitted EGP amount (${input.amount}) must exactly match the required payment amount (${payment.amountEgp})`);
+    }
+  } else if (input.currency === "USD") {
+    if (Math.abs(Number(input.amount) - Number(payment.amountUsd)) > 0.01) {
+      throw new ApiError(400, `Submitted USD amount (${input.amount}) must exactly match the required payment amount (${payment.amountUsd})`);
+    }
+  } else {
+    throw new ApiError(400, "Unsupported currency");
   }
 
   // Check if there is already a PENDING submission for this payment
@@ -323,6 +337,16 @@ export async function adminVerifyManualPayment(
     `/projects?id=${payment.projectId}`,
   );
 
+  await logSystemEvent({
+    actorId: adminUserId,
+    actorRole: "ADMIN",
+    action: "admin.manual_payment_verified",
+    targetType: "ManualPaymentSubmission",
+    targetId: String(submissionId),
+    beforeState: { status: "PENDING" },
+    afterState: { status: "VERIFIED", adminNote },
+  });
+
   return submission;
 }
 
@@ -366,12 +390,30 @@ export async function adminRejectManualPayment(
     );
   }
 
+  await logSystemEvent({
+    actorId: adminUserId,
+    actorRole: "ADMIN",
+    action: "admin.manual_payment_rejected",
+    targetType: "ManualPaymentSubmission",
+    targetId: String(submissionId),
+    beforeState: { status: "PENDING" },
+    afterState: { status: "REJECTED", adminNote: reason },
+  });
+
   return submission;
 }
 
 // ─── Client: Fetch manual payment settings (configured destinations) ───────
 
-export async function getManualPaymentSettingsForClient() {
+export async function getManualPaymentSettingsForClient(userId: number) {
+  // Ensure the user actually has a project awaiting payment
+  const pendingProject = await db.project.findFirst({
+    where: { clientId: userId, payment: { status: "PENDING" } },
+  });
+  if (!pendingProject) {
+    throw new ApiError(403, "You do not have any pending payments");
+  }
+
   const settings = await db.platformSettings.findFirst();
   if (!settings || !settings.manualPaymentSettings) {
     return { bankAccounts: [], instapayAccounts: [], walletAccounts: [] };

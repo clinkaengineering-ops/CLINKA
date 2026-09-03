@@ -1,4 +1,5 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
+import { logSystemEvent } from "../../utils/auditLogger";
 import ApiResponse from "../../utils/ApiResponse";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import {
@@ -186,6 +187,17 @@ export async function getConversationMessagesController(
     const conversationId = Number(req.params.conversationId);
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 50;
+
+    await logSystemEvent({
+      actorId: req.user!.userId,
+      actorRole: "ADMIN",
+      action: "admin.conversation_viewed",
+      targetType: "Conversation",
+      targetId: String(conversationId),
+      ipAddress: req.ip,
+      userAgent: req.get("User-Agent"),
+    });
+
     const data = await getConversationMessages(conversationId, page, limit);
     res.status(200).json(ApiResponse(200, "Messages fetched", data));
   } catch (error) {
@@ -339,7 +351,7 @@ export async function overridePaymentController(
   try {
     const input = updatePaymentOverrideSchema.parse(req.body);
     const paymentId = Number(req.params.paymentId);
-    const data = await overridePaymentStatus(paymentId, input.status);
+    const data = await overridePaymentStatus(paymentId, input.status, req.user!.userId);
     res.status(200).json(ApiResponse(200, "Payment overridden", data));
   } catch (error) {
     next(error);
@@ -366,7 +378,16 @@ export async function getSystemLogsController(
 ) {
   try {
     const limit = Number(req.query.limit) || 50;
-    const logs = await getSystemLogs(limit);
+    const page = Number(req.query.page) || 1;
+    const filters = {
+      userId: req.query.userId ? Number(req.query.userId) : undefined,
+      targetId: req.query.targetId ? String(req.query.targetId) : undefined,
+      action: req.query.action ? String(req.query.action) : undefined,
+      startDate: req.query.startDate ? new Date(String(req.query.startDate)) : undefined,
+      endDate: req.query.endDate ? new Date(String(req.query.endDate)) : undefined,
+    };
+    
+    const logs = await getSystemLogs(limit, page, filters);
     res.status(200).json(ApiResponse(200, "System logs fetched", logs));
   } catch (error) {
     next(error);

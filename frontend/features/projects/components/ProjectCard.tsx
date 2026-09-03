@@ -97,6 +97,12 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
         {project.status === "COMPLETED" && (
           <Badge color="green">{t("pay.status.completed")}</Badge>
         )}
+        {project.payment?.manualSubmissions?.some((s: any) => s.status === "PENDING") && (
+          <Badge color="amber">{t("pay.status.manualPending")}</Badge>
+        )}
+        {project.payment?.manualSubmissions?.some((s: any) => s.status === "REJECTED") && !project.payment?.manualSubmissions?.some((s: any) => s.status === "PENDING") && (
+          <Badge color="rose">{t("pay.status.manualRejected")}</Badge>
+        )}
       </div>
     </Card>
   );

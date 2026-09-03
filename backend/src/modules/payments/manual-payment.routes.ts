@@ -12,9 +12,10 @@ import {
   adminRejectManualPayment,
   getManualPaymentSettingsForClient,
 } from "./manual-payment.service";
-import { getStoredUploadPath } from "../../config/upload";
+import { getStoredUploadPath, createUploadMiddleware } from "../../config/upload";
 import { submitManualPaymentSchema } from "./payments.validation";
-import { createUploadMiddleware } from "../../config/upload";
+import { manualSubmitRateLimiter } from "../../middlewares/rateLimit";
+import { idempotency } from "../../middlewares/idempotency";
 
 // Dedicated upload middleware for payment proofs — 5MB limit, images + PDF
 const PROOF_MIME_TYPES = new Set([
@@ -39,7 +40,7 @@ router.get(
   authenticate,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const settings = await getManualPaymentSettingsForClient();
+      const settings = await getManualPaymentSettingsForClient(req.user!.userId);
       res.status(200).json(ApiResponse(200, "Manual payment settings retrieved", settings));
     } catch (error) {
       next(error);
@@ -53,6 +54,8 @@ router.post(
   "/projects/:projectId/manual-submit",
   authenticate,
   authorize("CLIENT"),
+  manualSubmitRateLimiter,
+  idempotency,
   proofUpload.single("proof"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -158,6 +161,7 @@ router.post(
   "/admin/manual-payments/:submissionId/verify",
   authenticate,
   authorize("ADMIN"),
+  idempotency,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const submissionId = Number(req.params.submissionId);
@@ -176,6 +180,7 @@ router.post(
   "/admin/manual-payments/:submissionId/reject",
   authenticate,
   authorize("ADMIN"),
+  idempotency,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const submissionId = Number(req.params.submissionId);

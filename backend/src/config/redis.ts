@@ -27,7 +27,7 @@ function memoryDel(key: string) {
   memoryStore.delete(key);
 }
 
-function getRedisClient(): Redis | null {
+export function getRedisClient(): Redis | null {
   if (
     redisUnavailable ||
     !process.env.REDIS_URL?.trim() ||

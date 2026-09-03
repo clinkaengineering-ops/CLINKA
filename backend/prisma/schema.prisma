@@ -189,6 +189,7 @@ model User {
 
   profile               EngineerProfile?
   projects              Project[]
+  systemAuditLogs       SystemAuditLog[]    @relation("ActorAuditLogs")
   reviews               Review[]
   messages              Message[]
   notifications         Notification[]
@@ -343,6 +344,7 @@ model Payment {
   gatewayInvoiceId  String?
   gatewayInvoiceKey String?
   status            PaymentStatus @default(PENDING)
+  isAdminOverride   Boolean       @default(false)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -545,6 +547,7 @@ model SupportTicket {
 
   user       User? @relation("UserSupportTickets", fields: [userId], references: [id])
   resolvedBy User? @relation("ResolvedSupportTickets", fields: [resolvedById], references: [id])
+  systemAuditLogs SystemAuditLog[] @relation("TicketAuditLogs")
 }
 
 model Wallet {
@@ -854,4 +857,22 @@ model ProfileAnalytics {
   clicks            Int @default(0)
 
   engineer EngineerProfile @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+}
+
+model SystemAuditLog {
+  id              Int      @id @default(autoincrement())
+  timestamp       DateTime @default(now())
+  actorId         Int
+  actorRole       String
+  action          String
+  targetType      String
+  targetId        String
+  beforeState     Json?
+  afterState      Json?
+  ipAddress       String?
+  userAgent       String?
+  relatedTicketId Int?
+
+  actor           User           @relation("ActorAuditLogs", fields: [actorId], references: [id])
+  relatedTicket   SupportTicket? @relation("TicketAuditLogs", fields: [relatedTicketId], references: [id])
 }

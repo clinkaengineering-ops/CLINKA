@@ -16,10 +16,7 @@ export default function InvitationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"PENDING" | "ACCEPTED" | "DECLINED" | "CLOSED">("PENDING");
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-
-  useEffect(() => {
-    loadInvitations();
-  }, []);
+  const [now] = useState(() => Date.now());
 
   const loadInvitations = async () => {
     try {
@@ -36,6 +33,10 @@ export default function InvitationsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadInvitations();
+  }, []);
 
   const handleRespond = async (id: number, action: "ACCEPT" | "DECLINE") => {
     try {
@@ -147,7 +148,7 @@ export default function InvitationsPage() {
 
                   {inv.status === "PENDING" && (
                     <div className="flex items-center gap-2 text-sm text-amber-500 bg-amber-500/10 w-max px-3 py-1.5 rounded-lg">
-                      <span className="font-medium">{t("hire.expiresIn").replace("{days}", String(Math.max(1, Math.ceil((new Date(inv.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))))}</span>
+                      <span className="font-medium">{t("hire.expiresIn").replace("{days}", String(Math.max(1, Math.ceil((new Date(inv.expiresAt).getTime() - now) / (1000 * 60 * 60 * 24)))))}</span>
                       <span>({formatDate(inv.expiresAt)})</span>
                     </div>
                   )}

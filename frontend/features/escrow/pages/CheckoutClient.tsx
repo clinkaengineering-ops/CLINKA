@@ -491,7 +491,7 @@ function CheckoutForm({ projectId }: { projectId: number }) {
         {status === "form" && (
           <div className="flex flex-col items-center gap-4 py-12 px-6 animate-fade-in text-center">
             <p className="text-base font-medium text-slate-700 dark:text-slate-300">
-              You have chosen manual payment.
+              {t("checkout.manualPaymentDesc")}
             </p>
             <Button onClick={() => setManualModalOpen(true)}>
               View Instructions

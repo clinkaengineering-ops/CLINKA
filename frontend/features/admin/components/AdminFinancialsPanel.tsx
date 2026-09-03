@@ -135,6 +135,11 @@ export function AdminFinancialsPanel() {
                       <Badge color={p.status === "RELEASED" ? "green" : p.status === "REFUNDED" ? "slate" : "amber"}>
                         {p.status}
                       </Badge>
+                      {p.isAdminOverride && (
+                        <Badge color="amber" className="ml-2">
+                          Override
+                        </Badge>
+                      )}
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">

@@ -54,9 +54,7 @@ export default function FinanceSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    load();
-  }, []);
+
 
   const load = async () => {
     setLoading(true);
@@ -126,6 +124,10 @@ export default function FinanceSettingsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);

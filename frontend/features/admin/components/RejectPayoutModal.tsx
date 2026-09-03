@@ -46,7 +46,7 @@ export function RejectPayoutModal({ isOpen, onClose, onSubmit, amount }: RejectP
       <Card className="w-full max-w-md p-6 border-t-4 border-t-rose-500">
         <h2 className="mb-4 text-lg font-bold text-rose-600">Reject Payout</h2>
         <p className="mb-4 text-sm text-slate-500">
-          You are rejecting a withdrawal request for <strong>${amount}</strong>. This will release the funds back to the engineer's available balance.
+          You are rejecting a withdrawal request for <strong>${amount}</strong>. This will release the funds back to the engineer&apos;s available balance.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -50,10 +50,6 @@ export function PaymentDetailsDrawer({ submissionId, onClose, onUpdated }: { sub
   const [processing, setProcessing] = useState(false);
   const [showReject, setShowReject] = useState(false);
 
-  useEffect(() => {
-    load();
-  }, [submissionId]);
-
   const load = async () => {
     setLoading(true);
     try {
@@ -65,6 +61,10 @@ export function PaymentDetailsDrawer({ submissionId, onClose, onUpdated }: { sub
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    load();
+  }, [submissionId]);
 
   const handleVerify = async () => {
     if (!confirm("Are you sure you want to verify this payment? This will fund the project escrow.")) return;

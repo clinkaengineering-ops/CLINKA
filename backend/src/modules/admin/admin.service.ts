@@ -505,6 +505,12 @@ export async function getAllPayments(page = 1, limit = 20) {
   };
 }
 
+function maskString(str: string | null): string | null {
+  if (!str) return null;
+  if (str.length <= 4) return "****";
+  return "****" + str.slice(-4);
+}
+
 export async function getWithdrawalRequests(
   page = 1,
   limit = 20,
@@ -535,7 +541,11 @@ export async function getWithdrawalRequests(
       accountHolderNameEncrypted,
       ...safeItem 
     } = item;
-    return safeItem;
+
+    // Mask sensitive fields by default
+    if (safeItem.accountNumber) safeItem.accountNumber = maskString(safeItem.accountNumber)!;
+
+    return { ...safeItem, isMasked: true };
   });
 
   return {
@@ -863,11 +873,16 @@ export async function getPayoutStats() {
   };
 }
 
-export async function overridePaymentStatus(paymentId: number, status: "RELEASED" | "REFUNDED") {
-  return await db.payment.update({
-    where: { id: paymentId },
-    data: { status },
-  });
+import { releaseEscrowPayment, refundEscrowPayment } from "../payments/payments.service";
+
+export async function overridePaymentStatus(paymentId: number, status: "RELEASED" | "REFUNDED", adminId: number) {
+  if (status === "RELEASED") {
+    // We pass adminId as the clientId but with isAdmin=true to bypass the owner check
+    return await releaseEscrowPayment(adminId, paymentId, true);
+  } else if (status === "REFUNDED") {
+    return await refundEscrowPayment(adminId, paymentId, true);
+  }
+  throw new Error("Invalid status override");
 }
 
 export async function getAnalyticsData() {
@@ -1156,8 +1171,18 @@ export async function getSystemHealth() {
   };
 }
 
-export async function getSystemLogs(limit = 50) {
-  const [users, bans, tickets, payments, projects, reviews] = await Promise.all([
+export async function getSystemLogs(
+  limit = 50,
+  page = 1,
+  filters?: {
+    userId?: number;
+    targetId?: string;
+    action?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }
+) {
+  const [users, bans, tickets, payments, projects, reviews, auditLogs] = await Promise.all([
     db.user.findMany({
       orderBy: { createdAt: "desc" },
       take: 12,
@@ -1188,10 +1213,32 @@ export async function getSystemLogs(limit = 50) {
       take: 8,
       include: { project: { select: { title: true } } },
     }),
+    db.systemAuditLog.findMany({
+      where: {
+        ...(filters?.userId ? { actorId: filters.userId } : {}),
+        ...(filters?.targetId ? { targetId: filters.targetId } : {}),
+        ...(filters?.action ? { action: filters.action } : {}),
+        timestamp: {
+          gte: filters?.startDate ? new Date(filters.startDate) : undefined,
+          lte: filters?.endDate ? new Date(filters.endDate) : undefined,
+        },
+      },
+      orderBy: { timestamp: "desc" },
+      take: limit,
+      skip: (page - 1) * limit,
+    }),
   ]);
 
   type LogLevel = "INFO" | "WARN" | "ERROR" | "DEBUG";
-  const entries: Array<{ timestamp: Date; level: LogLevel; message: string }> = [];
+  const entries: Array<{
+    id?: string | number;
+    timestamp: Date;
+    level: LogLevel;
+    message: string;
+    action?: string;
+    actorId?: number;
+    targetId?: string;
+  }> = [];
 
   users.forEach((u) =>
     entries.push({
@@ -1238,6 +1285,18 @@ export async function getSystemLogs(limit = 50) {
       timestamp: r.createdAt,
       level: "INFO",
       message: `Review submitted for "${r.project.title}"`,
+    }),
+  );
+
+  auditLogs.forEach((l) =>
+    entries.push({
+      id: l.id,
+      timestamp: l.timestamp,
+      level: l.action.includes("reject") || l.action.includes("failed") ? "WARN" : "INFO",
+      message: `[Audit] ${l.actorRole} ${l.actorId} performed ${l.action} on ${l.targetType} ${l.targetId}`,
+      action: l.action,
+      actorId: l.actorId,
+      targetId: l.targetId,
     }),
   );
 
@@ -1320,8 +1379,8 @@ export async function revealWithdrawalBankDetails(
     }
   });
 
-  if (!item || !["IBAN", "INSTAPAY", "E_WALLET"].includes(item.payoutType)) {
-    throw new ApiError(404, "Withdrawal request bank details not found or not applicable");
+  if (!item) {
+    throw new ApiError(404, "Withdrawal request not found");
   }
 
   const { decryptSensitiveField } = await import("../../utils/fieldEncryption");
@@ -1341,6 +1400,8 @@ export async function revealWithdrawalBankDetails(
   } else if (item.payoutType === "E_WALLET") {
     decrypted.walletProvider = item.bankName;
     decrypted.walletNumber = item.accountNumber;
+  } else if (item.payoutType === "PAYMOB") {
+    decrypted.accountNumber = item.accountNumber;
   }
 
   const { logPayoutEvent } = await import("../payouts/payout.audit");
@@ -1350,6 +1411,17 @@ export async function revealWithdrawalBankDetails(
     actorId: adminId,
     actorIp: adminIp,
     actorUserAgent: adminUserAgent,
+  });
+
+  const { logSystemEvent } = await import("../../utils/auditLogger");
+  await logSystemEvent({
+    actorId: adminId,
+    actorRole: "ADMIN",
+    action: "admin.withdrawal_reveal_bank_details",
+    targetType: "WithdrawalRequest",
+    targetId: String(withdrawalId),
+    ipAddress: adminIp,
+    userAgent: adminUserAgent,
   });
 
   return decrypted;
@@ -1425,8 +1497,19 @@ export async function rejectInternationalWithdrawal(withdrawalId: number, adminI
     "FUNDS_RELEASED",
     "Withdrawal Rejected",
     `Your withdrawal request of $${updated.amount} has been rejected.\n\nReason:\n${reason}\n\nNote:\n${notes || "Please update your receiving account and submit a new request."}`,
-    "/balance",
+    `/balance`,
   );
+
+  const { logSystemEvent } = await import("../../utils/auditLogger");
+  await logSystemEvent({
+    actorId: adminId,
+    actorRole: "ADMIN",
+    action: "admin.withdrawal_rejected",
+    targetType: "WithdrawalRequest",
+    targetId: String(withdrawalId),
+    beforeState: { status: updated.status },
+    afterState: { status: "REJECTED", reason, notes },
+  });
 
   return updated;
 }

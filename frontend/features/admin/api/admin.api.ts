@@ -233,6 +233,7 @@ export interface AdminPayment {
   amount: number;
   commission: number;
   status: string;
+  isAdminOverride: boolean;
   createdAt: string;
   client: { name: string; email: string };
   engineer: { user: { name: string; email: string } };
@@ -311,13 +312,27 @@ export const fetchSystemHealth = (): Promise<SystemHealth> =>
   });
 
 export interface SystemLog {
+  id?: string | number;
   timestamp: string;
   level: "INFO" | "WARN" | "ERROR" | "DEBUG";
   message: string;
+  action?: string;
+  actorId?: number;
+  targetId?: string;
 }
 
-export const fetchSystemLogs = (): Promise<SystemLog[]> =>
-  unwrap(api.get<ApiResponse<SystemLog[]>>("/admin/logs")).then((d) => d ?? []);
+export const fetchSystemLogs = (
+  page = 1,
+  limit = 50,
+  filters?: {
+    userId?: number;
+    targetId?: string;
+    action?: string;
+    startDate?: string;
+    endDate?: string;
+  }
+): Promise<SystemLog[]> =>
+  unwrap(api.get<ApiResponse<SystemLog[]>>("/admin/logs", { params: { page, limit, ...filters } })).then((d) => d ?? []);
 
 export interface AdminSupportTicket {
   id: number;

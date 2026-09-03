@@ -26,6 +26,14 @@ api.interceptors.response.use(
     const requestUrl = String(error.config?.url ?? "");
     const isSessionProbe = requestUrl.includes("/users/me");
 
+    if (error.response?.status === 429) {
+      if (!error.response.data) error.response.data = {};
+      // Customize message if it's the generic one or missing
+      if (!error.response.data.message || error.response.data.message === "Too Many Requests") {
+        error.response.data.message = "You are doing this too often. Please wait a moment and try again.";
+      }
+    }
+
     if (
       typeof window !== "undefined" &&
       error.response?.status === 401 &&

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, Button, Badge } from "@/components/UI";
 import { cn } from "@/utils/cn";
 import { fetchSystemLogs, type SystemLog } from "../api/admin.api";
@@ -29,45 +29,48 @@ export function AdminSystemLogs() {
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"ALL" | "ERROR" | "WARN" | "INFO">("ALL");
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  
+  // Filters
+  const [userIdFilter, setUserIdFilter] = useState("");
+  const [targetIdFilter, setTargetIdFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchSystemLogs();
+      const filters: any = {};
+      if (userIdFilter) filters.userId = Number(userIdFilter);
+      if (targetIdFilter) filters.targetId = targetIdFilter;
+      if (actionFilter) filters.action = actionFilter;
+      if (startDate) filters.startDate = startDate;
+      if (endDate) filters.endDate = endDate;
+
+      const data = await fetchSystemLogs(page, limit, filters);
       setLogs(data);
     } catch (err) {
       setError(axiosMessage(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit, userIdFilter, targetIdFilter, actionFilter, startDate, endDate]);
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
   }, [load]);
-
-  const filteredLogs = filter === "ALL" ? logs : logs.filter((log) => log.level === filter);
-
-  const counts = useMemo(
-    () => ({
-      INFO: logs.filter((l) => l.level === "INFO").length,
-      WARN: logs.filter((l) => l.level === "WARN").length,
-      ERROR: logs.filter((l) => l.level === "ERROR").length,
-    }),
-    [logs],
-  );
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold">System logs</h2>
+          <h2 className="text-xl font-bold">System Audit Logs</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Live events from registrations, payments, bans, tickets, and projects. Auto-refreshes every 30s.
+            Detailed chronological record of all system events and admin actions.
           </p>
         </div>
         <Button size="sm" variant="secondary" onClick={load} disabled={loading}>
@@ -75,14 +78,60 @@ export function AdminSystemLogs() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 sm:max-w-md">
-        {(["INFO", "WARN", "ERROR"] as const).map((level) => (
-          <Card key={level} className="p-3 text-center">
-            <p className="text-xs uppercase tracking-wider text-slate-500">{level}</p>
-            <p className="text-2xl font-bold mt-1">{counts[level]}</p>
-          </Card>
-        ))}
-      </div>
+      <Card className="p-4 space-y-4">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filters</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <input
+            type="number"
+            placeholder="Actor User ID"
+            className="w-full px-3 py-2 text-sm border rounded-md dark:bg-slate-800 dark:border-slate-700"
+            value={userIdFilter}
+            onChange={(e) => setUserIdFilter(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Target ID"
+            className="w-full px-3 py-2 text-sm border rounded-md dark:bg-slate-800 dark:border-slate-700"
+            value={targetIdFilter}
+            onChange={(e) => setTargetIdFilter(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Action (e.g., auth.login)"
+            className="w-full px-3 py-2 text-sm border rounded-md dark:bg-slate-800 dark:border-slate-700"
+            value={actionFilter}
+            onChange={(e) => setActionFilter(e.target.value)}
+          />
+          <input
+            type="date"
+            className="w-full px-3 py-2 text-sm border rounded-md dark:bg-slate-800 dark:border-slate-700"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+          <input
+            type="date"
+            className="w-full px-3 py-2 text-sm border rounded-md dark:bg-slate-800 dark:border-slate-700"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setUserIdFilter("");
+              setTargetIdFilter("");
+              setActionFilter("");
+              setStartDate("");
+              setEndDate("");
+              setPage(1);
+            }}
+          >
+            Clear Filters
+          </Button>
+        </div>
+      </Card>
 
       <Card className="p-0 overflow-hidden">
         {error && (
@@ -91,64 +140,82 @@ export function AdminSystemLogs() {
           </p>
         )}
 
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-2 items-center flex-wrap">
-          <span className="text-xs font-semibold text-slate-500 uppercase">Filter</span>
-          {(["ALL", "INFO", "WARN", "ERROR"] as const).map((level) => (
-            <button
-              key={level}
-              type="button"
-              onClick={() => setFilter(level)}
-              className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-semibold transition",
-                filter === level
-                  ? "bg-electric-500 text-white"
-                  : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600",
-              )}
-            >
-              {level}
-              {level !== "ALL" && ` (${counts[level as keyof typeof counts] ?? 0})`}
-            </button>
-          ))}
-        </div>
-
         {loading && logs.length === 0 ? (
           <p className="p-8 text-center text-slate-500 text-sm">Loading system logs…</p>
-        ) : filteredLogs.length === 0 ? (
+        ) : logs.length === 0 ? (
           <p className="p-8 text-center text-slate-500 text-sm">
-            {logs.length === 0
-              ? "No platform events recorded yet. Activity will appear here as users register, pay, or open tickets."
-              : "No logs match this filter."}
+            No logs match the current filters.
           </p>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[560px] overflow-y-auto">
-            {filteredLogs.map((log) => (
-              <div
-                key={`${log.timestamp}-${log.message}`}
-                className={cn(
-                  "px-4 py-3 flex gap-3 items-start border-s-4",
-                  log.level === "ERROR"
-                    ? "border-rose-500 bg-rose-50/50 dark:bg-rose-900/10"
-                    : log.level === "WARN"
-                      ? "border-amber-500 bg-amber-50/50 dark:bg-amber-900/10"
-                      : log.level === "INFO"
-                        ? "border-electric-500 bg-electric-500/5"
-                        : "border-slate-400 bg-slate-50 dark:bg-slate-900/30",
-                )}
-              >
-                <div className="flex-1 min-w-0 font-mono text-xs">
-                  <p className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</p>
-                  <p className="mt-1 text-sm font-sans text-slate-800 dark:text-slate-100 break-words">
-                    {log.message}
-                  </p>
-                </div>
-                <Badge color={getLevelColor(log.level)}>{log.level}</Badge>
-              </div>
-            ))}
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Timestamp</th>
+                  <th className="px-4 py-3 font-semibold">Level</th>
+                  <th className="px-4 py-3 font-semibold">Action</th>
+                  <th className="px-4 py-3 font-semibold">Actor ID</th>
+                  <th className="px-4 py-3 font-semibold">Target ID</th>
+                  <th className="px-4 py-3 font-semibold w-full">Message</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {logs.map((log) => (
+                  <tr
+                    key={`${log.timestamp}-${log.message}`}
+                    className={cn(
+                      "hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors",
+                      log.level === "ERROR" && "bg-rose-50/30 dark:bg-rose-900/5",
+                      log.level === "WARN" && "bg-amber-50/30 dark:bg-amber-900/5"
+                    )}
+                  >
+                    <td className="px-4 py-3 text-slate-500 font-mono text-xs">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge color={getLevelColor(log.level)}>{log.level}</Badge>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
+                      {log.action || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {log.actorId || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {log.targetId || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-200 truncate max-w-md">
+                      {log.message}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
-        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 text-center">
-          Showing {filteredLogs.length} of {logs.length} events
+        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 flex justify-between items-center">
+          <div>
+            Showing {logs.length} events
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={logs.length < limit}
+              onClick={() => setPage(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </Card>
     </div>

@@ -3,6 +3,7 @@ import {
   authenticate,
   authorize,
 } from "../../middlewares/auth.middleware";
+import { idempotency } from "../../middlewares/idempotency";
 import {
   createEngineerWithdrawalController,
   paymobWebhookController,
@@ -69,6 +70,7 @@ router.post(
   authenticate,
   authorize("ENGINEER"),
   payoutRateLimit,
+  idempotency,
   createEngineerWithdrawalController,
 );
 router.get(
@@ -96,13 +98,15 @@ router.post(
 router.post(
   "/:paymentId/release",
   authenticate,
-  authorize("CLIENT"),
+  authorize("ADMIN"),
+  idempotency,
   releaseEscrowController,
 );
 router.post(
   "/:paymentId/refund",
   authenticate,
-  authorize("CLIENT"),
+  authorize("ADMIN"),
+  idempotency,
   refundEscrowController,
 );
 router.post(

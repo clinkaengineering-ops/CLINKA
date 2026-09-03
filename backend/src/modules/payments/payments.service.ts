@@ -1043,6 +1043,16 @@ export async function createWithdrawalRequest(
   input: any,
   idempotencyKey: string,
 ) {
+  const { logSystemEvent } = await import("../../utils/auditLogger");
+  await logSystemEvent({
+    actorId: engineerUserId,
+    actorRole: "ENGINEER",
+    action: "withdrawal.created",
+    targetType: "WithdrawalRequest",
+    targetId: "new",
+    afterState: { payoutMethod, input },
+  });
+
   const { createPaymobPayout, createIbanPayout, createInstapayPayout, createEWalletPayout } = await import("../payouts/payout.service");
   switch (payoutMethod) {
     case "PAYMOB":
@@ -1132,14 +1142,15 @@ function mapPaymentStatusToEscrow(
 export async function releaseEscrowPayment(
   clientId: number,
   paymentId: number,
+  isAdmin: boolean = false
 ) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
     include: { project: { select: { title: true, status: true } } },
   });
   if (!payment) throw new ApiError(404, "Payment not found");
-  if (payment.clientId !== clientId) {
-    throw new ApiError(403, "Only the client can release escrow funds");
+  if (!isAdmin && payment.clientId !== clientId) {
+    throw new ApiError(403, "Only the client or admin can release escrow funds");
   }
   if (payment.status !== "FUNDED") {
     throw new ApiError(400, "Escrow must be funded before release");
@@ -1162,10 +1173,14 @@ export async function releaseEscrowPayment(
   }
 
   const updated = await db.$transaction(async (tx) => {
-    const released = await tx.payment.update({
-      where: { id: paymentId },
-      data: { status: "RELEASED" },
+    const released = await tx.payment.updateMany({
+      where: { id: paymentId, status: "FUNDED" },
+      data: { status: "RELEASED", isAdminOverride: isAdmin },
     });
+    if (released.count === 0) {
+      throw new ApiError(409, "Payment was already released or refunded concurrently");
+    }
+    
     await tx.project.update({
       where: { id: payment.projectId },
       data: { status: "COMPLETED" },
@@ -1202,7 +1217,7 @@ export async function releaseEscrowPayment(
       },
     });
 
-    return released;
+    return await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
   });
 
   const { createNotification } = await import("../../utils/notifications");
@@ -1457,14 +1472,14 @@ export async function verifyOrSimulatePaymentSuccess(
   return pollPaymentConfirmation(clientId, paymentId);
 }
 
-export async function refundEscrowPayment(clientId: number, paymentId: number) {
+export async function refundEscrowPayment(clientId: number, paymentId: number, isAdmin: boolean = false) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
     include: { project: { select: { title: true } } },
   });
   if (!payment) throw new ApiError(404, "Payment not found");
-  if (payment.clientId !== clientId) {
-    throw new ApiError(403, "Only the client can request a refund");
+  if (!isAdmin && payment.clientId !== clientId) {
+    throw new ApiError(403, "Only the client or admin can refund escrow funds");
   }
   if (payment.status !== "FUNDED") {
     throw new ApiError(400, "Only funded escrow can be refunded");
@@ -1472,15 +1487,19 @@ export async function refundEscrowPayment(clientId: number, paymentId: number) {
 
   // Cancel the project and mark payment refunded atomically
   const updated = await db.$transaction(async (tx) => {
-    const refunded = await tx.payment.update({
-      where: { id: paymentId },
-      data: { status: "REFUNDED" },
+    const refunded = await tx.payment.updateMany({
+      where: { id: paymentId, status: "FUNDED" },
+      data: { status: "REFUNDED", isAdminOverride: isAdmin },
     });
+    if (refunded.count === 0) {
+      throw new ApiError(409, "Payment was already released or refunded concurrently");
+    }
+    
     await tx.project.update({
       where: { id: payment.projectId },
       data: { status: "CANCELLED" },
     });
-    return refunded;
+    return await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
   });
 
   // Notify the engineer so they're not left wondering

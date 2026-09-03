@@ -262,7 +262,8 @@ export async function releaseEscrowController(
 ) {
   try {
     const paymentId = Number(req.params.paymentId);
-    const payment = await releaseEscrowPayment(req.user!.userId, paymentId);
+    const isAdmin = req.user?.role === "ADMIN";
+    const payment = await releaseEscrowPayment(req.user!.userId, paymentId, isAdmin);
     res
       .status(200)
       .json(ApiResponse(200, "Escrow released successfully", payment));
@@ -294,7 +295,8 @@ export async function refundEscrowController(
 ) {
   try {
     const paymentId = Number(req.params.paymentId);
-    const payment = await refundEscrowPayment(req.user!.userId, paymentId);
+    const isAdmin = req.user?.role === "ADMIN";
+    const payment = await refundEscrowPayment(req.user!.userId, paymentId, isAdmin);
     res
       .status(200)
       .json(ApiResponse(200, "Escrow refunded successfully", payment));

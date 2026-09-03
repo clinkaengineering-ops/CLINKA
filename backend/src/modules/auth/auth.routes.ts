@@ -24,6 +24,7 @@ import {
 import upload from "../../middlewares/upload.middleware";
 import imageUpload from "../../middlewares/imageUpload.middleware";
 import { authenticate } from "../../middlewares/auth.middleware";
+import { loginRateLimiter, otpRateLimiter } from "../../middlewares/rateLimit";
 
 const router = Router();
 
@@ -54,16 +55,16 @@ router.post(
   imageUpload.array("portfolio", 10),
   completeGoogleEngineerController,
 );
-router.post("/login", loginController);
+router.post("/login", loginRateLimiter, loginController);
 router.post("/logout", authenticate, logoutController);
 router.get("/verify-email", verifyEmailController);
-router.post("/forgot-password", forgotPasswordController);
+router.post("/forgot-password", otpRateLimiter, forgotPasswordController);
 router.post("/reset-password", resetPasswordController);
-router.post("/resend-verification", authenticate, resendVerificationController);
+router.post("/resend-verification", authenticate, otpRateLimiter, resendVerificationController);
 router.post("/change-password", authenticate, changePasswordController);
 router.post("/request-email-change", authenticate, requestEmailChangeController);
 router.post("/confirm-email-change", authenticate, confirmEmailChangeController);
-router.post("/verify-otp", verifyOtpController);
+router.post("/verify-otp", otpRateLimiter, verifyOtpController);
 
 router.get("/google/status", googleAuthStatusController);
 router.post("/google/complete-registration", googleCompleteRegistrationController);

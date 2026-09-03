@@ -49,6 +49,8 @@ function mapUploadedPaths(
   );
 }
 
+import { logSystemEvent } from "../../utils/auditLogger";
+
 export async function checkRegistrationEmailController(
   req: Request,
   res: Response,
@@ -235,6 +237,18 @@ export async function loginController(req: Request, res: Response, next: NextFun
     const result = await login(validatedData);
 
     if ("token" in result) {
+      if (result.user) {
+        await logSystemEvent({
+          actorId: result.user.id,
+          actorRole: result.user.role,
+          action: "auth.login",
+          targetType: "User",
+          targetId: String(result.user.id),
+          ipAddress: req.ip,
+          userAgent: req.get("User-Agent"),
+        });
+      }
+
       res.cookie("token", result.token, authCookieOptions(req.headers.origin));
       return res.status(200).json(ApiResponse(200, "Logged in successfully", result));
     }
