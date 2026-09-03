@@ -205,6 +205,9 @@ model User {
   resolvedTickets    SupportTicket[]     @relation("ResolvedSupportTickets")
   wallet             Wallet?
   withdrawalRequests WithdrawalRequest[]
+
+  openedDisputes     Dispute[]           @relation("DisputeOpenedBy")
+  resolvedDisputes   Dispute[]           @relation("DisputeResolvedBy")
 }
 
 model Ban {
@@ -308,8 +311,11 @@ model Project {
   progressNote      String?
   progressUpdatedAt DateTime?
   isFlagged         Boolean       @default(false)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  deliveredAt           DateTime?
+  disputeWindowClosesAt DateTime?
+  disputePausedAt       DateTime?
 
   client       User                @relation(fields: [clientId], references: [id])
   bids         Bid[]
@@ -318,6 +324,7 @@ model Project {
   review       Review?
   submissions  ProjectSubmission[]
   invitations  ProjectInvitation[]
+  disputes     Dispute[]
 }
 
 model Bid {
@@ -555,6 +562,7 @@ model Wallet {
   userId           Int      @unique
   availableBalance Decimal  @default(0) @db.Decimal(18, 2)
   pendingBalance   Decimal  @default(0) @db.Decimal(18, 2)
+  heldByDispute    Decimal  @default(0) @db.Decimal(18, 2)
   version          Int      @default(1)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -862,7 +870,7 @@ model ProfileAnalytics {
 model SystemAuditLog {
   id              Int      @id @default(autoincrement())
   timestamp       DateTime @default(now())
-  actorId         Int
+  actorId         Int?
   actorRole       String
   action          String
   targetType      String
@@ -873,6 +881,33 @@ model SystemAuditLog {
   userAgent       String?
   relatedTicketId Int?
 
-  actor           User           @relation("ActorAuditLogs", fields: [actorId], references: [id])
+  actor           User?          @relation("ActorAuditLogs", fields: [actorId], references: [id])
   relatedTicket   SupportTicket? @relation("TicketAuditLogs", fields: [relatedTicketId], references: [id])
+}
+
+enum DisputeStatus {
+  OPEN
+  AWAITING_ENGINEER_FIX
+  ESCALATED_TO_ADMIN
+  RESOLVED_ENGINEER
+  RESOLVED_CLIENT
+}
+
+model Dispute {
+  id              Int           @id @default(autoincrement())
+  projectId       Int           // NOT unique, but enforced at service level
+  openedById      Int
+  reason          String
+  status          DisputeStatus @default(OPEN)
+  openedAt        DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  resolvedAt      DateTime?
+  resolvedById    Int?          // System or Admin
+  resolutionNote  String?
+  
+  project         Project       @relation(fields: [projectId], references: [id])
+  openedBy        User          @relation("DisputeOpenedBy", fields: [openedById], references: [id])
+  resolvedBy      User?         @relation("DisputeResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([projectId, status])
 }

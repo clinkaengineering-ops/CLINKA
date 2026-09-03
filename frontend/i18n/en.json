@@ -632,7 +632,7 @@
   "bal.title": "Balance",
   "bal.subtitle": "Track payments from clients on your projects.",
   "bal.available": "Available balance",
-  "bal.availableHint": "Funds available for withdrawal after the 14-day holding period.",
+  "bal.availableHint": "Funds available for withdrawal 7 days after delivery.",
   "bal.secured": "Secured",
   "bal.securedHint": "Client paid — held securely until the project is completed.",
   "bal.awaitingClient": "Awaiting payment",
@@ -673,7 +673,7 @@
   "bal.how1": "Client accepts your bid and pays through CLINKA.",
   "bal.how2": "You receive a notification and start working.",
   "bal.how3": "When finished, submit your work for review.",
-  "bal.how4": "Client approves delivery — funds move to pending balance, then available after 14 days.",
+  "bal.how4": "Work is delivered — funds move to pending, then available 7 days after delivery.",
   "bal.empty": "No payments yet. Win a bid and wait for the client to pay.",
   "bal.transactions": "Payment history",
   "bal.wallet": "Wallet breakdown",
@@ -1250,5 +1250,12 @@
   "inv.status_expired": "Expired",
   "inv.total": "invitations",
   "inv.sentOn": "Sent on",
-  "proj.status.awaitingPayment": "Awaiting Payment"
+  "proj.status.awaitingPayment": "Awaiting Payment",
+  "dispute.reportIssue": "Report an issue",
+  "dispute.reportIssueModalTitle": "Report an Issue",
+  "dispute.reportIssueModalDesc": "Describe the issue clearly. The dispute window will be paused, and the engineer will be notified to review and fix it.",
+  "dispute.reasonPlaceholder": "Provide a reason for the issue...",
+  "dispute.reasonRequired": "A reason is required to open a dispute.",
+  "dispute.submit": "Submit Dispute",
+  "dispute.windowClosed": "Review window closed"
 }

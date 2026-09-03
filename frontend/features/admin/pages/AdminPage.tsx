@@ -18,8 +18,9 @@ import { AdminReviewsPanel } from "../components/AdminReviewsPanel";
 import { AdminAnalytics } from "../components/AdminAnalytics";
 import { AdminSystemLogs } from "../components/AdminSystemLogs";
 import { AdminSupportTicketsPanel } from "../components/AdminSupportTicketsPanel";
+import { AdminDisputesPanel } from "../components/AdminDisputesPanel";
 
-type AdminTab = "overview" | "verifications" | "users" | "projects" | "reviews" | "financials" | "payouts" | "bans" | "chats" | "analytics" | "logs" | "support";
+type AdminTab = "overview" | "verifications" | "users" | "projects" | "reviews" | "disputes" | "financials" | "payouts" | "bans" | "chats" | "analytics" | "logs" | "support";
 
 export function AdminPage() {
   const { t } = useI18n();
@@ -63,33 +64,34 @@ export function AdminPage() {
 
       <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto items-center">
         {(
-          [
-            ["overview", "Overview"],
-            ["verifications", "Verifications"],
-            ["users", "Directory"],
-            ["projects", "Projects"],
-            ["reviews", "Reviews"],
-            ["bans", "Bans"],
-            ["chats", "Chats"],
-            ["analytics", "Analytics"],
-            ["logs", "System Logs"],
-            ["support", "Support"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "px-4 py-2 text-sm font-semibold rounded-t-lg transition whitespace-nowrap",
-              tab === id
-                ? "text-electric-600 dark:text-electric-400 border-b-2 border-electric-500 -mb-px"
-                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300",
-            )}
-          >
-            {label}
-          </button>
-        ))}
+            [
+              ["overview", "Overview"],
+              ["verifications", "Verifications"],
+              ["users", "Directory"],
+              ["projects", "Projects"],
+              ["reviews", "Reviews"],
+              ["disputes", `Disputes${disputes?.length ? ` (${disputes.length})` : ""}`],
+              ["bans", "Bans"],
+              ["chats", "Chats"],
+              ["analytics", "Analytics"],
+              ["logs", "System Logs"],
+              ["support", "Support"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id as AdminTab)}
+              className={cn(
+                "px-4 py-2 text-sm font-semibold rounded-t-lg transition whitespace-nowrap",
+                tab === id
+                  ? "text-electric-600 dark:text-electric-400 border-b-2 border-electric-500 -mb-px"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300",
+              )}
+            >
+              {label}
+            </button>
+          ))}
         <div className="flex-1" />
         <Link href="/admin/finance">
           <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow">
@@ -109,6 +111,7 @@ export function AdminPage() {
       {tab === "users" && <AdminUserDirectory />}
       {tab === "projects" && <AdminProjectsPanel />}
       {tab === "reviews" && <AdminReviewsPanel />}
+      {tab === "disputes" && <AdminDisputesPanel />}
       {tab === "bans" && <BanManagementPanel />}
       {tab === "chats" && <AdminChatViewer />}
       {tab === "analytics" && <AdminAnalytics />}

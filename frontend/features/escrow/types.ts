@@ -70,6 +70,7 @@ export interface EngineerBalanceSummary {
   spendableBalance: number;
   heldInWithdrawals: number;
   pendingBalance: number;
+  heldByDispute: number;
   securedBalance: number;
   awaitingClientPayment: number;
   transactions: EngineerBalanceTransaction[];

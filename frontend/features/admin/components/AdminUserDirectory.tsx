@@ -107,6 +107,26 @@ export function AdminUserDirectory() {
               <p><span className="font-semibold">Role:</span> <Badge>{user.role}</Badge></p>
             </div>
             
+            {user.wallet && (
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                <h4 className="font-semibold text-sm">Wallet Balances</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-2 rounded">
+                    <div className="text-xs text-slate-500 uppercase">Available</div>
+                    <div className="font-mono text-emerald-600 dark:text-emerald-400 font-medium">${Number(user.wallet.availableBalance).toFixed(2)}</div>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-2 rounded">
+                    <div className="text-xs text-slate-500 uppercase">Pending</div>
+                    <div className="font-mono text-amber-600 dark:text-amber-400 font-medium">${Number(user.wallet.pendingBalance).toFixed(2)}</div>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-2 rounded">
+                    <div className="text-xs text-slate-500 uppercase">Held (Dispute)</div>
+                    <div className="font-mono text-rose-600 dark:text-rose-400 font-medium">${Number(user.wallet.heldByDispute).toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
               <Button onClick={handleImpersonate} variant="secondary" className="w-full">
                 Login as {user.name}
@@ -149,6 +169,29 @@ export function AdminUserDirectory() {
                 </div>
                 <Button onClick={handleUpdateProfile} disabled={updating}>
                   {updating ? "Saving..." : "Save Profile"}
+                </Button>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                <h4 className="text-xs font-semibold text-rose-500">Disputes & Operations</h4>
+                <Button 
+                  variant="danger" 
+                  size="sm" 
+                  onClick={() => {
+                    const amount = prompt("Enter amount to freeze (USD):");
+                    if (!amount || isNaN(Number(amount))) return;
+                    const reason = prompt("Enter reason for freezing balance:");
+                    if (!reason) return;
+                    import("../api/admin.api").then((api) => {
+                      api.manualFreeze(user.id, Number(amount), reason).then(() => {
+                        alert("Balance frozen successfully");
+                      }).catch((err) => {
+                        alert(err.response?.data?.message ?? err.message ?? "Failed to freeze balance");
+                      });
+                    });
+                  }}
+                >
+                  Manually Freeze Balance
                 </Button>
               </div>
             </div>

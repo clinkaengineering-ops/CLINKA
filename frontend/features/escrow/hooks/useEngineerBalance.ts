@@ -12,6 +12,7 @@ const emptyBalance: EngineerBalanceSummary = {
   pendingBalance: 0,
   securedBalance: 0,
   awaitingClientPayment: 0,
+  heldByDispute: 0,
   transactions: [],
   walletHistory: [],
   withdrawalRequests: [],

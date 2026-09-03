@@ -14,7 +14,8 @@ import {
 } from "./manual-payment.service";
 import { getStoredUploadPath, createUploadMiddleware } from "../../config/upload";
 import { submitManualPaymentSchema } from "./payments.validation";
-import { manualSubmitRateLimiter } from "../../middlewares/rateLimit";
+import { adminRateLimit } from "../../middlewares/adminRateLimit";
+import { manualSubmitRateLimiter, t2AccountRateLimit, t2Limiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
 import { idempotency } from "../../middlewares/idempotency";
 
 // Dedicated upload middleware for payment proofs — 5MB limit, images + PDF
@@ -38,6 +39,7 @@ const router = Router();
 router.get(
   "/manual-settings",
   authenticate,
+  t4AccountRateLimit,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const settings = await getManualPaymentSettingsForClient(req.user!.userId);
@@ -55,6 +57,7 @@ router.post(
   authenticate,
   authorize("CLIENT"),
   manualSubmitRateLimiter,
+  t2AccountRateLimit,
   idempotency,
   proofUpload.single("proof"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -115,6 +118,7 @@ router.get(
   "/projects/:projectId/manual-submissions",
   authenticate,
   authorize("CLIENT"),
+  t4AccountRateLimit,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const projectId = Number(req.params.projectId);
@@ -127,7 +131,7 @@ router.get(
 );
 
 // ─── ADMIN: GET PENDING MANUAL PAYMENTS ───────────────────────────────────────
-router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), async (req, res, next) => {
+router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), adminRateLimit, async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -145,7 +149,7 @@ router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), async (re
 });
 
 // ─── ADMIN: GET SINGLE MANUAL PAYMENT DETAILS ─────────────────────────────────
-router.get("/admin/manual-payments/:submissionId", authenticate, authorize("ADMIN"), async (req, res, next) => {
+router.get("/admin/manual-payments/:submissionId", authenticate, authorize("ADMIN"), adminRateLimit, async (req, res, next) => {
   try {
     const id = parseInt(req.params.submissionId as string, 10);
     const result = await getAdminManualPaymentDetails(id);
@@ -161,6 +165,8 @@ router.post(
   "/admin/manual-payments/:submissionId/verify",
   authenticate,
   authorize("ADMIN"),
+  adminRateLimit,
+  ...t2Limiters,
   idempotency,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -180,6 +186,8 @@ router.post(
   "/admin/manual-payments/:submissionId/reject",
   authenticate,
   authorize("ADMIN"),
+  adminRateLimit,
+  ...t2Limiters,
   idempotency,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {

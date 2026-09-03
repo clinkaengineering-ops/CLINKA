@@ -12,6 +12,7 @@ import { isReviewableStatus } from "../utils/projectStatus";
 import { approveProjectWork } from "../api/project.api";
 import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { checkoutPath } from "@/features/escrow/utils/goToCheckout";
+import { ReportIssueModal } from "./ReportIssueModal";
 
 interface ProjectPaymentCardProps {
   project: Project;
@@ -23,6 +24,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
   const user = useAuthStore((s) => s.user);
   const [loading, setLoading] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showReportIssueModal, setShowReportIssueModal] = useState(false);
 
   const isClient = user?.role === "CLIENT";
   const isEngineer = user?.role === "ENGINEER";
@@ -120,17 +122,50 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
             </p>
           </div>
           {isClient && (
-            <Button
-              size="sm"
-              className="!bg-amber-500 hover:!bg-amber-600 !text-white"
-              onClick={handleApprove}
-              disabled={loading}
-            >
-              {t("pay.approveWork")}
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                size="sm"
+                className="!bg-amber-500 hover:!bg-amber-600 !text-white"
+                onClick={handleApprove}
+                disabled={loading}
+              >
+                {t("pay.approveWork")}
+              </Button>
+              {project.disputeWindowClosesAt && new Date() > new Date(project.disputeWindowClosesAt) ? (
+                <div className="text-center p-2 rounded bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30">
+                  <span className="text-sm text-rose-600 dark:text-rose-400 font-medium">{t("dispute.windowClosed")}</span>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setShowReportIssueModal(true)}
+                  disabled={loading}
+                >
+                  {t("dispute.reportIssue")}
+                </Button>
+              )}
+            </div>
           )}
           {isEngineer && <Badge color="amber">{t("pay.action.waitingClient")}</Badge>}
         </div>
+        <ReportIssueModal
+          open={showReportIssueModal}
+          onClose={() => setShowReportIssueModal(false)}
+          projectTitle={project.title}
+          loading={loading}
+          onSubmit={async (reason) => {
+            setLoading(true);
+            try {
+              const api = await import("../api/project.api");
+              await api.openDispute(project.id, reason);
+              setShowReportIssueModal(false);
+              onUpdated?.();
+            } finally {
+              setLoading(false);
+            }
+          }}
+        />
       </Card>
     );
   } else if (project.status === "REVISION_REQUESTED") {

@@ -272,14 +272,26 @@ export async function lookupUser(identifier: string) {
   if (!Number.isNaN(asId) && asId > 0) {
     const byId = await db.user.findUnique({
       where: { id: asId },
-      select: { id: true, name: true, email: true, role: true },
+      select: { 
+        id: true, 
+        name: true, 
+        email: true, 
+        role: true,
+        wallet: { select: { availableBalance: true, pendingBalance: true, heldByDispute: true } }
+      },
     });
     if (byId) return byId;
   }
 
   const byEmail = await db.user.findUnique({
     where: { email: trimmed.toLowerCase() },
-    select: { id: true, name: true, email: true, role: true },
+    select: { 
+      id: true, 
+      name: true, 
+      email: true, 
+      role: true,
+      wallet: { select: { availableBalance: true, pendingBalance: true, heldByDispute: true } }
+    },
   });
   if (!byEmail) throw new ApiError(404, "User not found");
   return byEmail;
@@ -1104,25 +1116,27 @@ export async function getEscrowOverview() {
 }
 
 export async function getActiveDisputes(limit = 10) {
-  const tickets = await db.supportTicket.findMany({
-    where: { status: "OPEN" },
-    orderBy: { createdAt: "desc" },
+  const disputes = await db.dispute.findMany({
+    where: { status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] } },
+    include: {
+      project: { select: { title: true } },
+      openedBy: { select: { name: true, role: true } },
+    },
+    orderBy: { openedAt: "desc" },
     take: limit,
   });
 
-  return tickets.map((ticket) => ({
-    id: ticket.id,
-    caseId: `TKT-${String(ticket.id).padStart(4, "0")}`,
-    parties: `${ticket.name} · ${ticket.email}`,
-    subject: ticket.subject,
-    amount: null as number | null,
-    status: "Open",
-    statusColor: "amber" as const,
-    ageHours: Math.max(
-      1,
-      Math.round((Date.now() - ticket.createdAt.getTime()) / (1000 * 60 * 60)),
-    ),
-    createdAt: ticket.createdAt,
+  return disputes.map((d) => ({
+    id: d.id,
+    projectId: d.projectId,
+    caseId: `DSP-${String(d.id).padStart(4, "0")}`,
+    parties: d.openedBy.name,
+    subject: d.project.title,
+    amount: null,
+    status: d.status,
+    statusColor: d.status === "ESCALATED_TO_ADMIN" ? "red" : (d.status === "AWAITING_ENGINEER_FIX" ? "blue" : "amber"),
+    ageHours: Math.max(1, Math.round((Date.now() - d.openedAt.getTime()) / (1000 * 60 * 60))),
+    createdAt: d.openedAt,
   }));
 }
 
@@ -1295,7 +1309,7 @@ export async function getSystemLogs(
       level: l.action.includes("reject") || l.action.includes("failed") ? "WARN" : "INFO",
       message: `[Audit] ${l.actorRole} ${l.actorId} performed ${l.action} on ${l.targetType} ${l.targetId}`,
       action: l.action,
-      actorId: l.actorId,
+      actorId: l.actorId ?? undefined,
       targetId: l.targetId,
     }),
   );

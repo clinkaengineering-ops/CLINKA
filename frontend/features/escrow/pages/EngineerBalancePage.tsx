@@ -278,7 +278,7 @@ export function EngineerBalancePage() {
         </Card>
       )}
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
         <StatCard
           label={t("bal.available")}
           value={loading ? "…" : formatMoney(balance.availableBalance)}
@@ -288,6 +288,11 @@ export function EngineerBalancePage() {
           label={t("bal.pendingBalance")}
           value={loading ? "…" : formatMoney(balance.pendingBalance)}
           icon={<IconClock width={20} height={20} className="text-purple-500" />}
+        />
+        <StatCard
+          label="Held by Dispute"
+          value={loading ? "…" : formatMoney(balance.heldByDispute || 0)}
+          icon={<IconShield width={20} height={20} className="text-rose-500" />}
         />
         <StatCard
           label={t("bal.secured")}

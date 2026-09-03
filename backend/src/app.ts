@@ -37,11 +37,20 @@ app.use(helmet());
 
 // Rate limiting (max 1000 requests per 15 mins per IP)
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
+  windowMs: 15 * 60 * 1000,
   max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: "Too many requests, please try again later." }
+  message: { success: false, message: "Too many requests, please try again later." },
+  handler: (req, res, _next, options) => {
+    const resetTime = (req as typeof req & { rateLimit?: { resetTime?: Date } }).rateLimit
+      ?.resetTime;
+    const retryAfter = resetTime
+      ? Math.max(1, Math.ceil((resetTime.getTime() - Date.now()) / 1000))
+      : Math.max(1, Math.ceil(options.windowMs / 1000));
+    res.setHeader("Retry-After", String(retryAfter));
+    res.status(options.statusCode).json(options.message);
+  },
 });
 app.use("/api", apiLimiter);
 

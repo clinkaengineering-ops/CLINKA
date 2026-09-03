@@ -30,36 +30,39 @@ import {
   rejectIfBanned,
 } from "../../middlewares/auth.middleware";
 import deliverableUpload from "../../middlewares/deliverableUpload.middleware";
+import { t2Limiters, t3Limiters, t4AccountRateLimit, t5PublicListingLimiter } from "../../middlewares/rateLimit";
 
 const router = Router();
 
-router.post("/", authenticate, createProjectController);
-router.get("/", optionalAuthenticate, getProjectsController);
-router.get("/my", authenticate, getMyProjectsController);
-router.get("/my/open", authenticate, authorize("CLIENT"), getMyOpenProjectsController);
-router.get("/invitations", authenticate, authorize("ENGINEER"), getMyInvitationsController);
-router.patch("/invitations/:id/respond", authenticate, authorize("ENGINEER"), respondInvitationController);
-router.patch("/invitations/:id/view", authenticate, authorize("ENGINEER"), markInvitationViewedController);
-router.patch("/invitations/:invitationId/cancel", authenticate, authorize("CLIENT"), cancelInvitationController);
+router.post("/", authenticate, ...t3Limiters, createProjectController);
+router.get("/", optionalAuthenticate, t5PublicListingLimiter, getProjectsController);
+router.get("/my", authenticate, t4AccountRateLimit, getMyProjectsController);
+router.get("/my/open", authenticate, authorize("CLIENT"), t4AccountRateLimit, getMyOpenProjectsController);
+router.get("/invitations", authenticate, authorize("ENGINEER"), t4AccountRateLimit, getMyInvitationsController);
+router.patch("/invitations/:id/respond", authenticate, authorize("ENGINEER"), ...t3Limiters, respondInvitationController);
+router.patch("/invitations/:id/view", authenticate, authorize("ENGINEER"), t4AccountRateLimit, markInvitationViewedController);
+router.patch("/invitations/:invitationId/cancel", authenticate, authorize("CLIENT"), ...t3Limiters, cancelInvitationController);
 router.get(
   "/assigned",
   authenticate,
   authorize("ENGINEER"),
   rejectIfBanned("ENGINEER"),
+  t4AccountRateLimit,
   getAssignedProjectsController,
 );
-router.get("/:id", optionalAuthenticate, getProjectByIdController);
-router.get("/:id/submissions", authenticate, getProjectSubmissionsController);
-router.get("/:id/invitations", authenticate, authorize("CLIENT"), getProjectInvitationsController);
-router.post("/:id/invite", authenticate, authorize("CLIENT"), inviteEngineerController);
-router.put("/:id", authenticate, updateProjectController);
-router.delete("/:id", authenticate, deleteProjectController);
+router.get("/:id", optionalAuthenticate, t5PublicListingLimiter, getProjectByIdController);
+router.get("/:id/submissions", authenticate, t4AccountRateLimit, getProjectSubmissionsController);
+router.get("/:id/invitations", authenticate, authorize("CLIENT"), t4AccountRateLimit, getProjectInvitationsController);
+router.post("/:id/invite", authenticate, authorize("CLIENT"), ...t3Limiters, inviteEngineerController);
+router.put("/:id", authenticate, ...t3Limiters, updateProjectController);
+router.delete("/:id", authenticate, ...t3Limiters, deleteProjectController);
 
 router.patch(
   "/:id/progress",
   authenticate,
   authorize("ENGINEER"),
   rejectIfBanned("ENGINEER"),
+  ...t3Limiters,
   updateProjectProgressController,
 );
 
@@ -68,6 +71,7 @@ router.post(
   authenticate,
   authorize("ENGINEER"),
   rejectIfBanned("ENGINEER"),
+  ...t3Limiters,
   deliverableUpload.array("files", 10),
   submitProjectWorkController,
 );
@@ -76,6 +80,7 @@ router.post(
   "/:id/request-revision",
   authenticate,
   authorize("CLIENT"),
+  ...t3Limiters,
   requestProjectRevisionController,
 );
 
@@ -83,6 +88,7 @@ router.post(
   "/:id/approve",
   authenticate,
   authorize("CLIENT"),
+  ...t2Limiters,
   approveProjectWorkController,
 );
 
@@ -91,6 +97,7 @@ router.patch(
   authenticate,
   authorize("ENGINEER"),
   rejectIfBanned("ENGINEER"),
+  ...t3Limiters,
   markProjectFinishedController,
 );
 

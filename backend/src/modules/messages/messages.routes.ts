@@ -4,6 +4,7 @@ import {
   rejectIfBanned,
 } from "../../middlewares/auth.middleware";
 import chatUpload from "../../middlewares/chatUpload.middleware";
+import { t3Limiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
 import {
   getMyConversationsController,
   getMessagesController,
@@ -18,17 +19,14 @@ const router = Router();
 router.use(authenticate, rejectIfBanned());
 
 // GET  /api/messages/conversations
-router.get("/conversations", getMyConversationsController);
-router.get("/unread-count", unreadMessagesCountController);
+router.get("/conversations", t4AccountRateLimit, getMyConversationsController);
+router.get("/unread-count", t4AccountRateLimit, unreadMessagesCountController);
 
-// GET  /api/messages/conversations/:id?page=1&limit=30
-router.get("/conversations/:id", getMessagesController);
+router.get("/conversations/:id", t4AccountRateLimit, getMessagesController);
 
-// GET  /api/messages/general/:userId
-router.get("/general/:userId", getGeneralConversationController);
+router.get("/general/:userId", t4AccountRateLimit, getGeneralConversationController);
 
-// POST /api/messages/conversations/:id  (JSON text or multipart file + optional caption)
-router.post("/conversations/:id", (req, res, next) => {
+router.post("/conversations/:id", ...t3Limiters, (req, res, next) => {
   chatUpload.single("file")(req, res, (err) => {
     if (err) return next(err);
     void sendMessageController(req, res, next);
@@ -36,6 +34,6 @@ router.post("/conversations/:id", (req, res, next) => {
 });
 
 // GET  /api/messages/by-project/:projectId
-router.get("/by-project/:projectId", getConversationByProjectController);
+router.get("/by-project/:projectId", t4AccountRateLimit, getConversationByProjectController);
 
 export default router;

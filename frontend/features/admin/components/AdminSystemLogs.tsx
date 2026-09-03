@@ -166,7 +166,8 @@ export function AdminSystemLogs() {
                     className={cn(
                       "hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors",
                       log.level === "ERROR" && "bg-rose-50/30 dark:bg-rose-900/5",
-                      log.level === "WARN" && "bg-amber-50/30 dark:bg-amber-900/5"
+                      log.level === "WARN" && "bg-amber-50/30 dark:bg-amber-900/5",
+                      log.action?.startsWith("disputes.") && "bg-violet-50/30 dark:bg-violet-900/10 border-l-2 border-violet-500"
                     )}
                   >
                     <td className="px-4 py-3 text-slate-500 font-mono text-xs">
@@ -179,7 +180,7 @@ export function AdminSystemLogs() {
                       {log.action || "-"}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                      {log.actorId || "-"}
+                      {log.actorId ? log.actorId : "System"}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                       {log.targetId || "-"}

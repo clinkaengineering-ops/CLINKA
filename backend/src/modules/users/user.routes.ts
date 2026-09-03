@@ -13,28 +13,29 @@ import {
 import { authenticate } from "../../middlewares/auth.middleware";
 import imageUpload from "../../middlewares/imageUpload.middleware";
 import avatarUpload from "../../middlewares/avatarUpload.middleware";
+import { t3Limiters, t4AccountRateLimit, t5PublicListingLimiter } from "../../middlewares/rateLimit";
 
 const router = Router();
 
 // Identity
-router.get("/me", authenticate, getMeController);
-router.put("/me", authenticate, updateMeController);
-router.post("/me/avatar", authenticate, avatarUpload.single("image"), uploadAvatarController);
+router.get("/me", authenticate, t4AccountRateLimit, getMeController);
+router.put("/me", authenticate, ...t3Limiters, updateMeController);
+router.post("/me/avatar", authenticate, ...t3Limiters, avatarUpload.single("image"), uploadAvatarController);
 router.post(
   "/me/cover",
   authenticate,
+  ...t3Limiters,
   imageUpload.single("image"),
   uploadCoverController,
 );
 
-// Engineer directory (public — no auth required to browse)
-router.get("/engineers", getEngineersController);
-router.get("/engineers/:id", getEngineerByIdController);
+router.get("/engineers", t5PublicListingLimiter, getEngineersController);
+router.get("/engineers/:id", t5PublicListingLimiter, getEngineerByIdController);
 
-// Portfolio (engineer only — must be authenticated)
 router.post(
   "/portfolio",
   authenticate,
+  ...t3Limiters,
   imageUpload.single("image"),
   addPortfolioItemController,
 );

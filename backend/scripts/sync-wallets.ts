@@ -15,7 +15,7 @@ async function main() {
   console.log(`Found ${releasedPayments.length} released payments.`);
 
   for (const payment of releasedPayments) {
-    const netAmount = payment.amountUsd - payment.commission;
+    const netAmount = payment.amountUsd.toNumber() - payment.commission.toNumber();
     
     await db.$transaction(async (tx) => {
       // Ensure wallet exists
@@ -32,7 +32,7 @@ async function main() {
       }
 
       // If this is an OLD payment, let's just make it fully AVAILABLE immediately
-      // because 14 days have likely passed or we want to honor old released funds immediately.
+      // because 7 days have likely passed or we want to honor old released funds immediately.
       // Or we can just set it to AVAILABLE.
       const now = new Date();
       const holdDate = walletHoldReleaseDate(payment.updatedAt);

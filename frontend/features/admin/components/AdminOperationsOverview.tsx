@@ -392,12 +392,13 @@ export function AdminOperationsOverview({
                   <th className="px-5 py-3">{t("ad.dCols.amount")}</th>
                   <th className="px-5 py-3">{t("ad.dCols.status")}</th>
                   <th className="px-5 py-3">{t("ad.dCols.age")}</th>
+                  <th className="px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {disputes.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
                       No open support tickets
                     </td>
                   </tr>
@@ -413,6 +414,38 @@ export function AdminOperationsOverview({
                         <Badge color={disputeBadgeColor(d.statusColor)}>{d.status}</Badge>
                       </td>
                       <td className="px-5 py-3 text-slate-500">{formatAge(d.ageHours)}</td>
+                      <td className="px-5 py-3 flex gap-2">
+                        {d.status === "OPEN" && (
+                          <Button size="sm" variant="secondary" onClick={() => {
+                            import("../api/admin.api").then(api => {
+                              api.escalateDisputeAdmin(d.projectId).then(() => window.location.reload());
+                            });
+                          }}>
+                            Escalate
+                          </Button>
+                        )}
+                        {(d.status === "ESCALATED_TO_ADMIN" || d.status === "OPEN") && (
+                          <>
+                            <Button size="sm" onClick={() => {
+                              const reason = prompt("Resolution note for Engineer Favor:");
+                              if (!reason) return;
+                              import("../api/admin.api").then(api => {
+                                api.resolveDisputeAdmin(d.projectId, "ENGINEER", reason).then(() => window.location.reload());
+                              });
+                            }}>Eng. Favor</Button>
+                            <Button size="sm" variant="danger" onClick={() => {
+                              const reason = prompt("Resolution note for Client Favor (Manual Refund required):");
+                              if (!reason) return;
+                              import("../api/admin.api").then(api => {
+                                api.resolveDisputeAdmin(d.projectId, "CLIENT", reason).then(() => {
+                                  alert("Dispute resolved in Client Favor. You must now manually execute a refund for this project payment via the Financial Control Center.");
+                                  window.location.reload();
+                                });
+                              });
+                            }}>Client Favor</Button>
+                          </>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}

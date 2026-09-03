@@ -57,6 +57,7 @@ const proofUpload = createUploadMiddleware("documents", {
 });
 
 import { adminRateLimit } from "../../middlewares/adminRateLimit";
+import { t2Limiters } from "../../middlewares/rateLimit";
 
 const router = Router();
 
@@ -90,7 +91,7 @@ router.get("/settings", getSettingsController);
 router.patch("/settings", updateSettingsController);
 
 router.get("/payments", getAllPaymentsController);
-router.patch("/payments/:paymentId/override", overridePaymentController);
+router.patch("/payments/:paymentId/override", ...t2Limiters, overridePaymentController);
 
 router.get("/analytics", getAnalyticsController);
 router.get("/escrow-overview", getEscrowOverviewController);
@@ -104,12 +105,12 @@ router.patch("/support-tickets/:ticketId", updateSupportTicketController);
 router.get("/withdrawals", getWithdrawalRequestsController);
 router.get("/withdrawals/stats", getPayoutStatsController);
 router.get("/withdrawals/:withdrawalId/audit", getWithdrawalAuditTrailController);
-router.patch("/withdrawals/:withdrawalId", updateWithdrawalRequestStatusController);
-router.post("/withdrawals/:withdrawalId/cancel", adminCancelWithdrawalController);
-router.post("/withdrawals/:withdrawalId/resolve", adminResolveWithdrawalController);
-router.post("/withdrawals/:withdrawalId/reveal-bank-details", adminRevealBankDetailsController);
-router.post("/withdrawals/:withdrawalId/reject", adminRejectWithdrawalController);
-router.post("/withdrawals/:withdrawalId/record-completion", proofUpload.single("proof"), adminRecordCompletionController);
-router.post("/payouts/reconcile", adminReconcilePayoutsController);
+router.patch("/withdrawals/:withdrawalId", ...t2Limiters, updateWithdrawalRequestStatusController);
+router.post("/withdrawals/:withdrawalId/cancel", ...t2Limiters, adminCancelWithdrawalController);
+router.post("/withdrawals/:withdrawalId/resolve", ...t2Limiters, adminResolveWithdrawalController);
+router.post("/withdrawals/:withdrawalId/reveal-bank-details", ...t2Limiters, adminRevealBankDetailsController);
+router.post("/withdrawals/:withdrawalId/reject", ...t2Limiters, adminRejectWithdrawalController);
+router.post("/withdrawals/:withdrawalId/record-completion", ...t2Limiters, proofUpload.single("proof"), adminRecordCompletionController);
+router.post("/payouts/reconcile", ...t2Limiters, adminReconcilePayoutsController);
 
 export default router;

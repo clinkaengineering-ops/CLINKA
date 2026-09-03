@@ -5,12 +5,13 @@ import {
   getServiceAreasHandler,
   getLanguagesHandler,
 } from "./taxonomy.controller";
+import { t5PublicListingLimiter } from "../../middlewares/rateLimit";
 
 const router = Router();
 
-router.get("/disciplines", getDisciplinesHandler);
-router.get("/skills", getSkillsHandler);
-router.get("/service-areas", getServiceAreasHandler);
-router.get("/languages", getLanguagesHandler);
+router.get("/disciplines", t5PublicListingLimiter, getDisciplinesHandler);
+router.get("/skills", t5PublicListingLimiter, getSkillsHandler);
+router.get("/service-areas", t5PublicListingLimiter, getServiceAreasHandler);
+router.get("/languages", t5PublicListingLimiter, getLanguagesHandler);
 
 export default router;

@@ -631,7 +631,7 @@
   "bal.title": "الرصيد",
   "bal.subtitle": "تتبع مدفوعات العملاء على مشاريعك.",
   "bal.available": "الرصيد المتاح",
-  "bal.availableHint": "أموال متاحة للسحب بعد فترة الانتظار 14 يومًا.",
+  "bal.availableHint": "أموال متاحة للسحب بعد 7 أيام من التسليم.",
   "bal.secured": "مؤمّن",
   "bal.securedHint": "دفع العميل — محفوظ بأمان حتى اكتمال المشروع.",
   "bal.awaitingClient": "بانتظار الدفع",
@@ -672,7 +672,7 @@
   "bal.how1": "يقبل العميل عرضك ويدفع عبر كلينكا.",
   "bal.how2": "تصلك رسالة وتبدأ العمل.",
   "bal.how3": "عند الانتهاء، قدّم عملك للمراجعة.",
-  "bal.how4": "يوافق العميل على التسليم — تنتقل الأموال للرصيد المعلّق ثم تصبح متاحة بعد 14 يومًا.",
+  "bal.how4": "تم تسليم العمل — تنتقل الأموال للرصيد المعلّق وتصبح متاحة بعد 7 أيام من التسليم.",
   "bal.empty": "لا مدفوعات بعد. اربح عرضًا وانتظر دفع العميل.",
   "bal.transactions": "سجل المدفوعات",
   "bal.wallet": "تفصيل المحفظة",
@@ -1249,5 +1249,12 @@
   "inv.status_expired": "منتهي",
   "inv.total": "دعوات",
   "inv.sentOn": "أُرسلت في",
-  "proj.status.awaitingPayment": "في انتظار الدفع"
+  "proj.status.awaitingPayment": "في انتظار الدفع",
+  "dispute.reportIssue": "الإبلاغ عن مشكلة",
+  "dispute.reportIssueModalTitle": "الإبلاغ عن مشكلة",
+  "dispute.reportIssueModalDesc": "صف المشكلة بوضوح. سيتم إيقاف فترة المراجعة مؤقتاً، وسيتم إخطار المهندس لمراجعتها وإصلاحها.",
+  "dispute.reasonPlaceholder": "قدم سبباً للمشكلة...",
+  "dispute.reasonRequired": "السبب مطلوب لفتح نزاع.",
+  "dispute.submit": "إرسال النزاع",
+  "dispute.windowClosed": "انتهت فترة المراجعة"
 }

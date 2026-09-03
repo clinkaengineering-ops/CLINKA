@@ -94,6 +94,15 @@ export const banUserAdmin = (userId: number, note?: string) =>
 export const unbanUserAdmin = (userId: number) =>
   unwrap(api.delete<ApiResponse<unknown>>(`/admin/bans/${userId}`));
 
+export const manualFreeze = (engineerId: number, amount: number, reason: string) =>
+  unwrap(api.post<ApiResponse<any>>("/disputes/manual-freeze", { engineerId, amount, reason }));
+
+export const resolveDisputeAdmin = (projectId: number, resolution: "ENGINEER" | "CLIENT", reason: string) =>
+  unwrap(api.post<ApiResponse<any>>("/disputes/resolve", { projectId, resolution, reason }));
+
+export const escalateDisputeAdmin = (projectId: number) =>
+  unwrap(api.post<ApiResponse<any>>("/disputes/escalate", { projectId }));
+
 export interface AdminConversationItem {
   id: number;
   projectId: number;
@@ -271,6 +280,7 @@ export interface EscrowOverview {
 
 export interface ActiveDispute {
   id: number;
+  projectId: number;
   caseId: string;
   parties: string;
   subject: string;
@@ -300,10 +310,13 @@ export const fetchEscrowOverview = (): Promise<EscrowOverview> =>
     return d;
   });
 
-export const fetchActiveDisputes = (limit = 6): Promise<ActiveDispute[]> =>
+export const fetchActiveDisputes = (limit = 20): Promise<ActiveDispute[]> =>
   unwrap(
     api.get<ApiResponse<ActiveDispute[]>>("/admin/disputes", { params: { limit } }),
   ).then((d) => d ?? []);
+
+export const resolveDispute = (projectId: number, resolution: "ENGINEER" | "CLIENT", reason: string) =>
+  unwrap(api.post<ApiResponse<any>>("/disputes/resolve", { projectId, resolution, reason }));
 
 export const fetchSystemHealth = (): Promise<SystemHealth> =>
   unwrap(api.get<ApiResponse<SystemHealth>>("/admin/system-health")).then((d) => {
@@ -318,6 +331,7 @@ export interface SystemLog {
   message: string;
   action?: string;
   actorId?: number;
+  actorRole?: string;
   targetId?: string;
 }
 

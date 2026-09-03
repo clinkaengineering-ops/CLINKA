@@ -82,7 +82,7 @@ export async function submitProjectWork(
 
   const project = await db.project.findUnique({
     where: { id: projectId },
-    include: { payment: true },
+    include: { payment: true, disputes: { where: { status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] } } } },
   });
   if (!project) throw new ApiError(404, "Project not found");
 
@@ -93,7 +93,10 @@ export async function submitProjectWork(
     );
   }
 
-  if (!project.payment || project.payment.status !== "FUNDED") {
+  const isFunded = project.payment?.status === "FUNDED";
+  const isHeldByDispute = project.payment?.status === "RELEASED" && project.disputes.length > 0;
+
+  if (!project.payment || (!isFunded && !isHeldByDispute)) {
     await createNotification(
       project.clientId,
       "FUND_REMINDER",
@@ -119,9 +122,39 @@ export async function submitProjectWork(
   assertProjectTransition(project.status, "SUBMITTED_FOR_REVIEW");
 
   const result = await db.$transaction(async (tx) => {
+    const now = new Date();
+    
+    // Set deliveredAt and initial dispute window if this is the first submission
+    let deliveredAt = project.deliveredAt;
+    let disputeWindowClosesAt = project.disputeWindowClosesAt;
+    if (!deliveredAt) {
+      deliveredAt = now;
+      disputeWindowClosesAt = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000);
+    }
+
+    // If there is an active dispute awaiting engineer fix, resume the timer
+    const activeDispute = project.disputes[0];
+    let disputePausedAt = project.disputePausedAt;
+    
+    if (activeDispute && activeDispute.status === "AWAITING_ENGINEER_FIX" && disputePausedAt && disputeWindowClosesAt) {
+      const pausedMs = now.getTime() - disputePausedAt.getTime();
+      disputeWindowClosesAt = new Date(disputeWindowClosesAt.getTime() + pausedMs);
+      disputePausedAt = null;
+      
+      await tx.dispute.update({
+        where: { id: activeDispute.id },
+        data: { status: "OPEN" },
+      });
+    }
+
     const updatedProject = await tx.project.update({
       where: { id: projectId },
-      data: { status: "SUBMITTED_FOR_REVIEW" },
+      data: { 
+        status: "SUBMITTED_FOR_REVIEW",
+        deliveredAt,
+        disputeWindowClosesAt,
+        disputePausedAt
+      },
     });
 
     const submission = await tx.projectSubmission.create({
@@ -175,8 +208,8 @@ export async function submitProjectWork(
     project.clientId,
     "WORK_SUBMITTED",
     "Work ready for review",
-    `The engineer submitted deliverables for "${project.title}". Review and approve or request revisions.`,
-    `/messages?project=${projectId}`,
+    `The engineer submitted deliverables for "${project.title}". The review window has started/resumed.`,
+    `/client/projects/${projectId}`,
   );
 
   return result;
@@ -296,20 +329,38 @@ export async function approveProjectWork(clientId: number, projectId: number) {
       },
     ]);
 
-    // Credit engineer wallet with pending balance (14-day hold)
+    // Credit engineer wallet with pending balance (7-day hold from delivery)
     const wallet = await ensureWallet(tx, engineerProfile.userId);
     await tx.wallet.update({
       where: { id: wallet.id },
       data: { pendingBalance: { increment: netAmount } },
     });
+    
+    // Resolve any active disputes in favor of engineer automatically if client approves
+    const activeDispute = await tx.dispute.findFirst({
+      where: { projectId, status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] } }
+    });
+    
+    if (activeDispute) {
+      await tx.dispute.update({
+        where: { id: activeDispute.id },
+        data: { 
+          status: "RESOLVED_ENGINEER", 
+          resolvedAt: new Date(), 
+          resolutionNote: "Client explicitly approved the work."
+        }
+      });
+      // Moving funds is not needed because they are just moving to the wallet now
+    }
+
     await tx.walletTransaction.create({
       data: {
         walletId: wallet.id,
         amount: netAmount,
         type: "RELEASED",
         status: "PENDING",
-        description: `Payment for "${projectTitle}". Available after 14-day hold.`,
-        availableAt: walletHoldReleaseDate(),
+        description: `Payment for "${projectTitle}". Available 7 days after delivery.`,
+        availableAt: walletHoldReleaseDate(project.deliveredAt ?? new Date()),
         relatedPaymentId: project.payment!.id,
       },
     });

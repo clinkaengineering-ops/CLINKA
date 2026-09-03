@@ -1,6 +1,6 @@
 import db from "../config/db";
 
-const HOLD_DAYS = 14;
+const HOLD_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 type TxLike = any;

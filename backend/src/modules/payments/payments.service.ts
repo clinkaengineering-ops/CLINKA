@@ -929,6 +929,7 @@ export async function getEngineerBalance(engineerUserId: number) {
     spendableBalance,
     heldInWithdrawals: heldAmount,
     pendingBalance: wallet.pendingBalance,
+    heldByDispute: wallet.heldByDispute || 0,
     securedBalance,
     awaitingClientPayment,
     transactions,
@@ -1043,6 +1044,26 @@ export async function createWithdrawalRequest(
   input: any,
   idempotencyKey: string,
 ) {
+  const db = (await import("../../config/db")).default;
+  const openDisputesCount = await db.dispute.count({
+    where: {
+      project: {
+        bids: {
+          some: {
+            status: "ACCEPTED",
+            engineer: { userId: engineerUserId }
+          }
+        }
+      },
+      status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] }
+    }
+  });
+
+  if (openDisputesCount > 0) {
+    const ApiError = (await import("../../utils/ApiError")).default;
+    throw new ApiError(403, "Cannot withdraw funds while you have an active dispute on any project.");
+  }
+
   const { logSystemEvent } = await import("../../utils/auditLogger");
   await logSystemEvent({
     actorId: engineerUserId,

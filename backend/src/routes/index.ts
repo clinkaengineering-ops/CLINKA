@@ -13,6 +13,7 @@ import adminFinanceRouter from "../modules/admin/admin.finance.routes";
 import publicRouter from "../modules/public/public.routes";
 import notificationsRouter from "../modules/notifications/notifications.routes";
 import taxonomyRouter from "../modules/taxonomy/taxonomy.routes";
+import disputesRouter from "../modules/disputes/disputes.routes";
 
 export default function registerRoutes(app: Application) {
   app.use("/api/public", publicRouter);
@@ -29,6 +30,7 @@ export default function registerRoutes(app: Application) {
   app.use("/api/projects", projectRouter);
   app.use("/api/projects", bidRouter);
   app.use("/api/taxonomy", taxonomyRouter);
+  app.use("/api/disputes", disputesRouter);
 
   // Debug endpoints
   app.get("/api/debug/email", async (req, res) => {

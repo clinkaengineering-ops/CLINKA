@@ -60,6 +60,9 @@ export interface Project {
   progressUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  disputeWindowClosesAt?: string | null;
+  disputePausedAt?: string | null;
+  disputes?: { id: number; status: string; reason: string }[];
   client?: ProjectClient;
   bids?: ProjectBid[];
   review?: ProjectReview | null;
@@ -187,6 +190,9 @@ export async function updateProjectProgress(
 ): Promise<void> {
   await api.patch(`/projects/${projectId}/progress`, { note });
 }
+
+export const openDispute = (projectId: number, reason: string) =>
+  unwrap(api.post<ApiResponse<any>>(`/disputes/open`, { projectId, reason }));
 
 export async function fetchProjectSubmissions(
   projectId: number,
