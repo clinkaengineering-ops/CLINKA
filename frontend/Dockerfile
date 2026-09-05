@@ -1,5 +1,5 @@
 # ---- Stage 1: Build ----
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app/frontend
 
@@ -12,7 +12,7 @@ RUN npm install
 RUN npm run build
 
 # ---- Stage 2: Production ----
-FROM node:20-slim
+FROM node:22-slim
 
 WORKDIR /app/frontend
 ENV NODE_ENV=production
