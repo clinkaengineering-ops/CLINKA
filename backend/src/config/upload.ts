@@ -55,12 +55,17 @@ export function getUploadRoot(): string {
   return path.resolve(process.cwd(), "uploads");
 }
 
+/** Origin only — never include `/uploads`, or public URLs double that segment. */
+export function normalizeUploadOrigin(value: string): string {
+  return value.replace(/\/+$/, "").replace(/\/uploads$/i, "");
+}
+
 export function getUploadBaseUrl(): string {
   const configured = process.env.UPLOAD_BASE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
+  if (configured) return normalizeUploadOrigin(configured);
 
   const apiUrl = process.env.API_URL?.trim();
-  if (apiUrl) return apiUrl.replace(/\/$/, "");
+  if (apiUrl) return normalizeUploadOrigin(apiUrl);
 
   return "";
 }

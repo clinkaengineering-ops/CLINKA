@@ -60,9 +60,15 @@ export const engineerRegisterStep2Schema = clientRegisterFormSchema.extend({
 
 export const engineerRegisterStep3Schema = engineerRegisterStep2Schema;
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_REGISTER_TOTAL_BYTES = 100 * 1024 * 1024;
+const FILE_TOO_LARGE = "File must be 10 MB or smaller";
+const TOTAL_UPLOAD_TOO_LARGE =
+  "These files together are too large. Please use smaller images and try again.";
+
 const uploadFileSchema = z
   .custom<File>((v) => v instanceof File, "Upload a file")
-  .refine((f) => f.size <= 10 * 1024 * 1024, "File must be 10 MB or smaller")
+  .refine((f) => f.size <= MAX_FILE_BYTES, FILE_TOO_LARGE)
   .refine(
     (f) =>
       ["image/jpeg", "image/png", "image/jpg", "application/pdf"].includes(
@@ -73,41 +79,66 @@ const uploadFileSchema = z
 
 const portfolioImageSchema = z
   .custom<File>((v) => v instanceof File, "Upload a portfolio image")
-  .refine((f) => f.size <= 10 * 1024 * 1024, "File must be 10 MB or smaller")
+  .refine((f) => f.size <= MAX_FILE_BYTES, FILE_TOO_LARGE)
   .refine(
     (f) => ["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(f.type),
     "Image must be JPG, PNG, or WEBP",
   );
 
-export const engineerRegisterStep4Schema = z.object({
-  documentType: documentTypeField,
-  file: uploadFileSchema,
-  portfolioFiles: z
-    .array(portfolioImageSchema)
-    .min(3, "Upload at least 3 portfolio work samples")
-    .max(10, "Upload at most 10 portfolio images"),
-});
+function withRegisterUploadBudget<T extends z.ZodType>(schema: T) {
+  return schema.superRefine((value, ctx) => {
+    if (!value || typeof value !== "object") return;
+    const payload = value as { file?: File; portfolioFiles?: File[] };
+    const files = [
+      ...(payload.file instanceof File ? [payload.file] : []),
+      ...(Array.isArray(payload.portfolioFiles) ? payload.portfolioFiles : []),
+    ];
+    const total = files.reduce((sum, file) => sum + file.size, 0);
+    if (total > MAX_REGISTER_TOTAL_BYTES) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["portfolioFiles"],
+        message: TOTAL_UPLOAD_TOO_LARGE,
+      });
+    }
+  });
+}
 
-export const engineerResumePortfolioSchema = z.object({
-  email: emailField,
-  password: loginPasswordField,
-  portfolioFiles: z
-    .array(portfolioImageSchema)
-    .min(3, "Upload at least 3 portfolio work samples")
-    .max(10, "Upload at most 10 portfolio images"),
-});
+export const engineerRegisterStep4Schema = withRegisterUploadBudget(
+  z.object({
+    documentType: documentTypeField,
+    file: uploadFileSchema,
+    portfolioFiles: z
+      .array(portfolioImageSchema)
+      .min(3, "Upload at least 3 portfolio work samples")
+      .max(10, "Upload at most 10 portfolio images"),
+  }),
+);
 
-export const joinEngineerFormSchema = z.object({
-  specialty: engineerSpecialtyField,
-  nationality: nationalityField,
-  bio: optionalBioField,
-  documentType: documentTypeField,
-  file: uploadFileSchema,
-  portfolioFiles: z
-    .array(portfolioImageSchema)
-    .min(3, "Upload at least 3 portfolio work samples")
-    .max(10, "Upload at most 10 portfolio images"),
-});
+export const engineerResumePortfolioSchema = withRegisterUploadBudget(
+  z.object({
+    email: emailField,
+    password: loginPasswordField,
+    portfolioFiles: z
+      .array(portfolioImageSchema)
+      .min(3, "Upload at least 3 portfolio work samples")
+      .max(10, "Upload at most 10 portfolio images"),
+  }),
+);
+
+export const joinEngineerFormSchema = withRegisterUploadBudget(
+  z.object({
+    specialty: engineerSpecialtyField,
+    nationality: nationalityField,
+    bio: optionalBioField,
+    documentType: documentTypeField,
+    file: uploadFileSchema,
+    portfolioFiles: z
+      .array(portfolioImageSchema)
+      .min(3, "Upload at least 3 portfolio work samples")
+      .max(10, "Upload at most 10 portfolio images"),
+  }),
+);
 
 export const forgotPasswordFormSchema = z.object({
   email: emailField,

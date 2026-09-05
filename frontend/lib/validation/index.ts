@@ -65,7 +65,7 @@ export function parseApiValidation(err: unknown): {
   const status = e.response.status;
   if (status === 413) {
     return {
-      message: "File is too large. Maximum size is 10 MB.",
+      message: "This upload is too large. Please use smaller files and try again.",
       errors: {},
     };
   }

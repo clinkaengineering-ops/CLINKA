@@ -17,6 +17,7 @@ const MEDIA_FIELD_NAMES = new Set([
   "attachmentUrl",
   "receiptUrl",
   "fileUrl",
+  "proofUrl",
   "collegeIdUrl",
   "certificateUrl",
   "syndicateCardUrl",

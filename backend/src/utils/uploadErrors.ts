@@ -9,7 +9,7 @@ export function resolveUploadError(err: unknown): ApiError | null {
   if (err instanceof MulterError) {
     switch (err.code) {
       case "LIMIT_FILE_SIZE":
-        return new ApiError(400, "File is too large. Maximum size is 10 MB.");
+        return new ApiError(400, "File is too large. Please use a smaller file.");
       case "LIMIT_UNEXPECTED_FILE":
         return new ApiError(400, "Invalid upload. Please use the attachment button.");
       default:
@@ -40,7 +40,7 @@ export function resolveUploadError(err: unknown): ApiError | null {
     lower.includes("too large") ||
     lower.includes("max file size")
   ) {
-    return new ApiError(400, "File is too large. Maximum size is 10 MB.");
+    return new ApiError(400, "File is too large. Please use a smaller file.");
   }
 
   if (

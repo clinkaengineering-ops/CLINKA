@@ -1,5 +1,6 @@
 // next.config.ts
 import type { NextConfig } from "next";
+import { collectUploadImagePatterns } from "./lib/imageRemotePatterns";
 
 const backendOrigin = (
   process.env.BACKEND_URL ??
@@ -7,28 +8,24 @@ const backendOrigin = (
   "http://127.0.0.1:5000"
 ).replace(/\/$/, "");
 
-function backendHostname(): string | undefined {
-  try {
-    return new URL(backendOrigin).hostname;
-  } catch {
-    return undefined;
-  }
-}
-
-const uploadHost = backendHostname();
+const uploadPatterns = collectUploadImagePatterns({
+  backendOrigin,
+  nextPublicBackendUrl: process.env.NEXT_PUBLIC_BACKEND_URL,
+  nextPublicApiUrl: process.env.NEXT_PUBLIC_API_URL,
+  nextPublicUploadBaseUrl: process.env.NEXT_PUBLIC_UPLOAD_BASE_URL,
+});
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Dev/proxy buffers the request body (default 10MB). Engineer register can be
+  // 1 document + 10 portfolio images; deliverables allow 10 × 25MB.
+  experimental: {
+    proxyClientMaxBodySize: "256mb",
+  },
   images: {
     remotePatterns: [
-      ...(uploadHost
-        ? [
-            {
-              protocol: backendOrigin.startsWith("https") ? "https" : "http",
-              hostname: uploadHost,
-            } as const,
-          ]
-        : []),
+      ...uploadPatterns,
+      // Legacy avatars/covers still stored as Cloudinary URLs in the database
       {
         protocol: "https",
         hostname: "res.cloudinary.com",

@@ -18,6 +18,13 @@ const uploadDir = getUploadRoot();
 
 app.use("/uploads", express.static(uploadDir, {
   setHeaders: (res, filePath) => {
+    const origin = res.req.headers.origin;
+    if (origin && isAllowedOrigin(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+
     const normalized = filePath.replace(/\\/g, "/");
     if (normalized.includes("/documents/")) {
       res.setHeader("Cache-Control", "private, no-store");

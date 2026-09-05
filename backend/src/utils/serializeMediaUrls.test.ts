@@ -62,9 +62,21 @@ describe("serializeMediaUrls", () => {
     const result = serializeMediaUrls({
       url: "https://paymob.example/webhook",
       fileUrl: "/uploads/projects/file.pdf",
+      proofUrl: "/uploads/documents/receipt.png",
     });
 
     assert.equal(result.url, "https://paymob.example/webhook");
     assert.equal(result.fileUrl, "https://cdn.example.com/uploads/projects/file.pdf");
+    assert.equal(result.proofUrl, "https://cdn.example.com/uploads/documents/receipt.png");
+  });
+
+  it("rewrites nested proofUrl used by payment review payloads", () => {
+    const result = serializeMediaUrls({
+      payment: { proofUrl: "/uploads/documents/receipt.png" },
+    });
+    assert.equal(
+      result.payment.proofUrl,
+      "https://cdn.example.com/uploads/documents/receipt.png",
+    );
   });
 });

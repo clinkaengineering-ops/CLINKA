@@ -1,3 +1,5 @@
+import { normalizeUploadOrigin } from "./upload";
+
 const REQUIRED_IN_PRODUCTION = [
   "DATABASE_URL",
   "JWT_SECRET",
@@ -15,13 +17,15 @@ const REQUIRED_IN_PRODUCTION = [
   "UPLOAD_DIR",
 ] as const;
 
-function applyProductionUploadDefaults(): void {
+export function applyProductionUploadDefaults(): void {
   if (!process.env.UPLOAD_DIR?.trim()) {
     process.env.UPLOAD_DIR = "/app/uploads";
   }
 
   if (!process.env.UPLOAD_BASE_URL?.trim() && process.env.API_URL?.trim()) {
-    process.env.UPLOAD_BASE_URL = process.env.API_URL.replace(/\/$/, "");
+    process.env.UPLOAD_BASE_URL = normalizeUploadOrigin(process.env.API_URL);
+  } else if (process.env.UPLOAD_BASE_URL?.trim()) {
+    process.env.UPLOAD_BASE_URL = normalizeUploadOrigin(process.env.UPLOAD_BASE_URL);
   }
 }
 

@@ -5,6 +5,7 @@ import { authApi } from "../api/auth.api";
 import { getMe } from "@/features/engineers/api/engineer.api";
 import { parseApiValidation } from "@/lib/validation";
 import useAuthStore from "@/store/authStore";
+import { resizeImageBeforeUpload } from "@/utils/resizeImageBeforeUpload";
 
 function redirectToCheckEmail(
   router: ReturnType<typeof useRouter>,
@@ -67,9 +68,9 @@ export function useRegister() {
       formData.append("documentType", data.documentType);
       if (data.bio) formData.append("bio", data.bio);
       if (data.nationality) formData.append("nationality", data.nationality);
-      formData.append("document", data.file);
+      formData.append("document", await resizeImageBeforeUpload(data.file));
       for (const file of data.portfolioFiles) {
-        formData.append("portfolio", file);
+        formData.append("portfolio", await resizeImageBeforeUpload(file));
       }
       await authApi.registerEngineer(formData);
       redirectToCheckEmail(router, data.email);
@@ -92,7 +93,7 @@ export function useRegister() {
       formData.append("email", data.email);
       formData.append("password", data.password);
       for (const file of data.portfolioFiles) {
-        formData.append("portfolio", file);
+        formData.append("portfolio", await resizeImageBeforeUpload(file));
       }
       await authApi.resumeEngineerRegistration(formData);
       redirectToCheckEmail(router, data.email);
@@ -119,9 +120,9 @@ export function useRegister() {
       formData.append("nationality", data.nationality);
       formData.append("documentType", data.documentType);
       if (data.bio) formData.append("bio", data.bio);
-      formData.append("document", data.file);
+      formData.append("document", await resizeImageBeforeUpload(data.file));
       for (const file of data.portfolioFiles) {
-        formData.append("portfolio", file);
+        formData.append("portfolio", await resizeImageBeforeUpload(file));
       }
       await authApi.completeGoogleEngineer(formData);
       await finishGoogleRegistration(router, setUser);

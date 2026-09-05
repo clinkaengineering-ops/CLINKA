@@ -10,6 +10,7 @@ import {
   getUploadBaseUrl,
   isAllowedUpload,
   normalizeStoredUploadPath,
+  normalizeUploadOrigin,
   resolvePublicUploadUrl,
   resolveStoredExtension,
   storedPathToAbsolute,
@@ -89,6 +90,16 @@ describe("upload config", () => {
 
   it("derives upload base URL from API_URL without duplicating /uploads", () => {
     process.env.API_URL = "https://api.example.com/";
+    assert.equal(getUploadBaseUrl(), "https://api.example.com");
+    assert.equal(
+      resolvePublicUploadUrl("/uploads/avatars/user.png"),
+      "https://api.example.com/uploads/avatars/user.png",
+    );
+  });
+
+  it("strips a trailing /uploads from UPLOAD_BASE_URL to avoid doubled paths", () => {
+    process.env.UPLOAD_BASE_URL = "https://api.example.com/uploads/";
+    assert.equal(normalizeUploadOrigin(process.env.UPLOAD_BASE_URL), "https://api.example.com");
     assert.equal(getUploadBaseUrl(), "https://api.example.com");
     assert.equal(
       resolvePublicUploadUrl("/uploads/avatars/user.png"),
