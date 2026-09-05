@@ -33,8 +33,16 @@ function resolveProofUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path;
   if (/^data:/i.test(path)) return path;
+  
   // Relative server path — prepend API origin
-  const base = resolveBackendOrigin();
+  let base = resolveBackendOrigin();
+  
+  // In production, if base is empty (e.g. NEXT_PUBLIC_API_URL="/api"), 
+  // we must force the absolute API domain because Next.js rewrites are disabled.
+  if (!base && process.env.NODE_ENV === "production") {
+    base = "https://api.clinkaeng.com";
+  }
+  
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 

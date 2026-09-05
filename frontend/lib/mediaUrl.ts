@@ -5,7 +5,11 @@ export function resolveMediaUrl(url: string | null | undefined): string | undefi
   if (!url) return undefined;
   if (/^https?:\/\//i.test(url)) return url;
   if (url.startsWith("/uploads/")) {
-    return `${resolveBackendOrigin()}${url}`;
+    let base = resolveBackendOrigin();
+    if (!base && process.env.NODE_ENV === "production") {
+      base = "https://api.clinkaeng.com";
+    }
+    return `${base}${url}`;
   }
   return url;
 }
