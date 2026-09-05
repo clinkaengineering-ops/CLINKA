@@ -347,6 +347,7 @@ export function ManualPaymentModal({
               }}
               onClose={onClose}
               processingNotice={settings?.processingNotice}
+              t={t}
             />
           ) : null}
         </div>
@@ -513,6 +514,7 @@ function StepSubmitProof({
   onBack,
   onClose,
   processingNotice,
+  t,
 }: {
   method: PaymentMethod;
   selectedBank: ManualBankAccount | null;
@@ -534,6 +536,7 @@ function StepSubmitProof({
   onBack: () => void;
   onClose: () => void;
   processingNotice?: string | null;
+  t: (k: string) => string;
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
@@ -545,6 +548,21 @@ function StepSubmitProof({
         <h4 className="text-base font-bold text-slate-900 dark:text-white">
           {METHOD_ICONS[method]} {METHOD_LABELS[method]}
         </h4>
+      </div>
+
+      {/* ─── Currency Conversion Notice ─────────────────────────────── */}
+      <div className="rounded-xl border-2 border-amber-400 dark:border-amber-500 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl shrink-0 mt-0.5" aria-hidden="true">⚠️</span>
+          <div className="space-y-1.5">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300 leading-snug">
+              {t("manualPay.currencyNotice.title")}
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+              {t("manualPay.currencyNotice.body")}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Destination details card */}

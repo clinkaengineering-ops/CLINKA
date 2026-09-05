@@ -1193,6 +1193,8 @@
   "checkout.return.tryAgain": "Try payment again",
   "checkout.return.goToProject": "Go to project",
   "checkout.manualPaymentDesc": "Your project requires a manual payment. Please follow the instructions to secure your escrow.",
+  "manualPay.currencyNotice.title": "⚠️ Important — Please Read Before Sending",
+  "manualPay.currencyNotice.body": "The amount shown above is in US Dollars (USD). If your bank or wallet requires you to send in a different currency (e.g. Egyptian Pounds, Saudi Riyals, or any other local currency), you must first convert the exact USD amount to your local currency using the current exchange rate — then send that converted amount. Please be precise; sending the wrong amount or currency may delay your payment confirmation or cause it to be rejected.",
   "st.uploadPhoto": "Upload Photo",
   "auth.passReq.min": "At least 8 characters",
   "auth.passReq.upper": "One uppercase letter",
