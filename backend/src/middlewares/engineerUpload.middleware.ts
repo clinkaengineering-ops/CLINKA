@@ -14,13 +14,10 @@
  * routing each to the correct storage directory and mime filter.
  */
 
-import crypto from "crypto";
 import multer from "multer";
-import {
-  ensureCategoryDir,
-  resolveStoredExtension,
-  type UploadCategory,
-} from "../config/upload";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "../config/cloudinary";
+import { UploadCategory } from "../config/upload";
 
 // ── Per-field config ──────────────────────────────────────────────────────────
 
@@ -45,16 +42,17 @@ const FIELD_CONFIG: Record<
 
 // ── Storage: routes each field to its own directory ───────────────────────────
 
-const storage = multer.diskStorage({
-  destination: (_req, file, cb) => {
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (_req, file) => {
     const config = FIELD_CONFIG[file.fieldname];
-    // Fallback to "documents" if an unknown field slips through
     const category = config?.category ?? "documents";
-    cb(null, ensureCategoryDir(category));
-  },
-  filename: (_req, file, cb) => {
-    const ext = resolveStoredExtension(file.mimetype, file.originalname);
-    cb(null, `${crypto.randomUUID()}${ext}`);
+    const folder = category === "documents" ? "engineer-docs" : "portfolio";
+    
+    return {
+      folder,
+      resource_type: "auto",
+    };
   },
 });
 

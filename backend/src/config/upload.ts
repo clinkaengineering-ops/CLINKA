@@ -2,6 +2,8 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import multer from "multer";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "./cloudinary";
 
 export const UPLOAD_CATEGORIES = [
   "images",
@@ -129,15 +131,13 @@ export function isAllowedUpload(
   return true;
 }
 
-export function createLocalUpload(category: UploadCategory) {
-  return multer.diskStorage({
-    destination: (_req, _file, cb) => {
-      cb(null, ensureCategoryDir(category));
-    },
-    filename: (_req, file, cb) => {
-      const ext = resolveStoredExtension(file.mimetype, file.originalname);
-      cb(null, `${crypto.randomUUID()}${ext}`);
-    },
+export function createCloudinaryUpload(category: UploadCategory) {
+  return new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: category,
+      resource_type: "auto",
+    } as any,
   });
 }
 
@@ -207,27 +207,37 @@ export function resolvePublicUploadUrl(
   return base ? `${base}${relative}` : relative;
 }
 
-export function deleteUploadFile(storedPath: string | null | undefined): void {
-  if (!storedPath || /^https?:\/\//i.test(storedPath)) return;
-
-  const absolute = storedPathToAbsolute(storedPath);
-  if (!absolute) return;
+export async function deleteUploadFile(storedPath: string | null | undefined): Promise<void> {
+  if (!storedPath) return;
 
   try {
-    if (fs.existsSync(absolute)) {
+    // If it's a Cloudinary URL, extract the public_id and delete it
+    if (storedPath.includes("cloudinary.com")) {
+      const parts = storedPath.split("/");
+      const filenameWithExt = parts.pop();
+      const folder = parts.pop();
+      if (filenameWithExt && folder) {
+        const filename = filenameWithExt.split(".")[0];
+        const publicId = `${folder}/${filename}`;
+        await cloudinary.uploader.destroy(publicId);
+      }
+      return;
+    }
+
+    // Fallback for old local files (if they exist)
+    const absolute = storedPathToAbsolute(storedPath);
+    if (absolute && fs.existsSync(absolute)) {
       fs.unlinkSync(absolute);
     }
-  } catch {
-    // Missing or locked files should not block the request.
+  } catch (error) {
+    console.error("Failed to delete upload file:", error);
   }
 }
 
-export function deleteUploadFiles(
+export async function deleteUploadFiles(
   storedPaths: Array<string | null | undefined>,
-): void {
-  for (const storedPath of storedPaths) {
-    deleteUploadFile(storedPath);
-  }
+): Promise<void> {
+  await Promise.all(storedPaths.map(p => deleteUploadFile(p)));
 }
 
 export interface UploadMiddlewareOptions {
@@ -241,7 +251,7 @@ export function createUploadMiddleware(
   options: UploadMiddlewareOptions,
 ) {
   return multer({
-    storage: createLocalUpload(category),
+    storage: createCloudinaryUpload(category),
     limits: {
       fileSize: options.maxFileSize,
       ...(options.maxFiles !== undefined ? { files: options.maxFiles } : {}),
