@@ -142,7 +142,7 @@ router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), adminRate
     const country = (req.query.country as string) || undefined;
 
     const result = await listAdminManualPayments(page, limit, status, method, search, currency, country);
-    res.json(result);
+    res.status(200).json(ApiResponse(200, "Manual payments fetched", result));
   } catch (err) {
     next(err);
   }
@@ -153,7 +153,7 @@ router.get("/admin/manual-payments/:submissionId", authenticate, authorize("ADMI
   try {
     const id = parseInt(req.params.submissionId as string, 10);
     const result = await getAdminManualPaymentDetails(id);
-    res.json(result);
+    res.status(200).json(ApiResponse(200, "Manual payment details fetched", result));
   } catch (err) {
     next(err);
   }

@@ -59,15 +59,15 @@ export async function fetchAdminManualPayments(
   currency?: string,
   country?: string,
 ) {
-  const { data } = await api.get("/payments/admin/manual-payments", {
+  const { data } = await api.get<ApiResponse<any>>("/payments/admin/manual-payments", {
     params: { page, limit, status, method, search, currency, country }
   });
-  return data;
+  return data.data;
 }
 
 export async function fetchAdminManualPaymentDetails(submissionId: number) {
-  const { data } = await api.get(`/payments/admin/manual-payments/${submissionId}`);
-  return data;
+  const { data } = await api.get<ApiResponse<any>>(`/payments/admin/manual-payments/${submissionId}`);
+  return data.data;
 }
 
 export async function verifyAdminManualPayment(submissionId: number, adminNote?: string) {
