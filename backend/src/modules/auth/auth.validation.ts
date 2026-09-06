@@ -88,3 +88,20 @@ export const clientApplyEngineerSchema = z.object({
 });
 
 export type ClientApplyEngineerInput = z.infer<typeof clientApplyEngineerSchema>;
+
+export const googleCompleteRegistrationSchema = z.object({
+  token: z.string().trim().min(1, "Registration session is required"),
+  role: z.enum(["CLIENT", "ENGINEER"], {
+    error: "Select client or engineer",
+  }),
+  specialty: z
+    .enum(["CIVIL", "ARCHITECTURAL"], {
+      error: "Select civil or architectural specialty",
+    })
+    .optional(),
+  bio: optionalBioField,
+  nationality: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    nationalityField.optional(),
+  ),
+});

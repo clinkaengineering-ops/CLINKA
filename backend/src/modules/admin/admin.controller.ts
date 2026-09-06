@@ -43,6 +43,7 @@ import {
 import {
   banUserSchema,
   updateVerificationSchema,
+  verificationProfileIdSchema,
   updateProfileSchema,
   updateProjectSchema,
   updateSettingsSchema,
@@ -91,10 +92,8 @@ export async function updateVerificationController(
 ) {
   try {
     const input = updateVerificationSchema.parse(req.body);
-    const user = await updateEngineerVerification(
-      Number(req.params.profileId),
-      input,
-    );
+    const profileId = verificationProfileIdSchema.parse(req.params.profileId);
+    const user = await updateEngineerVerification(profileId, input);
     res.status(200).json(ApiResponse(200, "Verification updated", user));
   } catch (error) {
     next(error);

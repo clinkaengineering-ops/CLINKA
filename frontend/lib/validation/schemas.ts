@@ -68,17 +68,19 @@ const TOTAL_UPLOAD_TOO_LARGE =
 
 const uploadFileSchema = z
   .custom<File>((v) => v instanceof File, "Upload a file")
+  .refine((f) => f.size > 0, "Upload a file")
   .refine((f) => f.size <= MAX_FILE_BYTES, FILE_TOO_LARGE)
   .refine(
     (f) =>
-      ["image/jpeg", "image/png", "image/jpg", "application/pdf"].includes(
+      ["image/jpeg", "image/png", "image/jpg", "image/webp", "application/pdf"].includes(
         f.type,
       ),
-    "File must be JPG, PNG, or PDF",
+    "File must be JPG, PNG, WEBP, or PDF",
   );
 
 const portfolioImageSchema = z
   .custom<File>((v) => v instanceof File, "Upload a portfolio image")
+  .refine((f) => f.size > 0, "Upload a portfolio image")
   .refine((f) => f.size <= MAX_FILE_BYTES, FILE_TOO_LARGE)
   .refine(
     (f) => ["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(f.type),

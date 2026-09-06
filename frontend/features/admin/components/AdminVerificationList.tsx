@@ -3,7 +3,7 @@
 import { Badge, Button, Card } from "@/components/UI";
 import { IconCheck, IconClose } from "@/components/Icons";
 import { useI18n } from "@/i18n";
-import type { PendingVerification } from "../api/admin.api";
+import { isReviewableVerification, type PendingVerification } from "../api/admin.api";
 
 interface Props {
   verifications: PendingVerification[];
@@ -19,20 +19,21 @@ export function AdminVerificationList({
   onReject,
 }: Props) {
   const { t } = useI18n();
+  const reviewable = verifications.filter(isReviewableVerification);
 
   return (
     <Card>
       <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <h2 className="font-bold">{t("ad.pendingVerifications")}</h2>
         <Badge color="amber">
-          {verifications.length} {t("ad.pending")}
+          {reviewable.length} {t("ad.pending")}
         </Badge>
       </div>
       <div className="divide-y divide-slate-100 dark:divide-slate-800">
-        {verifications.length === 0 ? (
+        {reviewable.length === 0 ? (
           <p className="p-8 text-center text-sm text-slate-500">{t("ad.noPending")}</p>
         ) : (
-          verifications.map((v) => (
+          reviewable.map((v) => (
             <div
               key={v.profileId}
               className="p-4 flex items-center justify-between gap-4 flex-wrap"

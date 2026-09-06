@@ -6,6 +6,11 @@ export const updateVerificationSchema = z.object({
   }),
 });
 
+export const verificationProfileIdSchema = z.coerce
+  .number({ error: "Invalid profile" })
+  .int("Invalid profile")
+  .positive("Invalid profile");
+
 export type UpdateVerificationInput = z.infer<typeof updateVerificationSchema>;
 
 export const banUserSchema = z.object({

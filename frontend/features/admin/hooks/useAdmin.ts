@@ -7,6 +7,7 @@ import {
   fetchAdminStats,
   fetchEscrowOverview,
   fetchPendingVerifications,
+  isReviewableVerification,
   updateVerification,
   type ActiveDispute,
   type AdminStats,
@@ -45,7 +46,7 @@ export function useAdmin() {
         fetchActiveDisputes(6),
       ]);
       setStats(s);
-      setVerifications(v);
+      setVerifications((v ?? []).filter(isReviewableVerification));
       setAnalytics(a);
       setEscrow(e);
       setDisputes(d);

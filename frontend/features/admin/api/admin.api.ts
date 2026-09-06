@@ -33,6 +33,15 @@ export interface PendingVerification {
   submittedAt: string;
 }
 
+export function isReviewableVerification(v: PendingVerification): boolean {
+  const hasDoc = Boolean(
+    v.collegeIdUrl?.trim() ||
+      v.certificateUrl?.trim() ||
+      v.syndicateCardUrl?.trim(),
+  );
+  return hasDoc && (v.portfolios?.filter(Boolean).length ?? 0) >= 3;
+}
+
 export const fetchAdminStats = (): Promise<AdminStats> =>
   unwrap(api.get<ApiResponse<AdminStats>>("/admin/stats")).then((d) => {
     if (!d) throw new Error("Failed to load stats");

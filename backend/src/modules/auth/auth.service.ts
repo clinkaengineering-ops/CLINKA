@@ -20,6 +20,14 @@ import {
 import { cacheDel, cacheGet, cacheSet } from "../../config/redis";
 import { deleteUploadFiles } from "../../config/upload";
 import { generateProfileSlug } from "../../utils/slug";
+import {
+  MIN_ENGINEER_PORTFOLIO,
+  hasCompleteEngineerApplication,
+  hasVerificationDocument,
+  requireEngineerDocumentType,
+  requireVerificationDocumentUrl,
+  type EngineerDocumentType,
+} from "./engineerVerification";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
@@ -53,9 +61,11 @@ export async function checkRegistrationEmail(email: string) {
   }
 
   if (
+    !user.googleId &&
     user.role === "ENGINEER" &&
     user.profile?.verificationStatus === "PENDING" &&
-    (user.profile.portfolio?.length ?? 0) < 3
+    hasVerificationDocument(user.profile) &&
+    !hasCompleteEngineerApplication(user.profile)
   ) {
     return {
       status: "resume_engineer" as const,
@@ -94,15 +104,41 @@ export async function registerClient(data: clientRegisterInput) {
   return stripPassword(user);
 }
 
+async function notifyEngineerApplicationSubmitted(userId: number) {
+  const { createNotification } = await import("../../utils/notifications");
+  await createNotification(
+    userId,
+    "ENGINEER_APPLICATION_RECEIVED",
+    "Engineer application received",
+    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
+    "/settings",
+    { force: true },
+  );
+
+  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  for (const admin of admins) {
+    await createNotification(
+      admin.id,
+      "ENGINEER_APPLICATION_RECEIVED",
+      "New Engineer Application",
+      "A new engineer has submitted their application and is pending review.",
+      "/admin/verification",
+      { force: true },
+    );
+  }
+}
+
 export async function registerEngineer(
   data: engineerRegisterInput,
   fileUrl: string,
-  documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl",
+  documentType: EngineerDocumentType,
   portfolioUrls: string[] = [],
 ) {
   const { name, email, password, specialty, bio, nationality } = data;
+  const storedDocUrl = requireVerificationDocumentUrl(fileUrl);
+  const storedDocType = requireEngineerDocumentType(documentType);
 
-  if (portfolioUrls.length < 3) {
+  if (portfolioUrls.length < MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "Upload at least 3 portfolio work samples");
   }
 
@@ -132,7 +168,7 @@ export async function registerEngineer(
         bio,
         nationality,
         slug,
-        [documentType]: fileUrl,
+        [storedDocType]: storedDocUrl,
         portfolio: {
           create: portfolioUrls.map((coverImageUrl, index) => ({
             coverImageUrl,
@@ -152,27 +188,7 @@ export async function registerEngineer(
   } catch {
     // Account is created; verification email can be resent later
   }
-  const { createNotification } = await import("../../utils/notifications");
-  await createNotification(
-    user.id,
-    "ENGINEER_APPLICATION_RECEIVED",
-    "Engineer application received",
-    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
-    "/settings",
-    { force: true },
-  );
-
-  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
-  for (const admin of admins) {
-    await createNotification(
-      admin.id,
-      "ENGINEER_APPLICATION_RECEIVED",
-      "New Engineer Application",
-      "A new engineer has submitted their application and is pending review.",
-      "/admin/verification",
-      { force: true },
-    );
-  }
+  await notifyEngineerApplicationSubmitted(user.id);
 
   return stripPassword(user);
 }
@@ -183,7 +199,7 @@ export async function resumeEngineerRegistration(
 ) {
   const { email, password } = data;
 
-  if (portfolioUrls.length < 3) {
+  if (portfolioUrls.length < MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "Upload at least 3 portfolio work samples");
   }
 
@@ -197,6 +213,21 @@ export async function resumeEngineerRegistration(
   if (!user || user.role !== "ENGINEER" || !user.profile) {
     throw new ApiError(404, "No incomplete engineer registration found for this email");
   }
+  if (user.googleId) {
+    throw new ApiError(
+      400,
+      "This account uses Google sign-in. Sign in with Google to finish uploading your documents.",
+    );
+  }
+  if (user.profile.verificationStatus !== "PENDING") {
+    throw new ApiError(400, "This engineer account is already complete. Sign in instead.");
+  }
+  if (!hasVerificationDocument(user.profile)) {
+    throw new ApiError(400, "Verification document is required");
+  }
+  if (hasCompleteEngineerApplication(user.profile)) {
+    throw new ApiError(400, "This engineer account is already complete. Sign in instead.");
+  }
 
   const validPassword = await bcrypt.compare(password, user.password);
   if (!validPassword) {
@@ -204,11 +235,11 @@ export async function resumeEngineerRegistration(
   }
 
   const existingCount = user.profile.portfolio.length;
-  if (existingCount >= 3) {
+  if (existingCount >= MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "This engineer account is already complete. Sign in instead.");
   }
 
-  const needed = 3 - existingCount;
+  const needed = MIN_ENGINEER_PORTFOLIO - existingCount;
   if (portfolioUrls.length < needed) {
     throw new ApiError(
       400,
@@ -226,7 +257,7 @@ export async function resumeEngineerRegistration(
 
   const refreshed = await db.user.findUnique({
     where: { id: user.id },
-    include: { profile: true },
+    include: { profile: { include: { portfolio: { select: { id: true } } } } },
   });
   if (!refreshed) throw new ApiError(404, "User not found");
 
@@ -238,27 +269,14 @@ export async function resumeEngineerRegistration(
     }
   }
 
-  const { createNotification } = await import("../../utils/notifications");
-  await createNotification(
-    user.id,
-    "ENGINEER_APPLICATION_RECEIVED",
-    "Engineer application received",
-    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
-    "/settings",
-    { force: true },
-  );
-
-  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
-  for (const admin of admins) {
-    await createNotification(
-      admin.id,
-      "ENGINEER_APPLICATION_RECEIVED",
-      "New Engineer Application",
-      "A new engineer has submitted their application and is pending review.",
-      "/admin/verification",
-      { force: true },
+  if (!hasCompleteEngineerApplication(refreshed.profile ?? {})) {
+    throw new ApiError(
+      400,
+      "Upload your verification document and at least 3 portfolio work samples before submitting for review",
     );
   }
+
+  await notifyEngineerApplicationSubmitted(user.id);
 
   return stripPassword(refreshed);
 }
@@ -267,12 +285,14 @@ export async function applyClientAsEngineer(
   userId: number,
   data: import("./auth.validation").ClientApplyEngineerInput,
   fileUrl: string,
-  documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl",
+  documentType: EngineerDocumentType,
   portfolioUrls: string[] = [],
 ) {
   const { specialty, bio, nationality } = data;
+  const storedDocUrl = requireVerificationDocumentUrl(fileUrl);
+  const storedDocType = requireEngineerDocumentType(documentType);
 
-  if (portfolioUrls.length < 3) {
+  if (portfolioUrls.length < MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "Upload at least 3 portfolio work samples");
   }
 
@@ -288,7 +308,10 @@ export async function applyClientAsEngineer(
     throw new ApiError(403, "Admins cannot apply as engineers");
   }
 
-  if (user.profile?.verificationStatus === "PENDING") {
+  if (
+    user.profile?.verificationStatus === "PENDING" &&
+    hasCompleteEngineerApplication(user.profile)
+  ) {
     throw new ApiError(400, "Your engineer application is already under review");
   }
 
@@ -310,7 +333,7 @@ export async function applyClientAsEngineer(
         collegeIdUrl: null,
         certificateUrl: null,
         syndicateCardUrl: null,
-        [documentType]: fileUrl,
+        [storedDocType]: storedDocUrl,
         portfolio: { create: portfolioCreate },
       },
     });
@@ -324,33 +347,13 @@ export async function applyClientAsEngineer(
         nationality,
         slug,
         verificationStatus: "PENDING",
-        [documentType]: fileUrl,
+        [storedDocType]: storedDocUrl,
         portfolio: { create: portfolioCreate },
       },
     });
   }
 
-  const { createNotification } = await import("../../utils/notifications");
-  await createNotification(
-    userId,
-    "ENGINEER_APPLICATION_RECEIVED",
-    "Engineer application received",
-    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
-    "/settings",
-    { force: true },
-  );
-
-  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
-  for (const admin of admins) {
-    await createNotification(
-      admin.id,
-      "ENGINEER_APPLICATION_RECEIVED",
-      "New Engineer Application",
-      "A new engineer has submitted their application and is pending review.",
-      "/admin/verification",
-      { force: true },
-    );
-  }
+  await notifyEngineerApplicationSubmitted(userId);
 
   const refreshed = await db.user.findUnique({
     where: { id: userId },
@@ -364,12 +367,14 @@ export async function completeGoogleEngineerRegistration(
   userId: number,
   data: import("./auth.validation").ClientApplyEngineerInput,
   fileUrl: string,
-  documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl",
+  documentType: EngineerDocumentType,
   portfolioUrls: string[] = [],
 ) {
   const { specialty, bio, nationality } = data;
+  const storedDocUrl = requireVerificationDocumentUrl(fileUrl);
+  const storedDocType = requireEngineerDocumentType(documentType);
 
-  if (portfolioUrls.length < 3) {
+  if (portfolioUrls.length < MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "Upload at least 3 portfolio work samples");
   }
 
@@ -391,12 +396,7 @@ export async function completeGoogleEngineerRegistration(
     throw new ApiError(400, "Your engineer profile is already complete");
   }
 
-  const hasDoc = !!(
-    user.profile.collegeIdUrl ||
-    user.profile.certificateUrl ||
-    user.profile.syndicateCardUrl
-  );
-  if (hasDoc && user.profile.portfolio.length >= 3) {
+  if (hasCompleteEngineerApplication(user.profile)) {
     throw new ApiError(400, "Your engineer registration is already complete");
   }
 
@@ -412,7 +412,7 @@ export async function completeGoogleEngineerRegistration(
       collegeIdUrl: null,
       certificateUrl: null,
       syndicateCardUrl: null,
-      [documentType]: fileUrl,
+      [storedDocType]: storedDocUrl,
       portfolio: {
         create: portfolioUrls.map((coverImageUrl, index) => ({
           coverImageUrl,
@@ -422,27 +422,7 @@ export async function completeGoogleEngineerRegistration(
     },
   });
 
-  const { createNotification } = await import("../../utils/notifications");
-  await createNotification(
-    userId,
-    "ENGINEER_APPLICATION_RECEIVED",
-    "Engineer application received",
-    "We are reviewing your documents and portfolio. We will notify you when you are accepted.",
-    "/settings",
-    { force: true },
-  );
-
-  const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
-  for (const admin of admins) {
-    await createNotification(
-      admin.id,
-      "ENGINEER_APPLICATION_RECEIVED",
-      "New Engineer Application",
-      "A new engineer has submitted their application and is pending review.",
-      "/admin/verification",
-      { force: true },
-    );
-  }
+  await notifyEngineerApplicationSubmitted(userId);
 
   const refreshed = await db.user.findUnique({
     where: { id: userId },

@@ -5,6 +5,7 @@ import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 import { getGoogleClientConfig, getGoogleRedirectUri } from "../../config/google";
 import generateToken from "../../utils/generateToken";
+import { hasCompleteEngineerApplication } from "./engineerVerification";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -181,14 +182,7 @@ async function engineerNeedsDocumentUpload(userId: number): Promise<boolean> {
   });
   if (!full || full.role !== "ENGINEER" || !full.profile) return false;
   if (full.profile.verificationStatus !== "PENDING") return false;
-
-  const hasDoc = !!(
-    full.profile.collegeIdUrl ||
-    full.profile.certificateUrl ||
-    full.profile.syndicateCardUrl
-  );
-  const portfolioCount = full.profile.portfolio.length;
-  return !hasDoc || portfolioCount < 3;
+  return !hasCompleteEngineerApplication(full.profile);
 }
 
 async function findGoogleUser(
@@ -395,7 +389,8 @@ export async function completeGoogleRegistration(
   // Make sure they didn't get created in the meantime
   const existing = await db.user.findFirst({ where: { OR: [{ email }, { googleId }] } });
   if (existing) {
-     return { user: existing, token: generateToken(existing.id, existing.role) };
+    const { password: _, ...safe } = existing;
+    return { user: safe, token: generateToken(existing.id, existing.role) };
   }
 
   let user;

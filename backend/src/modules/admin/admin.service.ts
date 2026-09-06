@@ -25,6 +25,10 @@ import {
 } from "../payouts/payout.service";
 import type { PayoutType, WithdrawalRequestStatus } from "../../generated/prisma/client";
 import { assertPayoutTransition } from "../payouts/payout.state";
+import {
+  hasCompleteEngineerApplication,
+  pendingWithDocumentWhere,
+} from "../auth/engineerVerification";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
   return safe;
@@ -44,7 +48,7 @@ export async function getAdminStats() {
     totalEngineers,
     totalClients,
     totalProjects,
-    pendingVerifications,
+    pendingProfiles,
     openSupportTickets,
     payments,
     newUsersLast30,
@@ -55,7 +59,15 @@ export async function getAdminStats() {
     db.user.count({ where: { role: "ENGINEER" } }),
     db.user.count({ where: { role: "CLIENT" } }),
     db.project.count(),
-    db.engineerProfile.count({ where: { verificationStatus: "PENDING" } }),
+    db.engineerProfile.findMany({
+      where: pendingWithDocumentWhere,
+      select: {
+        collegeIdUrl: true,
+        certificateUrl: true,
+        syndicateCardUrl: true,
+        _count: { select: { portfolio: true } },
+      },
+    }),
     db.supportTicket.count({ where: { status: "OPEN" } }),
     db.payment.findMany({
       where: { status: { in: ["FUNDED", "RELEASED", "REFUNDED"] } },
@@ -67,6 +79,10 @@ export async function getAdminStats() {
     }),
     db.ban.count({ where: { active: true, expiresAt: { gt: now } } }),
   ]);
+
+  const pendingVerifications = pendingProfiles.filter((profile) =>
+    hasCompleteEngineerApplication(profile, profile._count.portfolio),
+  ).length;
 
   const gmv = payments
     .filter((p) => p.status === "FUNDED" || p.status === "RELEASED")
@@ -98,60 +114,85 @@ export async function getAdminStats() {
 export async function getPendingVerifications() {
   const engineers = await db.user.findMany({
     where: {
-      profile: { verificationStatus: "PENDING" },
+      profile: pendingWithDocumentWhere,
     },
     include: { profile: { include: { portfolio: true } } },
     orderBy: { createdAt: "desc" },
   });
 
-  return engineers.map((e) => {
-    const p = e.profile!;
-    const docType = p.syndicateCardUrl
-      ? "Syndicate Card"
-      : p.collegeIdUrl
-        ? "College ID"
-        : p.certificateUrl
-          ? "Certificate"
-          : "Document";
-    return {
-      profileId: p.id,
-      userId: e.id,
-      name: e.name,
-      email: e.email,
-      specialty: p.specialty,
-      documentType: docType,
-      collegeIdUrl: p.collegeIdUrl,
-      certificateUrl: p.certificateUrl,
-      syndicateCardUrl: p.syndicateCardUrl,
-      portfolios: p.portfolio?.map((item) => item.coverImageUrl) || [],
-      submittedAt: p.createdAt,
-    };
-  });
+  return engineers
+    .filter((e) => e.profile && hasCompleteEngineerApplication(e.profile))
+    .map((e) => {
+      const p = e.profile!;
+      const docType = p.syndicateCardUrl?.trim()
+        ? "Syndicate Card"
+        : p.collegeIdUrl?.trim()
+          ? "College ID"
+          : p.certificateUrl?.trim()
+            ? "Certificate"
+            : "Document";
+      const submittedAt = p.portfolio.reduce(
+        (latest, item) => (item.createdAt > latest ? item.createdAt : latest),
+        p.createdAt,
+      );
+      return {
+        profileId: p.id,
+        userId: e.id,
+        name: e.name,
+        email: e.email,
+        specialty: p.specialty,
+        documentType: docType,
+        collegeIdUrl: p.collegeIdUrl,
+        certificateUrl: p.certificateUrl,
+        syndicateCardUrl: p.syndicateCardUrl,
+        portfolios:
+          p.portfolio
+            ?.map((item) => item.coverImageUrl)
+            .filter((url): url is string => Boolean(url?.trim())) || [],
+        submittedAt,
+      };
+    });
 }
 
 export async function updateEngineerVerification(
   profileId: number,
   data: UpdateVerificationInput,
 ) {
-  const profile = await db.engineerProfile.findUnique({
-    where: { id: profileId },
-    include: { user: true },
-  });
-  if (!profile) throw new ApiError(404, "Engineer profile not found");
+  const updated = await db.$transaction(async (tx) => {
+    const profile = await tx.engineerProfile.findUnique({
+      where: { id: profileId },
+      include: { user: true, portfolio: { select: { id: true } } },
+    });
+    if (!profile) throw new ApiError(404, "Engineer profile not found");
+    if (profile.verificationStatus !== "PENDING") {
+      throw new ApiError(400, "This application is not pending review");
+    }
+    if (!hasCompleteEngineerApplication(profile)) {
+      throw new ApiError(
+        400,
+        "Cannot review an application until a verification document and at least 3 portfolio samples are submitted",
+      );
+    }
 
-  const updated = await db.engineerProfile.update({
-    where: { id: profileId },
-    data: { verificationStatus: data.status },
-    include: { user: true },
+    const next = await tx.engineerProfile.update({
+      where: { id: profileId },
+      data: { verificationStatus: data.status },
+      include: { user: true },
+    });
+
+    if (data.status === "APPROVED" && next.user.role === "CLIENT") {
+      await tx.user.update({
+        where: { id: next.userId },
+        data: { role: "ENGINEER" },
+      });
+    }
+
+    return next;
   });
 
   const { createNotification } = await import("../../utils/notifications");
 
   if (data.status === "APPROVED" && updated.user.role === "CLIENT") {
-    await db.user.update({
-      where: { id: updated.userId },
-      data: { role: "ENGINEER" },
-    });
     await createNotification(
       updated.userId,
       "ENGINEER_APPLICATION_APPROVED",

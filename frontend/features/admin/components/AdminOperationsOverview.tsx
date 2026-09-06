@@ -13,12 +13,13 @@ import {
 } from "@/components/Icons";
 import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import { useI18n } from "@/i18n";
-import type {
-  ActiveDispute,
-  AdminStats,
-  AnalyticsData,
-  EscrowOverview,
-  PendingVerification,
+import {
+  isReviewableVerification,
+  type ActiveDispute,
+  type AdminStats,
+  type AnalyticsData,
+  type EscrowOverview,
+  type PendingVerification,
 } from "../api/admin.api";
 
 const CHART_COLOR = "#196481";
@@ -114,7 +115,7 @@ export function AdminOperationsOverview({
   const escrowHeldSeries = (escrow.dailyEscrowHeld ?? []).map((d) => d.amount);
   const escrowHeldLabels = (escrow.dailyEscrowHeld ?? []).map((d) => shortDate(d.date));
   const escrowHeldStats = seriesStats(escrowHeldSeries);
-  const queuePreview = verifications.slice(0, 4);
+  const queuePreview = verifications.filter(isReviewableVerification).slice(0, 4);
 
   return (
     <div className="space-y-6">
