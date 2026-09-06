@@ -35,6 +35,15 @@ export default function ProjectMarketplace() {
     "browse",
   );
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile(); // Check on mount
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const isClient = user?.role === "CLIENT";
   const isEngineer = user?.role === "ENGINEER";
   const urlQ = searchParams.get("q") ?? "";
@@ -42,7 +51,7 @@ export default function ProjectMarketplace() {
     viewMode === "browse"
       ? {
         q: search || urlQ || undefined,
-        serviceType: serviceType || undefined,
+        serviceType: (serviceType as ServiceType) || undefined,
       }
       : undefined,
   );
@@ -78,7 +87,8 @@ export default function ProjectMarketplace() {
         ? assignedError
         : error;
   const firstId = projects[0]?.id ?? null;
-  const effectiveSelected = selectedId ?? firstId;
+  // On mobile, only use the explicitly selected ID so the modal doesn't open automatically
+  const effectiveSelected = isMobile ? selectedId : (selectedId ?? firstId);
 
   const {
     data: selectedProject,
@@ -118,7 +128,7 @@ export default function ProjectMarketplace() {
     return { title, description, budget, serviceType: normalizedService };
   }, [searchParams]);
 
-  const handleSelect = useCallback((id: number) => setSelectedId(id), []);
+  const handleSelect = useCallback((id: number | null) => setSelectedId(id), []);
 
   useEffect(() => {
     if (searchParams.get("view") === "mine" && isClient) {
@@ -256,15 +266,44 @@ export default function ProjectMarketplace() {
           onSelect={handleSelect}
         />
 
-        <div className="lg:sticky lg:top-20 h-fit min-w-0 w-full">
-          <ProjectDetailPanel
-            project={selectedProject ?? null}
-            loading={(detailLoading && !!effectiveSelected) || listLoading}
-            error={detailError}
-            onRefresh={handleRefresh}
-          />
-        </div>
+        {!isMobile && (
+          <div className="lg:sticky lg:top-20 h-fit min-w-0 w-full hidden lg:block">
+            <ProjectDetailPanel
+              project={selectedProject ?? null}
+              loading={(detailLoading && !!effectiveSelected) || listLoading}
+              error={detailError}
+              onRefresh={handleRefresh}
+            />
+          </div>
+        )}
       </div>
+
+      {isMobile && effectiveSelected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 lg:hidden">
+          <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col">
+            {/* Close button positioned absolutely outside the scrolling area */}
+            <button
+              onClick={() => handleSelect(null)}
+              className="absolute -top-3 -right-3 z-[60] p-2 text-slate-600 hover:text-slate-900 bg-white dark:bg-slate-800 dark:text-slate-300 shadow-lg rounded-full border border-slate-200 dark:border-slate-700"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            
+            {/* Scrolling container for the ProjectDetailPanel */}
+            <div className="overflow-y-auto rounded-xl w-full h-full shadow-2xl bg-white dark:bg-slate-900">
+              <ProjectDetailPanel
+                project={selectedProject ?? null}
+                loading={(detailLoading && !!effectiveSelected) || listLoading}
+                error={detailError}
+                onRefresh={handleRefresh}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <PostProjectModal
         open={postOpen}

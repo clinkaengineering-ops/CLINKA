@@ -38,14 +38,23 @@ export function SubmitWorkModal({
   };
 
   const handleSubmit = async () => {
-    if (!notes.trim() && links.length === 0 && files.length === 0) {
+    // Grab any pending link the user typed but forgot to click 'Add' for
+    const pendingUrl = linkUrl.trim();
+    const pendingName = linkName.trim() || undefined;
+    const finalLinks = [...links];
+    if (pendingUrl) {
+      finalLinks.push({ url: pendingUrl, name: pendingName });
+    }
+
+    if (!notes.trim() && finalLinks.length === 0 && files.length === 0) {
       setError(t("pay.submitWork.required"));
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await submitProjectWork(projectId, { notes: notes.trim() || undefined, links, files });
+      await submitProjectWork(projectId, { notes: notes.trim() || undefined, links: finalLinks, files });
+
       await onSubmitted();
       onClose();
     } catch (e: unknown) {

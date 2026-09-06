@@ -104,8 +104,8 @@ export function EngineerDashboardPage() {
           <Link href="/projects">
             <Button variant="secondary">{t("side.findProjects")}</Button>
           </Link>
-          <Link href="/my-bids">
-            <Button variant="secondary">{t("side.myBids")}</Button>
+          <Link href="/my-projects">
+            <Button variant="secondary">{t("side.myProjects")}</Button>
           </Link>
           <Link href="/messages">
             <Button variant="secondary">{t("side.messages")}</Button>

@@ -18,7 +18,7 @@ export function DashboardActiveProjects({
     <Card>
       <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <h2 className="font-bold">{t("cd.activeProjects")}</h2>
-        <Link href="/projects?view=mine">
+        <Link href="/my-projects">
           <Button size="sm" variant="ghost">
             {t("common.viewAll")}
           </Button>

@@ -173,16 +173,33 @@ export async function submitProjectWork(
       mimeType: string | null;
     }> = [];
 
+    let fileCounter = 1;
     for (const file of files) {
       const url = getStoredUploadPath(
         file as Express.Multer.File,
         "projects",
       ) ?? file.filename;
+      
+      let finalName = file.originalname;
+      const lastDot = finalName.lastIndexOf(".");
+      const nameWithoutExt = lastDot !== -1 ? finalName.substring(0, lastDot) : finalName;
+      
+      // If the OS auto-generated a UUID filename (like iOS does for photos), replace it with a friendly name
+      if (
+        nameWithoutExt.length === 36 &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(nameWithoutExt)
+      ) {
+        const ext = lastDot !== -1 ? finalName.substring(lastDot) : "";
+        const isImage = file.mimetype.startsWith("image/");
+        finalName = `${isImage ? "Image" : "Document"}_${fileCounter}${ext}`;
+        fileCounter++;
+      }
+
       deliverableRows.push({
         submissionId: submission.id,
         type: "FILE",
         url,
-        name: file.originalname,
+        name: finalName,
         mimeType: file.mimetype,
       });
     }
