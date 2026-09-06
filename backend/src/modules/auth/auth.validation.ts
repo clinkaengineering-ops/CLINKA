@@ -23,9 +23,6 @@ export const engineerRegisterSchema = clientRegisterSchema.extend({
   }),
   bio: optionalBioField,
   nationality: nationalityField,
-  documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
-    error: "Select a document type to upload",
-  }),
 });
 
 export const loginSchema = z.object({
@@ -82,9 +79,6 @@ export const clientApplyEngineerSchema = z.object({
   }),
   bio: optionalBioField,
   nationality: nationalityField,
-  documentType: z.enum(["collegeIdUrl", "certificateUrl", "syndicateCardUrl"], {
-    error: "Select a document type to upload",
-  }),
 });
 
 export type ClientApplyEngineerInput = z.infer<typeof clientApplyEngineerSchema>;

@@ -23,10 +23,6 @@ import { generateProfileSlug } from "../../utils/slug";
 import {
   MIN_ENGINEER_PORTFOLIO,
   hasCompleteEngineerApplication,
-  hasVerificationDocument,
-  requireEngineerDocumentType,
-  requireVerificationDocumentUrl,
-  type EngineerDocumentType,
 } from "./engineerVerification";
 
 function stripPassword<T extends { password: string }>({ password: _, ...safe }: T) {
@@ -64,7 +60,6 @@ export async function checkRegistrationEmail(email: string) {
     !user.googleId &&
     user.role === "ENGINEER" &&
     user.profile?.verificationStatus === "PENDING" &&
-    hasVerificationDocument(user.profile) &&
     !hasCompleteEngineerApplication(user.profile)
   ) {
     return {
@@ -130,13 +125,9 @@ async function notifyEngineerApplicationSubmitted(userId: number) {
 
 export async function registerEngineer(
   data: engineerRegisterInput,
-  fileUrl: string,
-  documentType: EngineerDocumentType,
   portfolioUrls: string[] = [],
 ) {
   const { name, email, password, specialty, bio, nationality } = data;
-  const storedDocUrl = requireVerificationDocumentUrl(fileUrl);
-  const storedDocType = requireEngineerDocumentType(documentType);
 
   if (portfolioUrls.length < MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "Upload at least 3 portfolio work samples");
@@ -168,7 +159,6 @@ export async function registerEngineer(
         bio,
         nationality,
         slug,
-        [storedDocType]: storedDocUrl,
         portfolio: {
           create: portfolioUrls.map((coverImageUrl, index) => ({
             coverImageUrl,
@@ -222,9 +212,7 @@ export async function resumeEngineerRegistration(
   if (user.profile.verificationStatus !== "PENDING") {
     throw new ApiError(400, "This engineer account is already complete. Sign in instead.");
   }
-  if (!hasVerificationDocument(user.profile)) {
-    throw new ApiError(400, "Verification document is required");
-  }
+
   if (hasCompleteEngineerApplication(user.profile)) {
     throw new ApiError(400, "This engineer account is already complete. Sign in instead.");
   }
@@ -272,7 +260,7 @@ export async function resumeEngineerRegistration(
   if (!hasCompleteEngineerApplication(refreshed.profile ?? {})) {
     throw new ApiError(
       400,
-      "Upload your verification document and at least 3 portfolio work samples before submitting for review",
+      "Upload at least 3 portfolio work samples before submitting for review",
     );
   }
 
@@ -284,13 +272,9 @@ export async function resumeEngineerRegistration(
 export async function applyClientAsEngineer(
   userId: number,
   data: import("./auth.validation").ClientApplyEngineerInput,
-  fileUrl: string,
-  documentType: EngineerDocumentType,
   portfolioUrls: string[] = [],
 ) {
   const { specialty, bio, nationality } = data;
-  const storedDocUrl = requireVerificationDocumentUrl(fileUrl);
-  const storedDocType = requireEngineerDocumentType(documentType);
 
   if (portfolioUrls.length < MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "Upload at least 3 portfolio work samples");
@@ -330,10 +314,6 @@ export async function applyClientAsEngineer(
         bio,
         nationality,
         verificationStatus: "PENDING",
-        collegeIdUrl: null,
-        certificateUrl: null,
-        syndicateCardUrl: null,
-        [storedDocType]: storedDocUrl,
         portfolio: { create: portfolioCreate },
       },
     });
@@ -347,7 +327,6 @@ export async function applyClientAsEngineer(
         nationality,
         slug,
         verificationStatus: "PENDING",
-        [storedDocType]: storedDocUrl,
         portfolio: { create: portfolioCreate },
       },
     });
@@ -366,13 +345,9 @@ export async function applyClientAsEngineer(
 export async function completeGoogleEngineerRegistration(
   userId: number,
   data: import("./auth.validation").ClientApplyEngineerInput,
-  fileUrl: string,
-  documentType: EngineerDocumentType,
   portfolioUrls: string[] = [],
 ) {
   const { specialty, bio, nationality } = data;
-  const storedDocUrl = requireVerificationDocumentUrl(fileUrl);
-  const storedDocType = requireEngineerDocumentType(documentType);
 
   if (portfolioUrls.length < MIN_ENGINEER_PORTFOLIO) {
     throw new ApiError(400, "Upload at least 3 portfolio work samples");
@@ -409,10 +384,6 @@ export async function completeGoogleEngineerRegistration(
       bio,
       nationality,
       verificationStatus: "PENDING",
-      collegeIdUrl: null,
-      certificateUrl: null,
-      syndicateCardUrl: null,
-      [storedDocType]: storedDocUrl,
       portfolio: {
         create: portfolioUrls.map((coverImageUrl, index) => ({
           coverImageUrl,

@@ -25,15 +25,6 @@ const FIELD_CONFIG: Record<
   string,
   { category: UploadCategory; allowedMimes: ReadonlySet<string> }
 > = {
-  document: {
-    category: "documents",
-    allowedMimes: new Set([
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "application/pdf",
-    ]),
-  },
   portfolio: {
     category: "images",
     allowedMimes: new Set([
@@ -51,8 +42,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: async (_req, file) => {
     const config = FIELD_CONFIG[file.fieldname];
-    const category = config?.category ?? "documents";
-    const folder = category === "documents" ? "engineer-docs" : "portfolio";
+    const folder = "portfolio";
     
     return {
       folder,
@@ -91,11 +81,6 @@ const engineerUpload = multer({
   },
 });
 
-/** Use on routes that accept both a credential document and portfolio images. */
-export const engineerDocAndPortfolio = engineerUpload.fields([
-  { name: "document", maxCount: 1 },
-  { name: "portfolio", maxCount: 10 },
-]);
 
 /** Use on routes that accept only portfolio images (e.g. resume registration). */
 export const engineerPortfolioOnly = engineerUpload.array("portfolio", 10);

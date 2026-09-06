@@ -25,21 +25,13 @@ export interface PendingVerification {
   name: string;
   email: string;
   specialty: string;
-  documentType: string;
-  collegeIdUrl: string | null;
-  certificateUrl: string | null;
-  syndicateCardUrl: string | null;
+
   portfolios: string[];
   submittedAt: string;
 }
 
 export function isReviewableVerification(v: PendingVerification): boolean {
-  const hasDoc = Boolean(
-    v.collegeIdUrl?.trim() ||
-      v.certificateUrl?.trim() ||
-      v.syndicateCardUrl?.trim(),
-  );
-  return hasDoc && (v.portfolios?.filter(Boolean).length ?? 0) >= 3;
+  return (v.portfolios?.filter(Boolean).length ?? 0) >= 3;
 }
 
 export const fetchAdminStats = (): Promise<AdminStats> =>

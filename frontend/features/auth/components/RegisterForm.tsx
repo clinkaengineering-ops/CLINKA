@@ -31,7 +31,6 @@ import { useI18n } from "@/i18n";
 
 type Role = "CLIENT" | "ENGINEER";
 type Specialty = "CIVIL" | "ARCHITECTURAL";
-type DocumentType = "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl";
 
 const NATIONALITIES = [
   "Afghan", "Albanian", "Algerian", "Argentine", "Armenian", "Australian",
@@ -71,8 +70,6 @@ export function RegisterForm() {
     specialty: "" as Specialty,
     bio: "",
     nationality: "",
-    documentType: "" as DocumentType,
-    file: null as File | null,
     portfolioFiles: [] as File[],
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -139,11 +136,6 @@ export function RegisterForm() {
   const displayStep = googleMode ? 1 : step;
   const displayStepLabel = googleMode ? stepLabels[0] : stepLabels[step - 1];
 
-  const documentOptions = [
-    { type: "collegeIdUrl" as DocumentType, label: t("auth.doc.collegeId") },
-    { type: "certificateUrl" as DocumentType, label: t("auth.doc.certificate") },
-    { type: "syndicateCardUrl" as DocumentType, label: t("auth.doc.syndicate") },
-  ];
 
   const portfolioRequired = resumeMode
     ? Math.max(3 - existingPortfolioCount, 0)
@@ -237,8 +229,6 @@ export function RegisterForm() {
 
     if (step === 3 && role === "ENGINEER") {
       const result = validateForm(engineerRegisterStep4Schema, {
-        documentType: form.documentType || undefined,
-        file: form.file ?? undefined,
         portfolioFiles: form.portfolioFiles,
       });
       if (!result.success) {
@@ -321,8 +311,6 @@ export function RegisterForm() {
         specialty: form.specialty,
         bio: form.bio,
         nationality: form.nationality,
-        documentType: form.documentType,
-        file: form.file!,
         portfolioFiles: form.portfolioFiles,
       });
       return;
@@ -353,8 +341,6 @@ export function RegisterForm() {
       specialty: form.specialty,
       bio: form.bio,
       nationality: form.nationality,
-      documentType: form.documentType,
-      file: form.file!,
       portfolioFiles: form.portfolioFiles,
     });
   }
@@ -604,7 +590,7 @@ export function RegisterForm() {
             {googleMode && (
               <p className="text-sm text-slate-500">{t("auth.googleDocsHint")}</p>
             )}
-            <p className="text-sm text-slate-500">{t("auth.uploadDocHint")}</p>
+
             {googleMode && (!form.specialty || !form.nationality) && (
               <>
                 <div>
@@ -649,45 +635,6 @@ export function RegisterForm() {
                 </Field>
               </>
             )}
-            {(fieldErrors.documentType || fieldErrors.file) && (
-              <p className="text-xs text-rose-500">
-                {fieldErrors.documentType ?? fieldErrors.file}
-              </p>
-            )}
-            <div className="space-y-3">
-              {documentOptions.map((d) => (
-                <label
-                  key={d.type}
-                  className={cn(
-                    "flex items-center justify-between p-3 rounded-xl border border-dashed cursor-pointer transition",
-                    form.documentType === d.type
-                      ? "border-electric-500 bg-electric-500/5"
-                      : "border-slate-300 dark:border-slate-700 hover:border-electric-500",
-                  )}
-                >
-                  <span className="text-sm font-medium">{d.label}</span>
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) {
-                        setForm({
-                          ...form,
-                          documentType: d.type,
-                          file: e.target.files[0],
-                        });
-                      }
-                    }}
-                  />
-                  <span className="text-xs text-electric-600 font-semibold">
-                    {form.documentType === d.type && form.file
-                      ? form.file.name
-                      : t("auth.upload")}
-                  </span>
-                </label>
-              ))}
-            </div>
 
             <PortfolioUploadSection
               t={t}

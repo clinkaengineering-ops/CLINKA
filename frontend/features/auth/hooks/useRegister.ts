@@ -53,8 +53,7 @@ export function useRegister() {
     specialty: "CIVIL" | "ARCHITECTURAL";
     bio?: string;
     nationality?: string;
-    documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl";
-    file: File;
+
     portfolioFiles: File[];
   }) {
     setLoading(true);
@@ -65,10 +64,8 @@ export function useRegister() {
       formData.append("email", data.email);
       formData.append("password", data.password);
       formData.append("specialty", data.specialty);
-      formData.append("documentType", data.documentType);
       if (data.bio) formData.append("bio", data.bio);
       if (data.nationality) formData.append("nationality", data.nationality);
-      formData.append("document", await resizeImageBeforeUpload(data.file));
       for (const file of data.portfolioFiles) {
         formData.append("portfolio", await resizeImageBeforeUpload(file));
       }
@@ -108,8 +105,7 @@ export function useRegister() {
     specialty: "CIVIL" | "ARCHITECTURAL";
     bio?: string;
     nationality: string;
-    documentType: "collegeIdUrl" | "certificateUrl" | "syndicateCardUrl";
-    file: File;
+
     portfolioFiles: File[];
   }) {
     setLoading(true);
@@ -118,9 +114,7 @@ export function useRegister() {
       const formData = new FormData();
       formData.append("specialty", data.specialty);
       formData.append("nationality", data.nationality);
-      formData.append("documentType", data.documentType);
       if (data.bio) formData.append("bio", data.bio);
-      formData.append("document", await resizeImageBeforeUpload(data.file));
       for (const file of data.portfolioFiles) {
         formData.append("portfolio", await resizeImageBeforeUpload(file));
       }

@@ -235,9 +235,6 @@ model EngineerProfile {
   verificationStatus VerificationStatus @default(PENDING)
   nationalId         String? /// Egyptian national ID (14 digits) — required for Paymob payouts
 
-  collegeIdUrl     String?
-  certificateUrl   String?
-  syndicateCardUrl String?
 
   averageRating Float    @default(0)
   totalReviews  Int      @default(0)

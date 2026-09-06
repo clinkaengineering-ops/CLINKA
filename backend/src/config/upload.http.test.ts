@@ -41,15 +41,6 @@ function createUploadApp() {
     allowedMimeTypes: new Set(["image/jpeg", "image/png", "image/webp"]),
     maxFileSize: 1024,
   });
-  const documentUpload = createUploadMiddleware("documents", {
-    allowedMimeTypes: new Set([
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "application/pdf",
-    ]),
-    maxFileSize: 1024,
-  });
 
   app.use("/uploads", express.static(uploadDir, {
     setHeaders: (res, filePath) => {
@@ -61,8 +52,8 @@ function createUploadApp() {
       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
 
       const normalized = filePath.replace(/\\/g, "/");
-      if (normalized.includes("/documents/")) {
-        res.setHeader("Cache-Control", "private, no-store");
+      if (normalized.includes("/portfolios/")) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         return;
       }
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
@@ -75,9 +66,6 @@ function createUploadApp() {
     res.status(201).json({ path: getStoredUploadPath(req.file, "images") });
   });
 
-  app.post("/upload/document", documentUpload.single("file"), (req, res) => {
-    res.status(201).json({ path: getStoredUploadPath(req.file, "documents") });
-  });
 
   app.use(errorHandler);
   return app;
@@ -148,19 +136,6 @@ describe("local upload HTTP flow", () => {
     assert.deepEqual(Buffer.from(await served.arrayBuffer()), PNG_1X1);
   });
 
-  it("keeps verification documents uncached", async () => {
-    const uploaded = await postFile(
-      origin,
-      "/upload/document",
-      "id.png",
-      "image/png",
-      PNG_1X1,
-    );
-    const payload = (await uploaded.json()) as { path: string };
-    const served = await fetch(`${origin}${payload.path}`);
-    assert.equal(served.status, 200);
-    assert.equal(served.headers.get("cache-control"), "private, no-store");
-  });
 
   it("rejects executable disguises and oversized files", async () => {
     const blocked = await postFile(

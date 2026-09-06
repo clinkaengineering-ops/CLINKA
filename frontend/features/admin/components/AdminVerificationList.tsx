@@ -41,40 +41,8 @@ export function AdminVerificationList({
               <div>
                 <p className="font-semibold text-sm">{v.name}</p>
                 <p className="text-xs text-slate-500">
-                  {v.email} · {v.specialty} · {v.documentType}
+                  {v.email} · {v.specialty}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {v.collegeIdUrl && (
-                    <a
-                      href={v.collegeIdUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-electric-600 hover:underline"
-                    >
-                      College ID
-                    </a>
-                  )}
-                  {v.certificateUrl && (
-                    <a
-                      href={v.certificateUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-electric-600 hover:underline"
-                    >
-                      Certificate
-                    </a>
-                  )}
-                  {v.syndicateCardUrl && (
-                    <a
-                      href={v.syndicateCardUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-electric-600 hover:underline"
-                    >
-                      Syndicate
-                    </a>
-                  )}
-                </div>
                 {v.portfolios && v.portfolios.length > 0 && (
                   <div className="mt-3">
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">

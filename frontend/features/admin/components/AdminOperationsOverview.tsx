@@ -50,7 +50,7 @@ function initials(name: string) {
 
 function verificationPriority(v: PendingVerification): "High" | "Normal" {
   const ageHours = (Date.now() - new Date(v.submittedAt).getTime()) / (1000 * 60 * 60);
-  if (v.documentType === "Syndicate Card" || ageHours >= 4) return "High";
+  if (ageHours >= 4) return "High";
   return "Normal";
 }
 
@@ -319,22 +319,7 @@ export function AdminOperationsOverview({
                       <div className="min-w-0">
                         <p className="font-semibold text-sm truncate">{v.name}</p>
                         <div className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1">
-                          {v.collegeIdUrl && (
-                            <a href={v.collegeIdUrl} target="_blank" rel="noreferrer" className="text-electric-600 hover:underline">
-                              College ID
-                            </a>
-                          )}
-                          {v.certificateUrl && (
-                            <a href={v.certificateUrl} target="_blank" rel="noreferrer" className="text-electric-600 hover:underline">
-                              Certificate
-                            </a>
-                          )}
-                          {v.syndicateCardUrl && (
-                            <a href={v.syndicateCardUrl} target="_blank" rel="noreferrer" className="text-electric-600 hover:underline">
-                              Syndicate
-                            </a>
-                          )}
-                          <span>· {verificationAge(v)}</span>
+                          <span>{verificationAge(v)}</span>
                           {v.portfolios && v.portfolios.length > 0 && (
                             <>
                               <span>·</span>

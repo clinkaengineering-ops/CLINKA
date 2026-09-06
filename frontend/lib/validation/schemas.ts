@@ -47,11 +47,6 @@ const engineerSpecialtyField = z.enum(["CIVIL", "ARCHITECTURAL"], {
   error: "Select your specialty",
 });
 
-const documentTypeField = z.enum(
-  ["collegeIdUrl", "certificateUrl", "syndicateCardUrl"],
-  { error: "Select a document type" },
-);
-
 export const engineerRegisterStep2Schema = clientRegisterFormSchema.extend({
   specialty: engineerSpecialtyField,
   bio: optionalBioField,
@@ -65,18 +60,6 @@ const MAX_REGISTER_TOTAL_BYTES = 100 * 1024 * 1024;
 const FILE_TOO_LARGE = "File must be 10 MB or smaller";
 const TOTAL_UPLOAD_TOO_LARGE =
   "These files together are too large. Please use smaller images and try again.";
-
-const uploadFileSchema = z
-  .custom<File>((v) => v instanceof File, "Upload a file")
-  .refine((f) => f.size > 0, "Upload a file")
-  .refine((f) => f.size <= MAX_FILE_BYTES, FILE_TOO_LARGE)
-  .refine(
-    (f) =>
-      ["image/jpeg", "image/png", "image/jpg", "image/webp", "application/pdf"].includes(
-        f.type,
-      ),
-    "File must be JPG, PNG, WEBP, or PDF",
-  );
 
 const portfolioImageSchema = z
   .custom<File>((v) => v instanceof File, "Upload a portfolio image")
@@ -97,9 +80,8 @@ const portfolioImageSchema = z
 function withRegisterUploadBudget<T extends z.ZodType>(schema: T) {
   return schema.superRefine((value, ctx) => {
     if (!value || typeof value !== "object") return;
-    const payload = value as { file?: File; portfolioFiles?: File[] };
+    const payload = value as { portfolioFiles?: File[] };
     const files = [
-      ...(payload.file instanceof File ? [payload.file] : []),
       ...(Array.isArray(payload.portfolioFiles) ? payload.portfolioFiles : []),
     ];
     const total = files.reduce((sum, file) => sum + file.size, 0);
@@ -115,8 +97,6 @@ function withRegisterUploadBudget<T extends z.ZodType>(schema: T) {
 
 export const engineerRegisterStep4Schema = withRegisterUploadBudget(
   z.object({
-    documentType: documentTypeField,
-    file: uploadFileSchema,
     portfolioFiles: z
       .array(portfolioImageSchema)
       .min(3, "Upload at least 3 portfolio work samples")
@@ -140,8 +120,6 @@ export const joinEngineerFormSchema = withRegisterUploadBudget(
     specialty: engineerSpecialtyField,
     nationality: nationalityField,
     bio: optionalBioField,
-    documentType: documentTypeField,
-    file: uploadFileSchema,
     portfolioFiles: z
       .array(portfolioImageSchema)
       .min(3, "Upload at least 3 portfolio work samples")
@@ -344,4 +322,4 @@ export const walletWithdrawalFormSchema = z.object({
   }
 });
 
-export { optionalUrlField, uploadFileSchema, portfolioImageSchema };
+export { optionalUrlField, portfolioImageSchema };

@@ -53,10 +53,6 @@ export interface EngineerProfile {
   averageRating: number | null;
   totalReviews: number;
   verificationStatus: VerificationStatus;
-  // verification document URLs (used for verification badges on profile page)
-  collegeIdUrl: string | null;
-  certificateUrl: string | null;
-  syndicateCardUrl: string | null;
   portfolio: PortfolioItem[];
   reviews: Review[];
   nationality: string | null;

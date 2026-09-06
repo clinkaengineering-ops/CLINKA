@@ -17,6 +17,8 @@ export function EngineerProfilePage({ id }: { id: number }) {
   const currentUser = useAuthStore((s) => s.user);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const [hireModalOpen, setHireModalOpen] = useState(false);
+  const [visiblePortfolioCount, setVisiblePortfolioCount] = useState(6);
+  const [visibleReviewCount, setVisibleReviewCount] = useState(5);
   const isAdmin = currentUser?.role === "ADMIN";
 
   const goPrev = () => {
@@ -197,7 +199,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
 
               {/* 3-column responsive grid */}
               <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {profile.portfolio.map((item, index) => {
+                {profile.portfolio.slice(0, visiblePortfolioCount).map((item, index) => {
                   const url = item.coverImageUrl || item.imageUrl || "";
                   const isPdf = url.toLowerCase().split("?")[0].endsWith(".pdf");
                   const categoryTag = profile.specialty === "ARCHITECTURAL"
@@ -250,6 +252,19 @@ export function EngineerProfilePage({ id }: { id: number }) {
                   );
                 })}
               </div>
+
+              {/* View More Portfolio */}
+              {profile.portfolio.length > visiblePortfolioCount && (
+                <div className="px-6 pb-6 pt-2 flex justify-center">
+                  <Button
+                    variant="outline"
+                    className="border-navy-700/50 hover:bg-navy-800/50 text-slate-300 dark:text-slate-400"
+                    onClick={() => setVisiblePortfolioCount(prev => prev + 6)}
+                  >
+                    View More Projects
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -268,7 +283,7 @@ export function EngineerProfilePage({ id }: { id: number }) {
                 </div>
               </div>
               <div className="mt-6 space-y-5">
-                {profile.reviews.map((r) => (
+                {profile.reviews.slice(0, visibleReviewCount).map((r) => (
                   <div
                     key={r.id}
                     className="pb-5 border-b border-slate-100 dark:border-slate-800 last:border-0 last:pb-0"
@@ -301,6 +316,19 @@ export function EngineerProfilePage({ id }: { id: number }) {
                   </div>
                 ))}
               </div>
+
+              {/* View More Reviews */}
+              {profile.reviews.length > visibleReviewCount && (
+                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-center">
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => setVisibleReviewCount(prev => prev + 5)}
+                  >
+                    View More Reviews
+                  </Button>
+                </div>
+              )}
             </Card>
           )}
         </div>

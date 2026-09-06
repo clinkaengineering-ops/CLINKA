@@ -62,9 +62,6 @@ export async function getAdminStats() {
     db.engineerProfile.findMany({
       where: pendingWithDocumentWhere,
       select: {
-        collegeIdUrl: true,
-        certificateUrl: true,
-        syndicateCardUrl: true,
         _count: { select: { portfolio: true } },
       },
     }),
@@ -81,7 +78,7 @@ export async function getAdminStats() {
   ]);
 
   const pendingVerifications = pendingProfiles.filter((profile) =>
-    hasCompleteEngineerApplication(profile, profile._count.portfolio),
+    hasCompleteEngineerApplication({ portfolio: new Array(profile._count.portfolio) }),
   ).length;
 
   const gmv = payments
@@ -124,13 +121,6 @@ export async function getPendingVerifications() {
     .filter((e) => e.profile && hasCompleteEngineerApplication(e.profile))
     .map((e) => {
       const p = e.profile!;
-      const docType = p.syndicateCardUrl?.trim()
-        ? "Syndicate Card"
-        : p.collegeIdUrl?.trim()
-          ? "College ID"
-          : p.certificateUrl?.trim()
-            ? "Certificate"
-            : "Document";
       const submittedAt = p.portfolio.reduce(
         (latest, item) => (item.createdAt > latest ? item.createdAt : latest),
         p.createdAt,
@@ -141,10 +131,10 @@ export async function getPendingVerifications() {
         name: e.name,
         email: e.email,
         specialty: p.specialty,
-        documentType: docType,
-        collegeIdUrl: p.collegeIdUrl,
-        certificateUrl: p.certificateUrl,
-        syndicateCardUrl: p.syndicateCardUrl,
+        documentType: "Portfolio Only",
+        collegeIdUrl: null,
+        certificateUrl: null,
+        syndicateCardUrl: null,
         portfolios:
           p.portfolio
             ?.map((item) => item.coverImageUrl)
@@ -170,7 +160,7 @@ export async function updateEngineerVerification(
     if (!hasCompleteEngineerApplication(profile)) {
       throw new ApiError(
         400,
-        "Cannot review an application until a verification document and at least 3 portfolio samples are submitted",
+        "Cannot review an application until at least 3 portfolio samples are submitted",
       );
     }
 

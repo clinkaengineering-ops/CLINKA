@@ -21,7 +21,7 @@ import {
   googleAuthStatusController,
   googleCompleteRegistrationController,
 } from "./auth.controller";
-import { engineerDocAndPortfolio, engineerPortfolioOnly } from "../../middlewares/engineerUpload.middleware";
+import { engineerPortfolioOnly } from "../../middlewares/engineerUpload.middleware";
 import { authenticate } from "../../middlewares/auth.middleware";
 import {
   t1LoginLimiters,
@@ -37,7 +37,7 @@ router.post("/register/client", ...t1RegisterLimiters, registerClientController)
 router.post(
   "/register/engineer",
   ...t1RegisterLimiters,
-  engineerDocAndPortfolio,
+  engineerPortfolioOnly,
   registerEngineerController,
 );
 router.post(
@@ -50,14 +50,14 @@ router.post(
   "/apply-engineer",
   authenticate,
   ...t1RegisterLimiters,
-  engineerDocAndPortfolio,
+  engineerPortfolioOnly,
   applyClientAsEngineerController,
 );
 router.post(
   "/register/engineer/google-complete",
   authenticate,
   ...t1RegisterLimiters,
-  engineerDocAndPortfolio,
+  engineerPortfolioOnly,
   completeGoogleEngineerController,
 );
 router.post("/login", ...t1LoginLimiters, loginController);
