@@ -83,8 +83,15 @@ const portfolioImageSchema = z
   .refine((f) => f.size > 0, "Upload a portfolio image")
   .refine((f) => f.size <= MAX_FILE_BYTES, FILE_TOO_LARGE)
   .refine(
-    (f) => ["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(f.type),
-    "Image must be JPG, PNG, or WEBP",
+    (f) =>
+      [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/webp",
+        "application/pdf",
+      ].includes(f.type),
+    "File must be JPG, PNG, WEBP, or PDF",
   );
 
 function withRegisterUploadBudget<T extends z.ZodType>(schema: T) {
@@ -222,12 +229,12 @@ export const checkoutContactFormSchema = z.object({
 export const portfolioItemFormSchema = z.object({
   description: portfolioDescriptionField,
   file: z
-    .custom<File>((v) => v instanceof File, "Select an image")
-    .refine((f) => f.size <= 5 * 1024 * 1024, "Image must be 5 MB or smaller")
+    .custom<File>((v) => v instanceof File, "Select a file")
+    .refine((f) => f.size <= 5 * 1024 * 1024, "File must be 5 MB or smaller")
     .refine(
       (f) =>
-        ["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(f.type),
-      "Image must be JPG, PNG, or WebP",
+        ["image/jpeg", "image/png", "image/jpg", "image/webp", "application/pdf"].includes(f.type),
+      "File must be JPG, PNG, WEBP, or PDF",
     ),
 });
 

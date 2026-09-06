@@ -467,7 +467,7 @@ function EngineerPortfolioSection({
           />
         </Field>
         <Field label={t("st.portfolioImage")}>
-          <input ref={fileRef} type="file" accept="image/*" className="text-sm w-full" />
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" className="text-sm w-full" />
         </Field>
       </div>
       {uploadError && <p className="mt-2 text-sm text-rose-500">{uploadError}</p>}

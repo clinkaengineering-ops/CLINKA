@@ -1,3 +1,4 @@
+
 {
   "brand.tagline": "مدني · معمار",
   "nav.marketplace": "السوق",
@@ -906,9 +907,9 @@
   "st.billing": "الفوترة",
   "st.profile": "الملف الشخصي",
   "st.portfolio": "معرض الأعمال",
-  "st.portfolioSub": "ارفع صور مشاريع تظهر في ملفك العام كمهندس.",
+  "st.portfolioSub": "ارفع صور مشاريع أو ملفات PDF تظهر في ملفك العام كمهندس.",
   "st.portfolioDesc": "الوصف",
-  "st.portfolioImage": "الصورة",
+  "st.portfolioImage": "صورة أو PDF",
   "st.addPortfolio": "إضافة للمعرض",
   "st.recentPayments": "مدفوعات الضمان الأخيرة",
   "st.noPayments": "لا توجد مدفوعات بعد.",
@@ -1066,7 +1067,7 @@
   "auth.portfolioTitle": "نماذج أعمال سابقة",
   "auth.portfolioHint": "ارفع 3 صور على الأقل للأعمال قبل الإرسال.",
   "auth.portfolioAdd": "إضافة صور الأعمال",
-  "auth.portfolioFormats": "JPG أو PNG أو WEBP حتى 10 ميجابايت لكل ملف",
+  "auth.portfolioFormats": "JPG، PNG، WEBP، أو PDF بحد أقصى 10 ميجابايت لكل ملف",
   "auth.portfolioResumeTitle": "إرسال أعمال سابقة",
   "auth.portfolioResumeHint": "وجدنا تسجيل مهندس غير مكتمل لهذا البريد. ارفع نماذج أعمالك لإكمال التسجيل.",
   "auth.portfolioMin": "ارفع {count} نموذج عمل على الأقل.",

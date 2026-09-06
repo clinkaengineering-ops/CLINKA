@@ -36,7 +36,12 @@ const FIELD_CONFIG: Record<
   },
   portfolio: {
     category: "images",
-    allowedMimes: new Set(["image/jpeg", "image/png", "image/webp"]),
+    allowedMimes: new Set([
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+    ]),
   },
 };
 

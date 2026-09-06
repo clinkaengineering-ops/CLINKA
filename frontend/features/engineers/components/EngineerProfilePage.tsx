@@ -2,7 +2,7 @@
 "use client";
 import { Avatar, Button, Card } from "@/components/UI";
 import { NationalityLabel } from "@/components/NationalityLabel";
-import { IconStar, IconMessage, IconBriefcase, IconClose, IconArrow } from "@/components/Icons";
+import { IconStar, IconMessage, IconBriefcase, IconClose, IconArrow, IconFile } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -185,33 +185,72 @@ export function EngineerProfilePage({ id }: { id: number }) {
           </Card>
 
           {profile?.portfolio && profile.portfolio.length > 0 && (
-            <Card>
-              <div className="p-6 pb-0">
-                <h2 className="text-lg font-bold">{t("ep.portfolio")}</h2>
+            <div className="rounded-2xl bg-white dark:bg-navy-950 border border-slate-200 dark:border-navy-800/60 overflow-hidden">
+              {/* Section header */}
+              <div className="px-6 pt-6 pb-4 flex items-center gap-3">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t("ep.portfolio")}</h2>
+                <div className="flex-1 h-px bg-gradient-to-r from-electric-500/40 to-transparent" />
+                <span className="text-xs font-medium text-slate-400">
+                  {profile.portfolio.length} {profile.portfolio.length === 1 ? "project" : "projects"}
+                </span>
               </div>
-              <div className="p-6 grid sm:grid-cols-2 gap-4">
-                {profile.portfolio.map((item, index) => (
-                  <div
-                    key={item.id}
-                    onClick={() => setActivePhotoIndex(index)}
-                    className="group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-electric-500/50 hover:shadow-lg cursor-pointer transition duration-300"
-                  >
-                    <div className="h-40 relative bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <img
-                        src={item.coverImageUrl || item.imageUrl || "/placeholder.png"}
-                        alt={item.description}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      />
+
+              {/* 3-column responsive grid */}
+              <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {profile.portfolio.map((item, index) => {
+                  const url = item.coverImageUrl || item.imageUrl || "";
+                  const isPdf = url.toLowerCase().split("?")[0].endsWith(".pdf");
+                  const categoryTag = profile.specialty === "ARCHITECTURAL"
+                    ? "Architectural"
+                    : profile.specialty === "CIVIL"
+                      ? "Structural"
+                      : "Engineering";
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setActivePhotoIndex(index)}
+                      className="group relative rounded-xl overflow-hidden border border-slate-200 dark:border-navy-800/80 bg-slate-50 dark:bg-navy-900/60 cursor-pointer transition-all duration-300 hover:border-electric-500/40 hover:shadow-[0_0_30px_-5px_rgba(25,100,129,0.15)]"
+                    >
+                      {/* 16:9 thumbnail area */}
+                      <div className="relative aspect-video overflow-hidden bg-slate-100 dark:bg-navy-900">
+                        {isPdf ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-100 dark:bg-navy-900">
+                            <div className="w-14 h-14 rounded-xl bg-electric-500/10 flex items-center justify-center">
+                              <IconFile width={28} height={28} className="text-electric-400" />
+                            </div>
+                            <span className="text-xs font-bold tracking-wider uppercase text-electric-400">PDF Document</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={url || "/placeholder.png"}
+                            alt={item.description}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        )}
+
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-navy-950/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <span className="px-5 py-2.5 rounded-lg bg-electric-500 text-white text-sm font-semibold shadow-lg shadow-electric-500/25 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                            {isPdf ? "View PDF" : "View Project"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card info */}
+                      <div className="p-4 space-y-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-2">
+                          {item.description}
+                        </p>
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand-copper/15 text-brand-copper border border-brand-copper/20">
+                          {isPdf ? "Document" : categoryTag}
+                        </span>
+                      </div>
                     </div>
-                    <div className="p-4">
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            </Card>
+            </div>
           )}
 
           {profile?.reviews && profile.reviews.length > 0 && (
@@ -334,45 +373,68 @@ export function EngineerProfilePage({ id }: { id: number }) {
       </div>
 
       {activePhotoIndex !== null && profile?.portfolio && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-md transition-all duration-300">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-navy-950/95 backdrop-blur-xl transition-all duration-300"
+          onClick={(e) => { if (e.target === e.currentTarget) setActivePhotoIndex(null); }}
+        >
           {/* Close button */}
           <button
             onClick={() => setActivePhotoIndex(null)}
-            className="absolute top-4 end-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+            className="absolute top-5 end-5 z-[110] p-3 rounded-full bg-navy-800/60 text-white/80 hover:bg-navy-700/80 hover:text-white border border-navy-700/50 backdrop-blur-sm transition-all cursor-pointer"
             aria-label="Close"
           >
-            <IconClose width={24} height={24} />
+            <IconClose width={20} height={20} />
           </button>
 
           {/* Left Arrow */}
           {profile.portfolio.length > 1 && (
             <button
               onClick={goPrev}
-              className="absolute start-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+              className="absolute start-4 z-[110] p-3 rounded-full bg-navy-800/60 text-white/80 hover:bg-electric-500/20 hover:text-electric-400 border border-navy-700/50 backdrop-blur-sm transition-all cursor-pointer"
               aria-label="Previous"
             >
-              <IconArrow width={24} height={24} className="rotate-180" />
+              <IconArrow width={22} height={22} className="rotate-180" />
             </button>
           )}
 
-          {/* Image and Meta Container */}
-          <div className="relative max-w-5xl w-full max-h-[85vh] px-4 flex flex-col items-center justify-center gap-4">
-            <div className="relative max-w-full max-h-[70vh] rounded-xl overflow-hidden shadow-2xl bg-black/40 border border-white/5">
-              <img
-                src={profile.portfolio[activePhotoIndex].coverImageUrl || profile.portfolio[activePhotoIndex].imageUrl || "/placeholder.png"}
-                alt={profile.portfolio[activePhotoIndex].description}
-                className="max-w-full max-h-[70vh] object-contain select-none transition-all duration-300"
-              />
-            </div>
-            
-            {/* Description & counter */}
-            <div className="w-full text-center max-w-2xl px-6 py-3 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10">
-              <p className="text-white text-sm sm:text-base font-medium">
-                {profile.portfolio[activePhotoIndex].description}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {activePhotoIndex + 1} of {profile.portfolio.length}
-              </p>
+          {/* Content container */}
+          <div className="relative max-w-6xl w-full max-h-[90vh] px-4 flex flex-col items-center justify-center gap-4">
+            {(() => {
+              const activeItem = profile.portfolio[activePhotoIndex];
+              const activeUrl = activeItem.coverImageUrl || activeItem.imageUrl || "";
+              const isPdf = activeUrl.toLowerCase().split("?")[0].endsWith(".pdf");
+              return (
+                <div className="relative max-w-full w-full h-[72vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 bg-navy-900 border border-navy-800/60">
+                  {isPdf ? (
+                    <iframe
+                      src={activeUrl}
+                      className="w-full h-full bg-white rounded-2xl"
+                      title={activeItem.description}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <img
+                        src={activeUrl || "/placeholder.png"}
+                        alt={activeItem.description}
+                        className="max-w-full max-h-[72vh] object-contain select-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Description footer */}
+            <div className="w-full max-w-2xl">
+              <div className="h-px bg-gradient-to-r from-transparent via-electric-500/30 to-transparent mb-3" />
+              <div className="flex items-center justify-between gap-4 px-2">
+                <p className="text-white/90 text-sm sm:text-base font-medium flex-1 text-center">
+                  {profile.portfolio[activePhotoIndex].description}
+                </p>
+                <span className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-navy-800/80 text-slate-400 border border-navy-700/50">
+                  {activePhotoIndex + 1} / {profile.portfolio.length}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -380,10 +442,10 @@ export function EngineerProfilePage({ id }: { id: number }) {
           {profile.portfolio.length > 1 && (
             <button
               onClick={goNext}
-              className="absolute end-4 z-[110] p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+              className="absolute end-4 z-[110] p-3 rounded-full bg-navy-800/60 text-white/80 hover:bg-electric-500/20 hover:text-electric-400 border border-navy-700/50 backdrop-blur-sm transition-all cursor-pointer"
               aria-label="Next"
             >
-              <IconArrow width={24} height={24} />
+              <IconArrow width={22} height={22} />
             </button>
           )}
         </div>

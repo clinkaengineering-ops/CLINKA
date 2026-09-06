@@ -4,6 +4,7 @@ const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
+  "application/pdf",
 ]);
 
 const imageUpload = createUploadMiddleware("images", {

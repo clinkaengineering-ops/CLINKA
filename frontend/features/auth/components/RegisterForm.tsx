@@ -774,7 +774,7 @@ function PortfolioUploadSection({
         <span className="text-xs text-slate-500">{t("auth.portfolioFormats")}</span>
         <input
           type="file"
-          accept="image/jpeg,image/png,image/jpg,image/webp"
+          accept="image/jpeg,image/png,image/jpg,image/webp,application/pdf"
           multiple
           className="hidden"
           onChange={(e) => onAdd(e.target.files)}
