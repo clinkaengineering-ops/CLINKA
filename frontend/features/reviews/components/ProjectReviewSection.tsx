@@ -14,7 +14,7 @@ export function ProjectReviewSection({
   engineerName,
   onSubmitted,
 }: {
-  projectId: number;
+  projectId: string;
   projectTitle: string;
   engineerName?: string;
   onSubmitted?: () => void;

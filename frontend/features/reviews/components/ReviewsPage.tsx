@@ -28,7 +28,7 @@ export function ReviewsPage() {
   const isClient = user?.role === "CLIENT";
 
   async function handleSubmit(
-    projectId: number,
+    projectId: string,
     rating: number,
     comment: string,
   ) {

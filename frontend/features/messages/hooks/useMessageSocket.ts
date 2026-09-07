@@ -15,8 +15,8 @@ export function useMessageSocket(
   onNewMessage: (msg: ChatMessage) => void,
   onError?: (err: { message: string }) => void,
 ) {
-  const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
-  const [typingUserId, setTypingUserId] = useState<number | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const onNewMessageRef = useRef(onNewMessage);
   
   useEffect(() => {

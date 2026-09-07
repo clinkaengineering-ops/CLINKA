@@ -29,7 +29,7 @@ export default function ProjectMarketplace() {
   const [budget, setBudget] = useState("");
   const [timeline, setTimeline] = useState("");
   const [serviceType, setServiceType] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [postOpen, setPostOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"browse" | "mine" | "contracts">(
     "browse",
@@ -128,7 +128,7 @@ export default function ProjectMarketplace() {
     return { title, description, budget, serviceType: normalizedService };
   }, [searchParams]);
 
-  const handleSelect = useCallback((id: number | null) => setSelectedId(id), []);
+  const handleSelect = useCallback((id: string | null) => setSelectedId(id), []);
 
   useEffect(() => {
     if (searchParams.get("view") === "mine" && isClient) {
@@ -140,11 +140,8 @@ export default function ProjectMarketplace() {
 
     const idParam = searchParams.get("id");
     if (idParam) {
-      const id = Number(idParam);
-      if (!Number.isNaN(id)) {
-        setSelectedId(id);
-        if (isClient) setViewMode("mine");
-      }
+      setSelectedId(idParam);
+      if (isClient) setViewMode("mine");
     }
 
     if (initialDraft) {

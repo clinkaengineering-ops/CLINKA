@@ -1,16 +1,16 @@
 export interface ConversationListItem {
   id: number;
-  projectId: number | null;
+  projectId: string | null;
   projectTitle: string;
   projectStatus: string;
-  participantId: number;
+  participantId: string;
   participantName: string;
   lastMessage: string | null;
   lastMessageAt: string;
 }
 
 export interface MessageSender {
-  id: number;
+  id: string;
   name: string;
   role: string;
 }
@@ -18,7 +18,7 @@ export interface MessageSender {
 export interface ChatMessage {
   id: number;
   conversationId: number;
-  senderId: number;
+  senderId: string;
   content: string;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
@@ -37,11 +37,11 @@ export interface MessagesPage {
 
 export interface ConversationDetail {
   id: number;
-  projectId: number | null;
-  clientId: number;
-  engineerId: number;
+  projectId: string | null;
+  clientId: string;
+  engineerId: string;
   createdAt: string;
-  project: { id: number; title: string; status: string } | null;
-  client: { id: number; name: string };
-  engineer: { id: number; name: string };
+  project: { id: string; title: string; status: string } | null;
+  client: { id: string; name: string };
+  engineer: { id: string; name: string };
 }

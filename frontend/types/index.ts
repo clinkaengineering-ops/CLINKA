@@ -10,7 +10,7 @@ export type VerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 // ── Auth store user (lightweight — no profile) ───────────────────────────────
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: Role;
@@ -33,15 +33,15 @@ export interface Review {
   rating: number;
   comment: string | null;
   createdAt: string;
-  projectId?: number;
-  client?: { id: number; name: string };
-  project?: { id: number; title: string };
+  projectId?: string;
+  client?: { id: string; name: string };
+  project?: { id: string; title: string };
 }
 
 // ── Engineer profile (full shape returned by GET /users/engineers/:id) ────────
 export interface EngineerProfile {
   id: number;
-  userId: number;
+  userId: string;
   bio: string | null;
   specialty: string | null;
   coverImageUrl?: string | null;
@@ -56,6 +56,7 @@ export interface EngineerProfile {
   portfolio: PortfolioItem[];
   reviews: Review[];
   nationality: string | null;
+  slug?: string | null;
 }
 
 // ── Full "me" shape returned by GET /users/me ─────────────────────────────────
@@ -67,7 +68,7 @@ export interface Me extends User {
 
 // ── Engineer list item (GET /users/engineers) ─────────────────────────────────
 export interface Engineer {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: Role;
@@ -179,22 +180,22 @@ export type ServiceType = "DESIGN" | "SUPERVISION" | "REVIEW";
 // the Project type from features/projects/api/project.api.ts which matches the backend.
 // Keeping this alias for any legacy references.
 export interface Project {
-  id: number;
+  id: string;
   title: string;
   description: string;
   budget: number;
   serviceType: "DESIGN" | "SUPERVISION" | "REVIEW";
   status: "OPEN" | "AWAITING_PAYMENT" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
-  clientId: number;
+  clientId: string;
   createdAt: string;
   updatedAt: string;
-  client?: { id: number; name: string };
+  client?: { id: string; name: string };
   _count?: { bids: number };
 } 
 
 export interface Bid {
   id: number;
-  projectId: number;
+  projectId: string;
   engineerName: string;
   amount: number;
   message: string | null;

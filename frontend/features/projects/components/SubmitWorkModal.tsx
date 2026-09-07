@@ -6,7 +6,7 @@ import { useI18n } from "@/i18n";
 import { submitProjectWork } from "../api/project.api";
 
 interface SubmitWorkModalProps {
-  projectId: number;
+  projectId: string;
   projectTitle: string;
   isRevision?: boolean;
   onClose: () => void;

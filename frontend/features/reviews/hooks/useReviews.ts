@@ -45,7 +45,7 @@ export function useReviews() {
   }, [load]);
 
   const submitReview = useCallback(
-    async (projectId: number, payload: CreateReviewPayload) => {
+    async (projectId: string, payload: CreateReviewPayload) => {
       setSubmitting(true);
       try {
         await submitProjectReview(projectId, payload);

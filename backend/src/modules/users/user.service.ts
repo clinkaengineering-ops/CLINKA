@@ -319,12 +319,21 @@ export async function getEngineers(query: z.infer<typeof searchQuerySchema>) {
 // ── getEngineerById ───────────────────────────────────────────────────────────
 // FIX: Added role guard so direct URL access cannot expose non-ENGINEER users.
 export async function getEngineerById(idOrSlug: string | number) {
-  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(idOrSlug));
-  
+  const key = String(idOrSlug);
+  const isUuid =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      key,
+    );
+  const isProfileId = /^\d+$/.test(key);
+
   const engineer = await db.user.findFirst({
     where: {
       role: "ENGINEER",
-      ...(isUuid ? { id: String(idOrSlug) } : { profile: { slug: String(idOrSlug) } }),
+      ...(isUuid
+        ? { id: key }
+        : isProfileId
+          ? { profile: { id: Number(key) } }
+          : { profile: { slug: key } }),
     },
     include: {
       profile: {

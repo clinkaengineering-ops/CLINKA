@@ -10,7 +10,7 @@ import useAuthStore from "@/store/authStore";
 import { useEngineerById } from "../hooks/useEngineerById";
 import { HireEngineerModal } from "./HireEngineerModal";
 
-export function EngineerProfilePage({ id }: { id: number }) {
+export function EngineerProfilePage({ id }: { id: string }) {
   const { t } = useI18n();
   const router = useRouter();
   const { engineer, loading, error } = useEngineerById(id);

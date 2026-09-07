@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/formatters";
 interface HireEngineerModalProps {
   open: boolean;
   onClose: () => void;
-  engineerId: number;
+  engineerId: string;
   engineerName: string;
   engineerSpecialty?: string | null;
 }
@@ -28,7 +28,7 @@ export function HireEngineerModal({
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);

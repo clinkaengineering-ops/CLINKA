@@ -3,22 +3,22 @@ import { Project } from "@/types";
 
 export interface ProjectInvitation {
   id: number;
-  projectId: number;
-  engineerId: number;
-  clientId: number;
+  projectId: string;
+  engineerId: string;
+  clientId: string;
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
   project?: {
-    id: number;
+    id: string;
     title: string;
     budget: number;
     serviceType: string;
     status: string;
   };
   client?: {
-    id: number;
+    id: string;
     name: string;
     avatarUrl: string | null;
   };
@@ -37,7 +37,7 @@ export const fetchMyOpenProjects = async (): Promise<Project[]> => {
   return res.data.data;
 };
 
-export const inviteEngineer = async (projectId: number, engineerId: number): Promise<ProjectInvitation> => {
+export const inviteEngineer = async (projectId: string, engineerId: string): Promise<ProjectInvitation> => {
   const res = await api.post<{ data: ProjectInvitation }>(`/projects/${projectId}/invite`, { engineerId });
   return res.data.data;
 };
@@ -56,7 +56,7 @@ export const markInvitationViewed = async (id: number): Promise<void> => {
   await api.patch(`/projects/invitations/${id}/view`);
 };
 
-export const fetchProjectInvitations = async (projectId: number): Promise<ProjectInvitation[]> => {
+export const fetchProjectInvitations = async (projectId: string): Promise<ProjectInvitation[]> => {
   const res = await api.get<{ data: ProjectInvitation[] }>(`/projects/${projectId}/invitations`);
   return res.data.data;
 };

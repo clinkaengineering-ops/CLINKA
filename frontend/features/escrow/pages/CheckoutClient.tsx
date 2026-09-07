@@ -85,9 +85,9 @@ export default function CheckoutClient() {
     );
   }
 
-  const projectId = Number(searchParams.get("projectId"));
+  const projectId = searchParams.get("projectId") ?? "";
 
-  if (!projectId || Number.isNaN(projectId)) {
+  if (!projectId) {
     return (
       <CheckoutShell>
         <p className="text-slate-400 text-sm text-center animate-fade-in">
@@ -169,7 +169,7 @@ function CheckoutReturnStatus({
   merchantOrderId,
   status,
 }: {
-  projectId?: number;
+  projectId?: string;
   paymentId?: number;
   orderId?: number;
   transactionId?: number;
@@ -394,7 +394,7 @@ function CheckoutReturnStatus({
   );
 }
 
-function CheckoutForm({ projectId }: { projectId: number }) {
+function CheckoutForm({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const router = useRouter();
 

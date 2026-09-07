@@ -25,8 +25,8 @@ export function disconnectMessageSocket() {
   }
 }
 
-export type PresenceUpdate = { userId: number; online: boolean };
-export type TypingEvent = { userId: number };
+export type PresenceUpdate = { userId: string; online: boolean };
+export type TypingEvent = { userId: string };
 
 export function subscribeSocketHandlers(
   sock: Socket,

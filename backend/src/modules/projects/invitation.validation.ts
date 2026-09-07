@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const inviteEngineerSchema = z.object({
-  engineerId: z.number().int().positive(),
+  engineerId: z.string().uuid({ message: "Invalid engineer id" }),
 });
 
 export const respondInvitationSchema = z.object({

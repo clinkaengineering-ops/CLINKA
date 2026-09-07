@@ -50,8 +50,8 @@ export function EscrowContractsList({
   actionLoading,
 }: {
   contracts: EscrowContractRow[];
-  selectedProjectId: number | null;
-  onSelect: (projectId: number) => void;
+  selectedProjectId: string | null;
+  onSelect: (projectId: string) => void;
   onFund: (row: EscrowContractRow) => void;
   onRelease: (paymentId: number) => void;
   onRefund?: (paymentId: number) => void;

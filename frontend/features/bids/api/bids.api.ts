@@ -11,7 +11,7 @@ export interface CreateBidPayload {
 }
 
 /** POST /projects/:projectId/bids */
-export const createBid = (projectId: number, payload: CreateBidPayload) =>
+export const createBid = (projectId: string, payload: CreateBidPayload) =>
   unwrap(api.post<ApiResponse<unknown>>(`/projects/${projectId}/bids`, payload));
 
 /** PUT /projects/approve/:bidId — client accepts a bid */
@@ -20,14 +20,14 @@ export const approveBid = (bidId: number) =>
 
 export interface MyBid {
   id: number;
-  projectId: number;
+  projectId: string;
   price: number;
   duration: string;
   description: string;
   status: "PENDING" | "ACCEPTED" | "REJECTED";
   createdAt: string;
   project: {
-    id: number;
+    id: string;
     title: string;
     status: string;
     serviceType: string;

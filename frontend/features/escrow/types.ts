@@ -12,7 +12,7 @@ export type EngineerPaymentStatus =
 
 export interface EngineerBalanceTransaction {
   id: number;
-  projectId: number;
+  projectId: string;
   projectTitle: string;
   amount: number;
   netAmount: number;
@@ -80,7 +80,7 @@ export interface EngineerBalanceSummary {
 
 export interface EscrowPaymentItem {
   id: number;
-  projectId: number;
+  projectId: string;
   projectTitle: string;
   projectStatus?: string;
   amountUsd: number;
@@ -93,7 +93,7 @@ export interface EscrowPaymentItem {
 /** Merged row: existing payment or in-progress project awaiting first payment */
 export interface EscrowContractRow {
   paymentId: number | null;
-  projectId: number;
+  projectId: string;
   projectTitle: string;
   projectStatus?: string;
   amountUsd: number;
@@ -118,7 +118,7 @@ export interface CheckoutPaymentData {
 export interface CheckoutResult {
   payment: {
     id: number;
-    projectId: number;
+    projectId: string;
     amountUsd: number;
     commission: number;
     status: string;

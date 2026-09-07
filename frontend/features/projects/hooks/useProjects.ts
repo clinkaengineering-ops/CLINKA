@@ -83,7 +83,7 @@ export function useProjects(params?: { q?: string; serviceType?: string }) {
 }
 
 /** Fetches a single project by id (includes bids). */
-export function useProject(id: number | null) {
+export function useProject(id: string | null) {
   const [state, run] = useAsyncState<Project>();
   const [tick, setTick] = useState(0);
 
@@ -170,7 +170,7 @@ export function useUpdateProject(onSuccess?: (p: Project) => void) {
   const [error, setError] = useState<string | null>(null);
 
   const update = useCallback(
-    async (id: number, payload: UpdateProjectPayload) => {
+    async (id: string, payload: UpdateProjectPayload) => {
       setLoading(true);
       setError(null);
       try {
@@ -196,7 +196,7 @@ export function useDeleteProject(onSuccess?: () => void) {
   const [error, setError] = useState<string | null>(null);
 
   const remove = useCallback(
-    async (id: number) => {
+    async (id: string) => {
       setLoading(true);
       setError(null);
       try {

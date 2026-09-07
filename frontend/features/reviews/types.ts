@@ -10,7 +10,7 @@ export interface ReviewProject {
 
 export interface Review {
   id: number;
-  projectId: number;
+  projectId: string;
   clientId: number;
   engineerId: number;
   rating: number;
@@ -21,7 +21,7 @@ export interface Review {
 }
 
 export interface PendingReviewProject {
-  projectId: number;
+  projectId: string;
   projectTitle: string;
   amount: number;
   engineerUserId: number;

@@ -22,7 +22,7 @@ export function useVerifyOtp() {
     const userId = sessionStorage.getItem("pendingUserId");
     if (!userId) { router.push("/login"); return; }
     try {
-      const res = await authApi.verifyOtp({ userId: Number(userId), otp });
+      const res = await authApi.verifyOtp({ userId, otp });
       const loggedInUser = res.data.data;
       setUser(loggedInUser);
       sessionStorage.removeItem("pendingUserId");

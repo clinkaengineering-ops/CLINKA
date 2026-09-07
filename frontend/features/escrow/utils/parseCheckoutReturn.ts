@@ -3,7 +3,7 @@ export type CheckoutReturnStatus = "success" | "fail" | "pending";
 export interface ParsedCheckoutReturn {
   isReturn: boolean;
   status: CheckoutReturnStatus | null;
-  projectId?: number;
+  projectId?: string;
   paymentId?: number;
   orderId?: number;
   transactionId?: number;
@@ -69,7 +69,8 @@ export function parseCheckoutReturn(
     status = "pending";
   }
 
-  const projectId = parsePositiveInt(firstParam(searchParams, ["projectId", "project_id"]));
+  const projectIdRaw = firstParam(searchParams, ["projectId", "project_id"]);
+  const projectId = projectIdRaw || undefined;
   const merchantOrderId =
     firstParam(searchParams, ["merchant_order_id", "merchantOrderId"]) ?? undefined;
   const specialReference =

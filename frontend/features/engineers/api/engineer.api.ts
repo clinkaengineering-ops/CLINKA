@@ -77,9 +77,9 @@ export const getEngineers = (params?: {
 }): Promise<Engineer[]> =>
   unwrap(api.get<ApiResponse<{engineers: Engineer[]}>>("/users/engineers", { params })).then(d => d.engineers);
 
-/** GET /users/engineers/:id */
-export const getEngineerById = (id: number): Promise<Engineer> =>
-  unwrap(api.get<ApiResponse<Engineer>>(`/users/engineers/${id}`));
+/** GET /users/engineers/:idOrSlug — User UUID or profile slug */
+export const getEngineerById = (id: string): Promise<Engineer> =>
+  unwrap(api.get<ApiResponse<Engineer>>(`/users/engineers/${encodeURIComponent(id)}`));
 
 // ── Portfolio ─────────────────────────────────────────────────────────────────
 

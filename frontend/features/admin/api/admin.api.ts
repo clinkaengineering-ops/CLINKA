@@ -106,11 +106,11 @@ export const escalateDisputeAdmin = (projectId: number) =>
 
 export interface AdminConversationItem {
   id: number;
-  projectId: number;
+  projectId: string | null;
   projectTitle: string;
-  clientId: number;
+  clientId: string;
   clientName: string;
-  engineerId: number;
+  engineerId: string;
   engineerName: string;
   lastMessage: string | null;
   lastMessageAt: string;
@@ -139,7 +139,7 @@ export const fetchAdminConversations = (
   });
 
 export interface AdminMessageSender {
-  id: number;
+  id: string;
   name: string;
   role: string;
 }
@@ -147,7 +147,7 @@ export interface AdminMessageSender {
 export interface AdminChatMessage {
   id: number;
   conversationId: number;
-  senderId: number;
+  senderId: string;
   content: string;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
@@ -164,9 +164,9 @@ export interface AdminMessagesPage {
   totalPages: number;
   conversation: {
     id: number;
-    projectId: number;
-    clientId: number;
-    engineerId: number;
+    projectId: string | null;
+    clientId: string;
+    engineerId: string;
   };
 }
 

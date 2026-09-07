@@ -30,7 +30,7 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post("/auth/login", data),
 
-  verifyOtp: (data: { userId: number; otp: string }) =>
+  verifyOtp: (data: { userId: string; otp: string }) =>
     api.post("/auth/verify-otp", data),
 
   verifyEmail: (token: string) =>

@@ -6,7 +6,7 @@ import { useI18n } from "@/i18n";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cancelInvitation, fetchProjectInvitations, ProjectInvitation } from "../../invitations/api/invitation.api";
 
-export function ProjectInvitationsPanel({ projectId }: { projectId: number }) {
+export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const [invitations, setInvitations] = useState<ProjectInvitation[]>([]);
   const [loading, setLoading] = useState(true);

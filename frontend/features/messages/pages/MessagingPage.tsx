@@ -113,7 +113,7 @@ export function MessagingPage() {
   const [search, setSearch] = useState("");
 
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [activeParticipantId, setActiveParticipantId] = useState<number | null>(
+  const [activeParticipantId, setActiveParticipantId] = useState<string | null>(
     null,
   );
   const [mobileView, setMobileView] = useState<"inbox" | "chat">("inbox");
@@ -263,22 +263,19 @@ export function MessagingPage() {
             if (match) setActiveParticipantId(match.participantId);
           }
         } else if (engineerParam) {
-          const engineerId = Number(engineerParam);
-          if (!Number.isNaN(engineerId)) {
-            const group = inboxGroups.find((g) => g.participantId === engineerId);
-            if (group) {
-              setActiveParticipantId(engineerId);
-              setActiveId(group.conversations[0].id);
-              setMobileView("chat");
-            } else {
-              setListError(
-                "No conversation yet. Post a project and wait for a bid, or open Messages after they bid on your project.",
-              );
-            }
+          const group = inboxGroups.find((g) => g.participantId === engineerParam);
+          if (group) {
+            setActiveParticipantId(engineerParam);
+            setActiveId(group.conversations[0].id);
+            setMobileView("chat");
+          } else {
+            setListError(
+              "No conversation yet. Post a project and wait for a bid, or open Messages after they bid on your project.",
+            );
           }
         } else if (userParam) {
           try {
-            const conv = await fetchGeneralConversation(Number(userParam));
+            const conv = await fetchGeneralConversation(userParam);
             setActiveId(conv.id);
             setActiveParticipantId(
               conv.clientId === user!.id ? conv.engineerId : conv.clientId,
@@ -290,7 +287,7 @@ export function MessagingPage() {
           }
         } else if (projectParam) {
           try {
-            const conv = await fetchConversationByProject(Number(projectParam));
+            const conv = await fetchConversationByProject(projectParam);
             setActiveId(conv.id);
             setActiveParticipantId(
               conv.clientId === user!.id ? conv.engineerId : conv.clientId,

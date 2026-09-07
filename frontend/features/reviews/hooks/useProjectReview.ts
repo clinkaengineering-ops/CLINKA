@@ -16,7 +16,7 @@ function axiosMessage(err: unknown): string {
   return e?.response?.data?.message ?? e?.message ?? "Request failed";
 }
 
-export function useProjectReview(projectId: number | null, enabled: boolean) {
+export function useProjectReview(projectId: string | null, enabled: boolean) {
   const [eligibility, setEligibility] = useState<ReviewEligibility | null>(
     null,
   );

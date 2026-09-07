@@ -41,7 +41,7 @@ export interface CheckoutSession {
   intentionId: string | null;
   orderId: number | null;
   currency: string;
-  projectId: number;
+  projectId: string;
   projectTitle: string;
   paymentId: number;
   amountUsd: number;
@@ -51,7 +51,7 @@ export interface CheckoutSession {
 
 /** GET /payments/projects/:projectId/checkout-session — Paymob Unified Checkout */
 export const fetchCheckoutSession = (
-  projectId: number,
+  projectId: string,
   phone?: string,
   address?: string,
 ): Promise<CheckoutSession> =>
@@ -64,7 +64,7 @@ export const fetchCheckoutSession = (
 
 /** POST /payments/projects/:projectId/checkout */
 export const initiateCheckout = (
-  projectId: number,
+  projectId: string,
   payload: InitiateCheckoutPayload,
 ): Promise<CheckoutResult> =>
   unwrap(
@@ -123,7 +123,7 @@ export const fetchManualPaymentSettings = (): Promise<ManualPaymentSettings> =>
 
 /** POST /payments/projects/:projectId/manual-submit */
 export const submitManualPayment = (
-  projectId: number,
+  projectId: string,
   payload: FormData,
 ): Promise<unknown> =>
   unwrap(
@@ -157,7 +157,7 @@ export const fetchEscrowPaymentById = (
   );
 
 /** GET /payments/projects/:projectId */
-export const fetchProjectPayment = (projectId: number) =>
+export const fetchProjectPayment = (projectId: string) =>
   unwrap(api.get<ApiResponse<unknown>>(`/payments/projects/${projectId}`));
 
 /** GET /payments/gateway/:gatewayId */
@@ -166,16 +166,16 @@ export const fetchPaymentByGatewayId = (gatewayId: string) =>
 
 /** POST /payments/verify-return — resolve Paymob return params and verify escrow */
 export const verifyCheckoutReturn = (payload: {
-  projectId?: number;
+  projectId?: string;
   paymentId?: number;
   orderId?: number;
   transactionId?: number;
   specialReference?: string;
   merchantOrderId?: string;
   returnQuery?: string;
-}): Promise<{ id: number; projectId: number; status: string }> =>
+}): Promise<{ id: number; projectId: string; status: string }> =>
   unwrap(
-    api.post<ApiResponse<{ id: number; projectId: number; status: string }>>(
+    api.post<ApiResponse<{ id: number; projectId: string; status: string }>>(
       "/payments/verify-return",
       payload,
     ),

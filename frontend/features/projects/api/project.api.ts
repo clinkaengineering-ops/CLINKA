@@ -13,12 +13,12 @@ const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) =>
   promise.then((r) => r.data.data);
 
 export interface ProjectClient {
-  id: number;
+  id: string;
   name: string;
 }
 
 export interface ProjectEngineerUser {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -38,7 +38,7 @@ export interface ProjectReview {
   rating: number;
   comment: string | null;
   createdAt: string;
-  client?: { id: number; name: string };
+  client?: { id: string; name: string };
 }
 
 export interface ProjectPermissions {
@@ -49,13 +49,13 @@ export interface ProjectPermissions {
 }
 
 export interface Project {
-  id: number;
+  id: string;
   title: string;
   description: string;
   budget: number;
   serviceType: ServiceType;
   status: ProjectStatus;
-  clientId: number;
+  clientId: string;
   progressNote?: string | null;
   progressUpdatedAt?: string | null;
   createdAt: string;
@@ -83,7 +83,7 @@ export interface ProjectDeliverable {
 
 export interface ProjectSubmission {
   id: number;
-  projectId: number;
+  projectId: string;
   notes: string | null;
   revisionNote: string | null;
   createdAt: string;
@@ -117,7 +117,7 @@ export const fetchProjects = (params?: {
   );
 
 /** GET /projects/:id — public, includes bids */
-export const fetchProjectById = (id: number): Promise<Project> =>
+export const fetchProjectById = (id: string): Promise<Project> =>
   unwrap(api.get<ApiResponse<Project>>(`/projects/${id}`)).then((p) => {
     if (!p) throw new Error("Project not found");
     return p;
@@ -142,7 +142,7 @@ export const createProject = (payload: CreateProjectPayload): Promise<Project> =
 
 /** PUT /projects/:id */
 export const updateProject = (
-  id: number,
+  id: string,
   payload: UpdateProjectPayload,
 ): Promise<Project> =>
   unwrap(api.put<ApiResponse<Project>>(`/projects/${id}`, payload)).then((p) => {
@@ -151,15 +151,15 @@ export const updateProject = (
   });
 
 /** DELETE /projects/:id */
-export const deleteProject = (id: number): Promise<void> =>
+export const deleteProject = (id: string): Promise<void> =>
   api.delete(`/projects/${id}`).then(() => undefined);
 
-export async function markProjectFinished(projectId: number): Promise<void> {
+export async function markProjectFinished(projectId: string): Promise<void> {
   await api.patch(`/projects/${projectId}/finish`);
 }
 
 export async function submitProjectWork(
-  projectId: number,
+  projectId: string,
   payload: { notes?: string; links?: { url: string; name?: string }[]; files?: File[] },
 ): Promise<void> {
   const form = new FormData();
@@ -174,28 +174,28 @@ export async function submitProjectWork(
 }
 
 export async function requestProjectRevision(
-  projectId: number,
+  projectId: string,
   note: string,
 ): Promise<void> {
   await api.post(`/projects/${projectId}/request-revision`, { note });
 }
 
-export async function approveProjectWork(projectId: number): Promise<void> {
+export async function approveProjectWork(projectId: string): Promise<void> {
   await api.post(`/projects/${projectId}/approve`);
 }
 
 export async function updateProjectProgress(
-  projectId: number,
+  projectId: string,
   note: string,
 ): Promise<void> {
   await api.patch(`/projects/${projectId}/progress`, { note });
 }
 
-export const openDispute = (projectId: number, reason: string) =>
+export const openDispute = (projectId: string, reason: string) =>
   unwrap(api.post<ApiResponse<any>>(`/disputes/open`, { projectId, reason }));
 
 export async function fetchProjectSubmissions(
-  projectId: number,
+  projectId: string,
 ): Promise<ProjectSubmission[]> {
   return unwrap(
     api.get<ApiResponse<ProjectSubmission[]>>(`/projects/${projectId}/submissions`),

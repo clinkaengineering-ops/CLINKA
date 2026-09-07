@@ -67,7 +67,7 @@ export const sendMessageWithAttachment = (
 
 /** GET /messages/by-project/:projectId */
 export const fetchConversationByProject = (
-  projectId: number,
+  projectId: string,
 ): Promise<ConversationDetail> =>
   unwrap(
     api.get<ApiResponse<ConversationDetail>>(`/messages/by-project/${projectId}`),
@@ -75,7 +75,7 @@ export const fetchConversationByProject = (
 
 /** GET /messages/general/:userId */
 export const fetchGeneralConversation = (
-  userId: number,
+  userId: string,
 ): Promise<ConversationDetail> =>
   unwrap(
     api.get<ApiResponse<ConversationDetail>>(`/messages/general/${userId}`),

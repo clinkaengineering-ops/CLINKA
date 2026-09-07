@@ -28,7 +28,7 @@ function axiosMessage(err: unknown): string {
 function toContractRows(
   payments: EscrowPaymentItem[],
   activeProjects: {
-    id: number;
+    id: string;
     title: string;
     status: string;
     budget: number;
@@ -163,7 +163,7 @@ export function useEscrow() {
 
   const fundProject = useCallback(
     async (
-      projectId: number,
+      projectId: string,
       payload: InitiateCheckoutPayload,
     ): Promise<CheckoutResult> => {
       setActionLoading(true);

@@ -15,13 +15,13 @@ export function PendingReviewsPanel({
   items: PendingReviewProject[];
   submitting: boolean;
   onSubmit: (
-    projectId: number,
+    projectId: string,
     rating: number,
     comment: string,
   ) => Promise<void>;
 }) {
   const { t } = useI18n();
-  const [activeId, setActiveId] = useState<number | null>(
+  const [activeId, setActiveId] = useState<string | null>(
     items[0]?.projectId ?? null,
   );
 

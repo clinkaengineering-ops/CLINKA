@@ -1,7 +1,7 @@
 import type { ConversationListItem } from "../types";
 
 export type ParticipantInboxGroup = {
-  participantId: number;
+  participantId: string;
   participantName: string;
   conversations: ConversationListItem[];
   lastMessage: string | null;
@@ -11,7 +11,7 @@ export type ParticipantInboxGroup = {
 export function groupConversationsByParticipant(
   list: ConversationListItem[],
 ): ParticipantInboxGroup[] {
-  const byParticipant = new Map<number, ConversationListItem[]>();
+  const byParticipant = new Map<string, ConversationListItem[]>();
 
   for (const conv of list) {
     const existing = byParticipant.get(conv.participantId) ?? [];

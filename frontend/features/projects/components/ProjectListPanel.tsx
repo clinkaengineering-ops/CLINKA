@@ -8,8 +8,8 @@ interface ProjectListPanelProps {
   projects: Project[];
   loading: boolean;
   error: string | null;
-  selectedId: number | null;
-  onSelect: (id: number) => void;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
 }
 
 export function ProjectListPanel({

@@ -61,7 +61,7 @@ export function ProjectContextPanel({
   const isClient = user?.role === "CLIENT";
   const isEngineer = user?.role === "ENGINEER";
 
-  const loadContext = useCallback(async (projectId: number) => {
+  const loadContext = useCallback(async (projectId: string) => {
     setLoadingPayment(true);
     setActionError(null);
     try {

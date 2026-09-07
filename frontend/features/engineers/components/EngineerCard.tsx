@@ -67,7 +67,11 @@ export function EngineerCard({ engineer }: { engineer: Engineer }) {
         <Badge color="electric">{engineer.profile?.specialty ?? "—"}</Badge>
         <Button
           size="sm"
-          onClick={() => router.push(`/engineers/${engineer.id}`)}
+          onClick={() =>
+            router.push(
+              `/engineers/${engineer.profile?.slug || engineer.id}`,
+            )
+          }
           icon={<IconArrow width={14} height={14} />}
         >
           {t("common.viewProfile")}

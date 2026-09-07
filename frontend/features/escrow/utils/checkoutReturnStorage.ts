@@ -1,7 +1,7 @@
 const STORAGE_KEY = "clinka.checkout.return";
 
 export type StoredCheckoutReturn = {
-  projectId: number;
+  projectId: string;
   paymentId: number;
 };
 
@@ -10,16 +10,20 @@ export function readCheckoutReturnStorage(): StoredCheckoutReturn | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { projectId?: number; paymentId?: number };
+    const parsed = JSON.parse(raw) as { projectId?: string | number; paymentId?: number };
+    const projectId =
+      typeof parsed?.projectId === "string"
+        ? parsed.projectId
+        : typeof parsed?.projectId === "number" && parsed.projectId > 0
+          ? String(parsed.projectId)
+          : null;
     if (
-      parsed?.projectId &&
-      Number.isInteger(parsed.projectId) &&
-      parsed.projectId > 0 &&
+      projectId &&
       parsed?.paymentId &&
       Number.isInteger(parsed.paymentId) &&
       parsed.paymentId > 0
     ) {
-      return { projectId: parsed.projectId, paymentId: parsed.paymentId };
+      return { projectId, paymentId: parsed.paymentId };
     }
   } catch {
     // ignore malformed fallback data

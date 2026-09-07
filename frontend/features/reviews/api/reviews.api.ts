@@ -27,7 +27,7 @@ export const fetchEngineerReviews = (engineerId: number): Promise<Review[]> =>
   ).then((d) => d ?? []);
 
 /** GET /reviews/projects/:projectId */
-export const fetchProjectReview = (projectId: number): Promise<Review> =>
+export const fetchProjectReview = (projectId: string): Promise<Review> =>
   unwrap(api.get<ApiResponse<Review>>(`/reviews/projects/${projectId}`)).then(
     (d) => {
       if (!d) throw new Error("Review not found");
@@ -37,7 +37,7 @@ export const fetchProjectReview = (projectId: number): Promise<Review> =>
 
 /** GET /reviews/projects/:projectId/eligibility */
 export const fetchReviewEligibility = (
-  projectId: number,
+  projectId: string,
 ): Promise<ReviewEligibility> =>
   unwrap(
     api.get<ApiResponse<ReviewEligibility>>(
@@ -50,7 +50,7 @@ export const fetchReviewEligibility = (
 
 /** POST /reviews/projects/:projectId */
 export const submitProjectReview = (
-  projectId: number,
+  projectId: string,
   payload: CreateReviewPayload,
 ): Promise<Review> =>
   unwrap(
