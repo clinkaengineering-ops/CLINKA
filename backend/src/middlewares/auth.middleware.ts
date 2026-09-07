@@ -7,7 +7,7 @@ import {
 } from "../modules/messages/ban.service";
 
 export interface AuthRequest extends Request {
-  user?: { userId: number; role: string };
+  user?: { userId: string; role: string };
 }
 
 function extractToken(req: Request): string | undefined {
@@ -24,7 +24,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     const token = extractToken(req);
     if (!token) throw new ApiError(401, "Not authenticated");
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: number; role: string };
+    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string; role: string };
     req.user = payload;
 
     next();
@@ -55,7 +55,7 @@ export function optionalAuthenticate(
   }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      userId: number;
+      userId: string;
       role: string;
     };
     req.user = payload;

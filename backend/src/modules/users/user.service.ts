@@ -14,7 +14,7 @@ function stripPassword<T extends { password: string }>({
 }
 
 // ── getMe ─────────────────────────────────────────────────────────────────────
-export async function getMe(userId: number) {
+export async function getMe(userId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
     include: {
@@ -36,7 +36,7 @@ export async function getMe(userId: number) {
 // ── updateMe ──────────────────────────────────────────────────────────────────
 // FIX 1: Always includes profile in the response so the frontend Me type is complete.
 // FIX 2: bio can be "" (empty string) — use `bio !== undefined` not `bio &&`.
-export async function updateMe(userId: number, data: updateProfileInput) {
+export async function updateMe(userId: string, data: updateProfileInput) {
   const { 
     name, 
     specializationIds, 
@@ -140,7 +140,7 @@ export async function updateMe(userId: number, data: updateProfileInput) {
   return stripPassword(updatedUser);
 }
 
-export async function updateAvatar(userId: number, avatarUrl: string) {
+export async function updateAvatar(userId: string, avatarUrl: string) {
   const existing = await db.user.findUnique({
     where: { id: userId },
     select: { avatarUrl: true },
@@ -169,7 +169,7 @@ export async function updateAvatar(userId: number, avatarUrl: string) {
   return stripPassword(user);
 }
 
-export async function updateCoverImage(userId: number, coverImageUrl: string) {
+export async function updateCoverImage(userId: string, coverImageUrl: string) {
   const profile = await db.engineerProfile.findUnique({ where: { userId } });
   if (!profile) throw new ApiError(404, "Engineer profile not found");
 
@@ -319,12 +319,12 @@ export async function getEngineers(query: z.infer<typeof searchQuerySchema>) {
 // ── getEngineerById ───────────────────────────────────────────────────────────
 // FIX: Added role guard so direct URL access cannot expose non-ENGINEER users.
 export async function getEngineerById(idOrSlug: string | number) {
-  const isNumeric = !isNaN(Number(idOrSlug));
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(String(idOrSlug));
   
   const engineer = await db.user.findFirst({
     where: {
       role: "ENGINEER",
-      ...(isNumeric ? { id: Number(idOrSlug) } : { profile: { slug: String(idOrSlug) } }),
+      ...(isUuid ? { id: String(idOrSlug) } : { profile: { slug: String(idOrSlug) } }),
     },
     include: {
       profile: {
@@ -348,7 +348,7 @@ export async function getEngineerById(idOrSlug: string | number) {
   });
   if (!engineer) throw new ApiError(404, "Engineer not found");
 
-  const profileId = engineer.profile?.id;
+  const profileId = engineer.profile ? engineer.profile.id : undefined;
   let completedProjects = 0;
   if (profileId) {
     completedProjects = await db.project.count({
@@ -366,14 +366,14 @@ export async function getEngineerById(idOrSlug: string | number) {
     }).catch(console.error);
   }
 
-  const professionalScore = calculateProfessionalScore(engineer.profile, completedProjects);
+  const professionalScore = engineer.profile ? calculateProfessionalScore(engineer.profile, completedProjects) : 0;
 
   return { ...stripPassword(engineer), completedProjects, professionalScore };
 }
 
 // ── addPortfolioItem ──────────────────────────────────────────────────────────
 export async function addPortfolioItem(
-  userId: number,
+  userId: string,
   data: import("./user.validation").AddPortfolioItemInput,
 ) {
   const profile = await db.engineerProfile.findUnique({ where: { userId } });
@@ -406,7 +406,7 @@ export async function addPortfolioItem(
 }
 
 // ── deletePortfolioItem ───────────────────────────────────────────────────────
-export async function deletePortfolioItem(userId: number, itemId: number) {
+export async function deletePortfolioItem(userId: string, itemId: number) {
   const [item, profile] = await Promise.all([
     db.portfolioProject.findUnique({
       where: { id: itemId },

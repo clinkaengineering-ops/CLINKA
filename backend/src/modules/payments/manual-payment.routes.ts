@@ -42,7 +42,7 @@ router.get(
   t4AccountRateLimit,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const settings = await getManualPaymentSettingsForClient(req.user!.userId);
+      const settings = await getManualPaymentSettingsForClient(String(req.user!.userId));
       res.status(200).json(ApiResponse(200, "Manual payment settings retrieved", settings));
     } catch (error) {
       next(error);
@@ -62,7 +62,7 @@ router.post(
   proofUpload.single("proof"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const projectId = req.params.projectId;
+      const projectId = (req.params.projectId as string);
       const input = submitManualPaymentSchema.parse(req.body);
       
       // Extract proof file metadata
@@ -78,7 +78,7 @@ router.post(
         proofFileSize = req.file.size;
       }
 
-      const submission = await submitManualPayment(req.user!.userId, projectId, {
+      const submission = await submitManualPayment(String(req.user!.userId), projectId, {
         paymentMethod: input.paymentMethod,
         transactionReference: input.transactionReference,
         amount: input.amount,
@@ -121,8 +121,8 @@ router.get(
   t4AccountRateLimit,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const projectId = req.params.projectId;
-      const submissions = await getManualPaymentSubmissions(req.user!.userId, projectId);
+      const projectId = (req.params.projectId as string);
+      const submissions = await getManualPaymentSubmissions(String(req.user!.userId), projectId);
       res.status(200).json(ApiResponse(200, "Submissions fetched", submissions));
     } catch (error) {
       next(error);
@@ -172,7 +172,7 @@ router.post(
     try {
       const submissionId = Number(req.params.submissionId);
       const { adminNote } = req.body;
-      const result = await adminVerifyManualPayment(submissionId, req.user!.userId, adminNote);
+      const result = await adminVerifyManualPayment(submissionId, String(req.user!.userId), adminNote);
       res.status(200).json(ApiResponse(200, "Payment verified and escrow funded", result));
     } catch (error) {
       next(error);
@@ -193,7 +193,7 @@ router.post(
     try {
       const submissionId = Number(req.params.submissionId);
       const { reason } = req.body;
-      const result = await adminRejectManualPayment(submissionId, req.user!.userId, reason);
+      const result = await adminRejectManualPayment(submissionId, String(req.user!.userId), reason);
       res.status(200).json(ApiResponse(200, "Payment rejected", result));
     } catch (error) {
       next(error);

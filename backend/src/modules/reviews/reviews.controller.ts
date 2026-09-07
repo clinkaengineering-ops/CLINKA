@@ -17,7 +17,7 @@ export async function createReviewController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.projectId;
+    const projectId = (req.params.projectId as string);
     const input = createReviewSchema.parse(req.body);
     const review = await createProjectReview(
       req.user!.userId,
@@ -36,7 +36,7 @@ export async function getProjectReviewController(
   next: NextFunction,
 ) {
   try {
-    const review = await getProjectReview(req.params.projectId);
+    const review = await getProjectReview((req.params.projectId as string));
     res.status(200).json(ApiResponse(200, "Review fetched successfully", review));
   } catch (error) {
     next(error);
@@ -49,7 +49,7 @@ export async function getEngineerReviewsController(
   next: NextFunction,
 ) {
   try {
-    const reviews = await getEngineerReviews(Number(req.params.engineerId));
+    const reviews = await getEngineerReviews(req.params.engineerId as string);
     res
       .status(200)
       .json(ApiResponse(200, "Engineer reviews fetched successfully", reviews));
@@ -94,7 +94,7 @@ export async function canReviewProjectController(
   try {
     const result = await canReviewProject(
       req.user!.userId,
-      req.params.projectId,
+      (req.params.projectId as string),
     );
     res.status(200).json(ApiResponse(200, "Review eligibility checked", result));
   } catch (error) {

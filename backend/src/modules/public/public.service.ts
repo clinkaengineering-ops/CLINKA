@@ -11,7 +11,7 @@ export function getSupportContactEmail() {
 
 export async function createSupportTicket(
   data: CreateSupportTicketInput,
-  userId?: number,
+  userId?: string,
 ) {
   return db.supportTicket.create({
     data: {

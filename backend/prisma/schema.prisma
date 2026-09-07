@@ -392,7 +392,7 @@ model ManualPaymentSubmission {
   note                 String? // Optional note from client
   status               ManualPaymentStatus @default(PENDING)
   adminNote            String? // Admin's note on verification/rejection
-  verifiedBy           Int? // Admin user ID who verified
+  verifiedBy           String? // Admin user ID who verified
   verifiedAt           DateTime?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
@@ -619,11 +619,11 @@ model WithdrawalRequest {
   lastInquiryAt              DateTime?
   processedAt                DateTime?
   approvedAt                 DateTime?
-  approvedById               Int?
+  approvedById               String?
   completedAt                DateTime?
-  completedById              Int?
+  completedById              String?
   rejectedAt                 DateTime?
-  rejectedById               Int?
+  rejectedById               String?
   reconciledAt               DateTime?
   reconciledById             Int?
   createdAt                  DateTime                @default(now())

@@ -118,7 +118,7 @@ export function createUserIdRateLimit(opts: {
   name: string;
   audit: boolean;
 }): RequestHandler {
-  const buckets = new Map<number, { count: number; windowStart: number }>();
+  const buckets = new Map<string, { count: number; windowStart: number }>();
 
   return function userIdRateLimit(req: Request, res: Response, next: NextFunction) {
     const userId = (req as AuthRequest).user?.userId;

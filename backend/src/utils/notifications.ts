@@ -207,7 +207,7 @@ async function dispatchNotificationEmail(
 }
 
 export async function createNotification(
-  userId: number,
+  userId: string,
   type: NotificationType,
   title: string,
   body?: string,

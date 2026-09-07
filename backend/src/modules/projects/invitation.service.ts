@@ -4,9 +4,9 @@ import { createNotification } from "../../utils/notifications";
 import { assertUserNotBanned } from "../messages/ban.service";
 
 export async function inviteEngineerToProject(
-  clientId: number,
-  projectId: number,
-  engineerUserId: number,
+  clientId: string,
+  projectId: string,
+  engineerUserId: string,
 ) {
   await assertUserNotBanned(clientId, "invite engineers");
 
@@ -96,7 +96,7 @@ export async function inviteEngineerToProject(
 }
 
 export async function markInvitationViewed(
-  engineerUserId: number,
+  engineerUserId: string,
   invitationId: number,
   metadata?: any
 ) {
@@ -134,7 +134,7 @@ export async function markInvitationViewed(
 }
 
 export async function respondToInvitation(
-  engineerUserId: number,
+  engineerUserId: string,
   invitationId: number,
   action: "ACCEPT" | "DECLINE",
   metadata?: any
@@ -265,7 +265,7 @@ export async function respondToInvitation(
 }
 
 export async function cancelInvitation(
-  clientId: number,
+  clientId: string,
   invitationId: number,
   metadata?: any
 ) {
@@ -300,7 +300,7 @@ export async function cancelInvitation(
   return updated;
 }
 
-export async function getMyInvitations(engineerUserId: number) {
+export async function getMyInvitations(engineerUserId: string) {
   const invitations = await db.projectInvitation.findMany({
     where: { engineerId: engineerUserId },
     include: {
@@ -328,7 +328,7 @@ export async function getMyInvitations(engineerUserId: number) {
   return invitations;
 }
 
-export async function getProjectInvitations(clientId: number, projectId: number) {
+export async function getProjectInvitations(clientId: string, projectId: string) {
   const project = await db.project.findUnique({ where: { id: projectId } });
   if (!project) throw new ApiError(404, "Project not found");
   if (project.clientId !== clientId) throw new ApiError(403, "Not your project");

@@ -68,7 +68,7 @@ function routeHandlers(router: Router, method: string, path: string): RequestHan
   return handlers;
 }
 
-async function dispatch(handler: RequestHandler, req: Partial<Request> & { user?: { userId: number; role: string } }) {
+async function dispatch(handler: RequestHandler, req: Partial<Request> & { user?: { userId: string; role: string } }) {
   const headers: Record<string, string> = {};
   let status = 200;
   let body: unknown;
@@ -132,7 +132,7 @@ function is429(result: { status: number; error: unknown }): boolean {
   return result.error instanceof ApiError && result.error.statusCode === 429;
 }
 
-async function exceedLimit(limiter: RequestHandler, max: number, base: Partial<Request> & { user?: { userId: number; role: string } }) {
+async function exceedLimit(limiter: RequestHandler, max: number, base: Partial<Request> & { user?: { userId: string; role: string } }) {
   for (let i = 0; i < max; i += 1) {
     const allowed = await dispatch(limiter, base);
     assert.equal(is429(allowed), false, `request ${i + 1} of ${max} should be under the limit`);
@@ -253,14 +253,14 @@ describe("rate limit other tiers", () => {
     assert.ok(handlers.includes(t4AccountRateLimit));
     await exceedLimit(t4AccountRateLimit, T4_MAX, {
       ip: "10.8.0.3",
-      user: { userId: 88001, role: "CLIENT" },
+      user: { userId: "123e4567-e89b-12d3-a456-426614174001", role: "CLIENT" },
     });
   });
 
   it("T4 under-limit traffic is unaffected", async () => {
     const result = await dispatch(t4AccountRateLimit, {
       ip: "10.8.0.4",
-      user: { userId: 88002, role: "CLIENT" },
+      user: { userId: "123e4567-e89b-12d3-a456-426614174002", role: "CLIENT" },
     });
     assert.equal(is429(result), false);
     assert.equal(result.nextCalled, true);
@@ -295,14 +295,14 @@ describe("rate limit other tiers", () => {
 
   it("T2 under-limit account traffic is unaffected", async () => {
     const result = await dispatch(t2AccountRateLimit, {
-      user: { userId: 88003, role: "CLIENT" },
+      user: { userId: "123e4567-e89b-12d3-a456-426614174003", role: "CLIENT" },
     });
     assert.equal(is429(result), false);
     assert.equal(result.nextCalled, true);
   });
 
   it("adminRateLimit sets Retry-After when the per-admin cap is exceeded", async () => {
-    const user = { userId: 99001, role: "ADMIN" };
+    const user = { userId: "123e4567-e89b-12d3-a456-426614174004", role: "ADMIN" };
     for (let i = 0; i < 30; i += 1) {
       const allowed = await dispatch(adminRateLimit, { user });
       assert.equal(is429(allowed), false);

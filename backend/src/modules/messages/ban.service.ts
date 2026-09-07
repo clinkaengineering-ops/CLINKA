@@ -12,9 +12,9 @@ function addDays(date: Date, days: number): Date {
 }
 
 export async function banUserFor30Days(
-  userId: number,
+  userId: string,
   reason: BanReason,
-  bannedById?: number,
+  bannedById?: string,
   note?: string,
   triggerMessage?: string,
 ) {
@@ -61,7 +61,7 @@ export async function banUserFor30Days(
 }
 
 export async function isUserBanned(
-  userId: number,
+  userId: string,
 ): Promise<{ banned: boolean; expiresAt: Date | null; reason?: string }> {
   const ban = await db.ban.findUnique({ where: { userId } });
 
@@ -103,7 +103,7 @@ export function bannedUserMessage(
 }
 
 export async function assertUserNotBanned(
-  userId: number,
+  userId: string,
   action: string,
 ): Promise<void> {
   const banStatus = await isUserBanned(userId);

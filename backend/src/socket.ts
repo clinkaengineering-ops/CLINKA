@@ -5,12 +5,12 @@ import { sendMessage } from "./modules/messages/messages.service";
 import { isAllowedOrigin } from "./config/cors";
 
 interface SocketUser {
-  userId: number;
+  userId: string;
   role: string;
 }
 
 // userId → Set of socketIds (user can have multiple tabs)
-const onlineUsers = new Map<number, Set<string>>();
+const onlineUsers = new Map<string, Set<string>>();
 
 let io: SocketServer | null = null;
 

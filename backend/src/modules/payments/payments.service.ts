@@ -120,7 +120,7 @@ async function sendWithdrawalRequestEmailToAdmins(input: {
 }
 OLD_WITHDRAWAL_END */
 
-async function getAcceptedAgreementForProject(projectId: number, projectBudget: number | any) {
+async function getAcceptedAgreementForProject(projectId: string, projectBudget: number | any) {
   const bid = await db.bid.findFirst({
     where: { projectId, status: "ACCEPTED" },
     include: {
@@ -158,7 +158,7 @@ export async function listPaymentMethods() {
   return listConfiguredPaymobMethods();
 }
 
-export async function getProjectPayment(projectId: number, userId: number) {
+export async function getProjectPayment(projectId: string, userId: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: { payment: true },
@@ -180,8 +180,8 @@ export async function getProjectPayment(projectId: number, userId: number) {
 }
 
 export async function initiateProjectCheckout(
-  clientId: number,
-  projectId: number,
+  clientId: string,
+  projectId: string,
   input: InitiateCheckoutInput,
 ) {
   const project = await db.project.findUnique({
@@ -310,8 +310,8 @@ export async function initiateProjectCheckout(
 
 /** Prepare Paymob Unified Checkout — creates pending payment + checkout URL */
 export async function prepareProjectCheckoutSession(
-  clientId: number,
-  projectId: number,
+  clientId: string,
+  projectId: string,
   phone?: string,
   address?: string,
 ) {
@@ -454,12 +454,12 @@ export async function prepareProjectCheckoutSession(
 }
 
 async function isGatewayTransactionAlreadyFunded(
-  transactionId: number,
+  transactionId: string,
   excludePaymentId?: number,
 ) {
   const existing = await db.payment.findFirst({
     where: {
-      gatewayInvoiceKey: String(transactionId),
+      gatewayInvoiceKey: transactionId,
       status: { in: ["FUNDED", "RELEASED"] },
       ...(excludePaymentId ? { NOT: { id: excludePaymentId } } : {}),
     },
@@ -495,7 +495,7 @@ async function fundPaymentFromVerifiedTransaction(
   const config = getPaymobConfig();
   validatePaymobTransactionForPayment(transaction, payment, config.integrationIds);
 
-  if (await isGatewayTransactionAlreadyFunded(transaction.id, paymentId)) {
+  if (await isGatewayTransactionAlreadyFunded(String(transaction.id), paymentId)) {
     throw new ApiError(409, "This Paymob transaction was already applied to a payment");
   }
 
@@ -659,7 +659,7 @@ async function resolveVerifiedPaymobTransaction(
       );
       return transaction;
     } catch (err: any) {
-      console.error(`Validation failed for transaction ${transaction.id}: ${err.message}`);
+      console.error(`Validation failed for transaction ${String(transaction.id)}: ${err.message}`);
       // Try next candidate
     }
   }
@@ -702,7 +702,7 @@ export async function handlePaymobWebhook(
     return {
       handled: true,
       type: transaction.pending ? "pending" : "failed",
-      transactionId: transaction.id,
+      transactionId: String(transaction.id),
     };
   }
 
@@ -745,7 +745,7 @@ export async function handlePaymobWebhook(
 
 export async function getPaymentByGatewayId(
   gatewayId: string,
-  userId: number,
+  userId: string,
 ) {
   const ref = parsePaymobSpecialReference(gatewayId);
   const payment = await db.payment.findFirst({
@@ -805,7 +805,7 @@ function mapEngineerPaymentStatus(
   return "awaiting_payment";
 }
 
-export async function getEngineerBalance(engineerUserId: number) {
+export async function getEngineerBalance(engineerUserId: string) {
   const profile = await db.engineerProfile.findUnique({
     where: { userId: engineerUserId },
     select: { id: true },
@@ -817,8 +817,8 @@ export async function getEngineerBalance(engineerUserId: number) {
       securedBalance: 0,
       awaitingClientPayment: 0,
       transactions: [] as Array<{
-        id: number;
-        projectId: number;
+        id: string;
+        projectId: string;
         projectTitle: string;
         amount: number;
         netAmount: number;
@@ -828,7 +828,7 @@ export async function getEngineerBalance(engineerUserId: number) {
         updatedAt: Date;
       }>,
       walletHistory: [] as Array<{
-        id: number;
+        id: string;
         amount: number;
         type: "PROJECT_PAYMENT" | "RELEASED" | "WITHDRAWAL";
         status: "PENDING" | "AVAILABLE" | "COMPLETED" | "REJECTED";
@@ -839,7 +839,7 @@ export async function getEngineerBalance(engineerUserId: number) {
         createdAt: Date;
       }>,
       withdrawalRequests: [] as Array<{
-        id: number;
+        id: string;
         amount: number;
         method: string;
         accountNumber: string;
@@ -1026,7 +1026,7 @@ export async function createEngineerWithdrawalRequest(
 }
 OLD_WITHDRAWAL_END */
 
-export async function listEngineerWithdrawalRequests(engineerUserId: number) {
+export async function listEngineerWithdrawalRequests(engineerUserId: string) {
   await db.$transaction(async (tx) =>
     settleMaturedWalletTransactions(tx, engineerUserId),
   );
@@ -1039,7 +1039,7 @@ export async function listEngineerWithdrawalRequests(engineerUserId: number) {
 }
 
 export async function createWithdrawalRequest(
-  engineerUserId: number,
+  engineerUserId: string,
   payoutMethod: "PAYMOB" | "IBAN" | "INSTAPAY" | "E_WALLET",
   input: any,
   idempotencyKey: string,
@@ -1090,7 +1090,7 @@ export async function createWithdrawalRequest(
   }
 }
 
-export async function listEngineerEscrow(engineerUserId: number) {
+export async function listEngineerEscrow(engineerUserId: string) {
   const balance = await getEngineerBalance(engineerUserId);
   return balance.transactions.map((tx) => ({
     id: tx.id,
@@ -1121,7 +1121,7 @@ function mapEngineerEscrowLegacyStatus(
   }
 }
 
-export async function listClientEscrow(clientId: number) {
+export async function listClientEscrow(clientId: string) {
   const payments = await db.payment.findMany({
     where: { clientId },
     include: {
@@ -1161,7 +1161,7 @@ function mapPaymentStatusToEscrow(
 }
 
 export async function releaseEscrowPayment(
-  clientId: number,
+  clientId: string,
   paymentId: number,
   isAdmin: boolean = false
 ) {
@@ -1267,7 +1267,7 @@ export async function releaseEscrowPayment(
   return updated;
 }
 
-export async function getEscrowPaymentById(paymentId: number, userId: number) {
+export async function getEscrowPaymentById(paymentId: number, userId: string) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
     include: {
@@ -1304,7 +1304,7 @@ export async function getEscrowPaymentById(paymentId: number, userId: number) {
 }
 
 export async function resolvePaymentForCheckoutReturn(
-  clientId: number,
+  clientId: string,
   input: VerifyCheckoutReturnInput,
 ) {
   const fromQuery = parseCheckoutReturnQuery(input.returnQuery);
@@ -1315,7 +1315,7 @@ export async function resolvePaymentForCheckoutReturn(
   const specialReference = input.specialReference ?? fromQuery.specialReference;
   const merchantOrderId = input.merchantOrderId ?? fromQuery.merchantOrderId;
 
-  const assertClientPayment = (payment: { clientId: number }) => {
+  const assertClientPayment = (payment: { clientId: string }) => {
     if (payment.clientId !== clientId) {
       throw new ApiError(403, "Only the client can verify this payment");
     }
@@ -1426,7 +1426,7 @@ async function refreshPaymentRecord(paymentId: number) {
 
 /** Poll Paymob and the database — never marks paid without gateway confirmation. */
 export async function pollPaymentConfirmation(
-  clientId: number,
+  clientId: string,
   paymentId: number,
   input: VerifyCheckoutReturnInput = {},
 ) {
@@ -1473,7 +1473,7 @@ export async function pollPaymentConfirmation(
 }
 
 export async function verifyCheckoutReturn(
-  clientId: number,
+  clientId: string,
   input: VerifyCheckoutReturnInput,
 ) {
   const payment = await resolvePaymentForCheckoutReturn(clientId, input);
@@ -1487,13 +1487,13 @@ export async function verifyCheckoutReturn(
 
 /** @deprecated Use pollPaymentConfirmation — never funds without Paymob proof. */
 export async function verifyOrSimulatePaymentSuccess(
-  clientId: number,
+  clientId: string,
   paymentId: number,
 ) {
   return pollPaymentConfirmation(clientId, paymentId);
 }
 
-export async function refundEscrowPayment(clientId: number, paymentId: number, isAdmin: boolean = false) {
+export async function refundEscrowPayment(clientId: string, paymentId: number, isAdmin: boolean = false) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
     include: { project: { select: { title: true } } },

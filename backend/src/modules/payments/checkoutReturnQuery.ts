@@ -1,7 +1,7 @@
 import { parsePaymobSpecialReference } from "./paymob.webhook";
 
 export type ParsedCheckoutReturnQuery = {
-  projectId?: number;
+  projectId?: string;
   paymentId?: number;
   orderId?: number;
   transactionId?: number;
@@ -41,7 +41,7 @@ export function parseCheckoutReturnQuery(
   const normalized = returnQuery.startsWith("?") ? returnQuery : `?${returnQuery}`;
   const params = new URLSearchParams(normalized);
 
-  const projectId = parsePositiveInt(firstParam(params, ["projectId", "project_id"]));
+  const projectId = firstParam(params, ["projectId", "project_id"]) ?? undefined;
   const merchantOrderId =
     firstParam(params, ["merchant_order_id", "merchantOrderId"]) ?? undefined;
   const specialReference =

@@ -1,6 +1,6 @@
 import db from '../config/db';
 
-export async function generateProfileSlug(name: string, userId: number): Promise<string> {
+export async function generateProfileSlug(name: string, userId: string): Promise<string> {
   // Base slug from name
   const baseSlug = name
     .toLowerCase()

@@ -262,8 +262,8 @@ export async function getAllBans() {
 }
 
 export async function banUserManually(
-  adminId: number,
-  targetUserId: number,
+  adminId: string,
+  targetUserId: string,
   note?: string,
 ) {
   const target = await db.user.findUnique({ where: { id: targetUserId } });
@@ -276,7 +276,7 @@ export async function banUserManually(
   return { userId: targetUserId };
 }
 
-export async function unbanUser(adminId: number, targetUserId: number) {
+export async function unbanUser(adminId: string, targetUserId: string) {
   const ban = await db.ban.findUnique({ where: { userId: targetUserId } });
   if (!ban) throw new ApiError(404, "No ban record for this user");
 
@@ -299,9 +299,9 @@ export async function unbanUser(adminId: number, targetUserId: number) {
 
 export async function lookupUser(identifier: string) {
   const trimmed = identifier.trim();
-  const asId = Number(trimmed);
-  if (!Number.isNaN(asId) && asId > 0) {
-    const byId = await db.user.findUnique({
+  const asId = trimmed;
+  if (asId) {
+    const byId = await db.user.findFirst({
       where: { id: asId },
       select: { 
         id: true, 
@@ -328,7 +328,7 @@ export async function lookupUser(identifier: string) {
   return byEmail;
 }
 
-export async function impersonateUser(targetUserId: number) {
+export async function impersonateUser(targetUserId: string) {
   const target = await db.user.findUnique({ where: { id: targetUserId } });
   if (!target) throw new ApiError(404, "User not found");
   if (target.role === "ADMIN") {
@@ -340,7 +340,7 @@ export async function impersonateUser(targetUserId: number) {
 }
 
 export async function updateEngineerProfileByAdmin(
-  userId: number,
+  userId: string,
   data: { specialty?: "CIVIL" | "ARCHITECTURAL"; bio?: string }
 ) {
   const profile = await db.engineerProfile.findUnique({ where: { userId } });
@@ -466,7 +466,7 @@ export async function getAllProjects(page = 1, limit = 20) {
 }
 
 export async function updateProjectByAdmin(
-  projectId: number,
+  projectId: string,
   data: { status?: any; isFlagged?: boolean },
 ) {
   return await db.project.update({
@@ -618,7 +618,7 @@ function isPaymobAutoPayout(item: {
 
 export async function updateWithdrawalRequestStatus(
   withdrawalId: number,
-  adminId: number,
+  adminId: string,
   input: UpdateWithdrawalRequestInput,
 ) {
   const item = await db.withdrawalRequest.findUnique({
@@ -780,7 +780,7 @@ export async function getWithdrawalAuditTrail(withdrawalId: number) {
 
 export async function adminCancelWithdrawal(
   withdrawalId: number,
-  adminId: number,
+  adminId: string,
   reason?: string,
 ) {
   const item = await db.withdrawalRequest.findUnique({
@@ -802,7 +802,7 @@ export async function adminCancelWithdrawal(
 
 export async function adminResolveWithdrawal(
   withdrawalId: number,
-  adminId: number,
+  adminId: string,
   action: "release_funds" | "mark_completed" | "cancel",
   reason?: string,
 ) {
@@ -918,7 +918,7 @@ export async function getPayoutStats() {
 
 import { releaseEscrowPayment, refundEscrowPayment } from "../payments/payments.service";
 
-export async function overridePaymentStatus(paymentId: number, status: "RELEASED" | "REFUNDED", adminId: number) {
+export async function overridePaymentStatus(paymentId: number, status: "RELEASED" | "REFUNDED", adminId: string) {
   if (status === "RELEASED") {
     // We pass adminId as the clientId but with isAdmin=true to bypass the owner check
     return await releaseEscrowPayment(adminId, paymentId, true);
@@ -1220,7 +1220,7 @@ export async function getSystemLogs(
   limit = 50,
   page = 1,
   filters?: {
-    userId?: number;
+    userId?: string;
     targetId?: string;
     action?: string;
     startDate?: Date;
@@ -1281,7 +1281,7 @@ export async function getSystemLogs(
     level: LogLevel;
     message: string;
     action?: string;
-    actorId?: number;
+    actorId?: string;
     targetId?: string;
   }> = [];
 
@@ -1380,7 +1380,7 @@ export async function getSupportTickets(page = 1, limit = 20) {
 
 export async function updateSupportTicket(
   ticketId: number,
-  adminId: number,
+  adminId: string,
   data: UpdateSupportTicketInput,
 ) {
   const ticket = await db.supportTicket.findUnique({ where: { id: ticketId } });
@@ -1405,7 +1405,7 @@ export async function updateSupportTicket(
 
 export async function revealWithdrawalBankDetails(
   withdrawalId: number,
-  adminId: number,
+  adminId: string,
   adminIp?: string,
   adminUserAgent?: string,
 ) {
@@ -1453,14 +1453,14 @@ export async function revealWithdrawalBankDetails(
   await logPayoutEvent(db as any, {
     withdrawalId,
     event: "ADMIN_VIEWED_BANK_DETAILS",
-    actorId: adminId,
+    actorId: String(adminId),
     actorIp: adminIp,
     actorUserAgent: adminUserAgent,
   });
 
   const { logSystemEvent } = await import("../../utils/auditLogger");
   await logSystemEvent({
-    actorId: adminId,
+    actorId: String(adminId),
     actorRole: "ADMIN",
     action: "admin.withdrawal_reveal_bank_details",
     targetType: "WithdrawalRequest",
@@ -1472,7 +1472,7 @@ export async function revealWithdrawalBankDetails(
   return decrypted;
 }
 
-export async function rejectInternationalWithdrawal(withdrawalId: number, adminId: number, reason: string, notes?: string) {
+export async function rejectInternationalWithdrawal(withdrawalId: number, adminId: string, reason: string, notes?: string) {
   const updated = await db.$transaction(async (tx) => {
     const item = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalId } });
     if (!item) {
@@ -1521,7 +1521,7 @@ export async function rejectInternationalWithdrawal(withdrawalId: number, adminI
       event: "ADMIN_REJECTED",
       statusBefore: "PENDING_REVIEW",
       statusAfter: "REJECTED",
-      actorId: adminId,
+      actorId: String(adminId),
       message: reason,
       metadata: { notes },
     });
@@ -1530,7 +1530,7 @@ export async function rejectInternationalWithdrawal(withdrawalId: number, adminI
       event: "BALANCE_RELEASED",
       statusBefore: "PENDING_REVIEW",
       statusAfter: "REJECTED",
-      actorId: adminId,
+      actorId: String(adminId),
       message: String(item.amount),
     });
 
@@ -1547,7 +1547,7 @@ export async function rejectInternationalWithdrawal(withdrawalId: number, adminI
 
   const { logSystemEvent } = await import("../../utils/auditLogger");
   await logSystemEvent({
-    actorId: adminId,
+    actorId: String(adminId),
     actorRole: "ADMIN",
     action: "admin.withdrawal_rejected",
     targetType: "WithdrawalRequest",
@@ -1561,7 +1561,7 @@ export async function rejectInternationalWithdrawal(withdrawalId: number, adminI
 
 export async function recordCompletion(
   withdrawalId: number, 
-  adminId: number, 
+  adminId: string, 
   notes?: string,
   transferMethod?: string,
   transferReference?: string,
@@ -1630,7 +1630,7 @@ export async function recordCompletion(
       event: "COMPLETED",
       statusBefore: item.status,
       statusAfter: "COMPLETED",
-      actorId: adminId,
+      actorId: String(adminId),
       message: notes,
       metadata: { transferReference: finalReference, proofUrl },
     });

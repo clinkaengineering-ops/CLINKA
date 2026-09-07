@@ -22,7 +22,7 @@ import {
   UpdateProgressInput,
 } from "./project.validation";
 
-async function getEngineerProfile(engineerUserId: number) {
+async function getEngineerProfile(engineerUserId: string) {
   const profile = await db.engineerProfile.findUnique({
     where: { userId: engineerUserId },
   });
@@ -31,7 +31,7 @@ async function getEngineerProfile(engineerUserId: number) {
 }
 
 async function assertAssignedEngineer(
-  projectId: number,
+  projectId: string,
   engineerProfileId: number,
 ) {
   const bid = await db.bid.findFirst({
@@ -44,8 +44,8 @@ async function assertAssignedEngineer(
 }
 
 export async function updateProjectProgress(
-  engineerUserId: number,
-  projectId: number,
+  engineerUserId: string,
+  projectId: string,
   data: UpdateProgressInput,
 ) {
   await assertUserNotBanned(engineerUserId, "update project progress");
@@ -71,8 +71,8 @@ export async function updateProjectProgress(
 }
 
 export async function submitProjectWork(
-  engineerUserId: number,
-  projectId: number,
+  engineerUserId: string,
+  projectId: string,
   data: SubmitWorkInput,
   files: Express.Multer.File[] = [],
 ) {
@@ -233,8 +233,8 @@ export async function submitProjectWork(
 }
 
 export async function requestProjectRevision(
-  clientId: number,
-  projectId: number,
+  clientId: string,
+  projectId: string,
   data: RequestRevisionInput,
 ) {
   const project = await db.project.findUnique({
@@ -290,7 +290,7 @@ export async function requestProjectRevision(
   return updated;
 }
 
-export async function approveProjectWork(clientId: number, projectId: number) {
+export async function approveProjectWork(clientId: string, projectId: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: { payment: true },
@@ -411,7 +411,7 @@ export async function approveProjectWork(clientId: number, projectId: number) {
   return updated;
 }
 
-export async function getProjectSubmissions(projectId: number, userId: number) {
+export async function getProjectSubmissions(projectId: string, userId: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: {
@@ -440,8 +440,8 @@ export async function getProjectSubmissions(projectId: number, userId: number) {
 
 /** @deprecated Use submitProjectWork — kept for backward-compatible route */
 export async function markProjectFinished(
-  engineerUserId: number,
-  projectId: number,
+  engineerUserId: string,
+  projectId: string,
 ) {
   return submitProjectWork(
     engineerUserId,

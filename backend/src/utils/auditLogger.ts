@@ -1,7 +1,7 @@
 import db from "../config/db";
 
 export interface SystemAuditLogInput {
-  actorId: number | null;
+  actorId: string | null;
   actorRole: string;
   action: string;
   targetType: string;

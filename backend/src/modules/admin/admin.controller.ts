@@ -122,7 +122,7 @@ export async function banUserController(
     const input = banUserSchema.parse(req.body);
     const result = await banUserManually(
       req.user!.userId,
-      req.params.userId,
+      (req.params.userId as string),
       input.note,
     );
     res.status(201).json(ApiResponse(201, "User banned for 30 days", result));
@@ -137,7 +137,7 @@ export async function unbanUserController(
   next: NextFunction,
 ) {
   try {
-    const result = await unbanUser(req.user!.userId, req.params.userId);
+    const result = await unbanUser(req.user!.userId, (req.params.userId as string));
     res.status(200).json(ApiResponse(200, "User unbanned", result));
   } catch (error) {
     next(error);
@@ -210,7 +210,7 @@ export async function impersonateUserController(
   next: NextFunction,
 ) {
   try {
-    const targetUserId = req.params.userId;
+    const targetUserId = (req.params.userId as string);
     const { user, token } = await impersonateUser(targetUserId);
 
     res.cookie("token", token, {
@@ -233,7 +233,7 @@ export async function updateProfileByAdminController(
 ) {
   try {
     const input = updateProfileSchema.parse(req.body);
-    const targetUserId = req.params.userId;
+    const targetUserId = (req.params.userId as string);
     const user = await updateEngineerProfileByAdmin(targetUserId, input);
     res.status(200).json(ApiResponse(200, "Profile updated successfully", user));
   } catch (error) {
@@ -263,7 +263,7 @@ export async function updateProjectStatusController(
 ) {
   try {
     const input = updateProjectSchema.parse(req.body);
-    const projectId = req.params.projectId;
+    const projectId = (req.params.projectId as string);
     const project = await updateProjectByAdmin(projectId, input);
     res.status(200).json(ApiResponse(200, "Project updated", project));
   } catch (error) {
@@ -379,7 +379,7 @@ export async function getSystemLogsController(
     const limit = Number(req.query.limit) || 50;
     const page = Number(req.query.page) || 1;
     const filters = {
-      userId: req.query.userId ? Number(req.query.userId) : undefined,
+      userId: (req.query.userId as string) ? String(req.query.userId) : undefined,
       targetId: req.query.targetId ? String(req.query.targetId) : undefined,
       action: req.query.action ? String(req.query.action) : undefined,
       startDate: req.query.startDate ? new Date(String(req.query.startDate)) : undefined,

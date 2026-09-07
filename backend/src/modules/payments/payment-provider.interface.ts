@@ -5,7 +5,7 @@ export interface PaymentIntentionResult {
 }
 
 export interface ProjectData {
-  id: number;
+  id: string;
   title: string;
   client: { name: string; email: string };
 }

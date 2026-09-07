@@ -46,7 +46,7 @@ export type VerifyCheckoutReturnInput = z.infer<typeof verifyCheckoutReturnSchem
 export const paymobWebhookSchema = z.object({
   type: z.string().optional(),
   obj: z.object({
-    id: z.string().uuid(),
+    id: z.number(),
     success: z.boolean(),
     amount_cents: z.number(),
     created_at: z.string(),
@@ -64,7 +64,7 @@ export const paymobWebhookSchema = z.object({
     pending: z.boolean(),
     order: z
       .object({
-        id: z.string().uuid().optional(),
+        id: z.number().optional(),
         merchant_order_id: z.string().nullable().optional(),
       })
       .optional(),

@@ -99,7 +99,7 @@ export async function registerClient(data: clientRegisterInput) {
   return stripPassword(user);
 }
 
-async function notifyEngineerApplicationSubmitted(userId: number) {
+async function notifyEngineerApplicationSubmitted(userId: string) {
   const { createNotification } = await import("../../utils/notifications");
   await createNotification(
     userId,
@@ -270,7 +270,7 @@ export async function resumeEngineerRegistration(
 }
 
 export async function applyClientAsEngineer(
-  userId: number,
+  userId: string,
   data: import("./auth.validation").ClientApplyEngineerInput,
   portfolioUrls: string[] = [],
 ) {
@@ -343,7 +343,7 @@ export async function applyClientAsEngineer(
 }
 
 export async function completeGoogleEngineerRegistration(
-  userId: number,
+  userId: string,
   data: import("./auth.validation").ClientApplyEngineerInput,
   portfolioUrls: string[] = [],
 ) {
@@ -452,7 +452,7 @@ export async function login(data: loginInput) {
 }
 
 // Step 2 — verify OTP, set cookie
-export async function verifyOtp(userId: number, otp: string) {
+export async function verifyOtp(userId: string, otp: string) {
   const storedOtp = await cacheGet(`otp:${userId}`);
 
   if (!storedOtp) throw new ApiError(400, "OTP expired or not found");
@@ -473,7 +473,7 @@ export async function verifyEmail(token: string) {
   let payload;
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      userId: number;
+      userId: string;
     };
   } catch (error) {
     throw new ApiError(400, "Invalid or expired verification link");
@@ -535,7 +535,7 @@ export async function resetPassword(token: string, newPassword: string) {
   let payload;
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      userId: number;
+      userId: string;
     };
   } catch (error) {
     throw new ApiError(400, "Invalid or expired password reset link");
@@ -549,7 +549,7 @@ export async function resetPassword(token: string, newPassword: string) {
   });
 }
 
-export async function resendVerificationEmail(userId: number, email: string) {
+export async function resendVerificationEmail(userId: string, email: string) {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw new ApiError(404, "User not found");
   if (user.isVerified) throw new ApiError(400, "Email already verified");
@@ -557,7 +557,7 @@ export async function resendVerificationEmail(userId: number, email: string) {
   await sendVerificationEmail(userId, email);
 }
 
-export async function requestEmailChange(userId: number, newEmail: string) {
+export async function requestEmailChange(userId: string, newEmail: string) {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw new ApiError(404, "User not found");
   if (user.email === newEmail) {
@@ -590,7 +590,7 @@ export async function requestEmailChange(userId: number, newEmail: string) {
   return { message: "Verification code sent to your new email address" };
 }
 
-export async function confirmEmailChange(userId: number, otp: string) {
+export async function confirmEmailChange(userId: string, otp: string) {
   const raw = await cacheGet(`email-change:${userId}`);
   if (!raw) throw new ApiError(400, "OTP expired or not found");
 
@@ -611,7 +611,7 @@ export async function confirmEmailChange(userId: number, otp: string) {
 }
 
 export async function changePassword(
-  userId: number,
+  userId: string,
   oldPassword: string,
   newPassword: string,
 ) {

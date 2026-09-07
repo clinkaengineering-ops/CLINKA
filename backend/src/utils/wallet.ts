@@ -9,7 +9,7 @@ export function walletHoldReleaseDate(from = new Date()): Date {
   return new Date(from.getTime() + HOLD_DAYS * DAY_MS);
 }
 
-export async function ensureWallet(tx: TxLike, userId: number) {
+export async function ensureWallet(tx: TxLike, userId: string) {
   const existing = await tx.wallet.findUnique({ where: { userId } });
   if (existing) return existing;
 
@@ -24,7 +24,7 @@ export async function ensureWallet(tx: TxLike, userId: number) {
 
 export async function settleMaturedWalletTransactions(
   tx: TxLike,
-  userId: number,
+  userId: string,
   now = new Date(),
 ) {
   const wallet = await ensureWallet(tx, userId);
@@ -69,7 +69,7 @@ export async function settleMaturedWalletTransactions(
 }
 
 /** Row-level lock to serialize concurrent withdrawals for the same engineer. */
-export async function lockWalletForUpdate(tx: TxLike, userId: number) {
+export async function lockWalletForUpdate(tx: TxLike, userId: string) {
   await ensureWallet(tx, userId);
   await tx.$executeRaw`SELECT id FROM "Wallet" WHERE "userId" = ${userId} FOR UPDATE`;
   return tx.wallet.findUniqueOrThrow({ where: { userId } });

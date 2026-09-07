@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-function generateToken(userId: number, role: string) {
+function generateToken(userId: string, role: string) {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {

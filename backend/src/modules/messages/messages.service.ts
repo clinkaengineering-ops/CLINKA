@@ -23,13 +23,13 @@ function formatLastMessagePreview(message: {
 
 function unreadCountForConv(
   conv: {
-    clientId: number;
-    engineerId: number;
+    clientId: string;
+    engineerId: string;
     clientLastReadAt: Date | null;
     engineerLastReadAt: Date | null;
-    messages: { senderId: number; createdAt: Date }[];
+    messages: { senderId: string; createdAt: Date }[];
   },
-  userId: number,
+  userId: string,
 ) {
   const isClient = conv.clientId === userId;
   const lastRead = isClient ? conv.clientLastReadAt : conv.engineerLastReadAt;
@@ -41,7 +41,7 @@ function unreadCountForConv(
 }
 
 // Get all conversations for the current user (as client or engineer)
-export async function getMyConversations(userId: number) {
+export async function getMyConversations(userId: string) {
   const conversations = await db.conversation.findMany({
     where: {
       OR: [{ clientId: userId }, { engineerId: userId }],
@@ -80,7 +80,7 @@ export async function getMyConversations(userId: number) {
   });
 }
 
-export async function getUnreadMessagesCount(userId: number) {
+export async function getUnreadMessagesCount(userId: string) {
   const conversations = await db.conversation.findMany({
     where: {
       OR: [{ clientId: userId }, { engineerId: userId }],
@@ -98,10 +98,10 @@ export async function getUnreadMessagesCount(userId: number) {
 
 export async function markConversationRead(
   conversationId: number,
-  userId: number,
+  userId: string,
 ) {
   const conv = await db.conversation.findUnique({
-    where: { id: conversationId },
+    where: { id: Number(conversationId) },
   });
   if (!conv) throw new ApiError(404, "Conversation not found");
   if (conv.clientId !== userId && conv.engineerId !== userId) {
@@ -111,12 +111,12 @@ export async function markConversationRead(
   const now = new Date();
   if (conv.clientId === userId) {
     await db.conversation.update({
-      where: { id: conversationId },
+      where: { id: Number(conversationId) },
       data: { clientLastReadAt: now },
     });
   } else {
     await db.conversation.update({
-      where: { id: conversationId },
+      where: { id: Number(conversationId) },
       data: { engineerLastReadAt: now },
     });
   }
@@ -125,13 +125,13 @@ export async function markConversationRead(
 // Get paginated messages in a conversation
 export async function getMessages(
   conversationId: number,
-  userId: number,
+  userId: string,
   page: number = 1,
   limit: number = 30,
 ) {
   // Verify user is a participant
   const conv = await db.conversation.findUnique({
-    where: { id: conversationId },
+    where: { id: Number(conversationId) },
   });
 
   if (!conv) throw new ApiError(404, "Conversation not found");
@@ -160,7 +160,7 @@ export async function getMessages(
 // Send a message
 export async function sendMessage(
   conversationId: number,
-  senderId: number,
+  senderId: string,
   data: SendMessageInput,
 ) {
   const content = (data.content ?? "").trim();
@@ -171,7 +171,7 @@ export async function sendMessage(
   }
 
   const conv = await db.conversation.findUnique({
-    where: { id: conversationId },
+    where: { id: Number(conversationId) },
   });
 
   if (!conv) throw new ApiError(404, "Conversation not found");
@@ -245,13 +245,13 @@ export async function sendMessage(
 
 export async function markConversationReadOnFetch(
   conversationId: number,
-  userId: number,
+  userId: string,
 ) {
   await markConversationRead(conversationId, userId);
 }
 
 async function ensureConversationForProjectBid(
-  projectId: number,
+  projectId: string,
   engineerProfileId: number,
 ) {
   const existing = await db.conversation.findUnique({ where: { projectId } });
@@ -277,8 +277,8 @@ async function ensureConversationForProjectBid(
 
 // Get or return a conversation by projectId (used when opening chat from project page)
 export async function getConversationByProject(
-  projectId: number,
-  userId: number,
+  projectId: string,
+  userId: string,
 ) {
   let conv = await db.conversation.findUnique({
     where: { projectId },
@@ -338,8 +338,8 @@ export async function getConversationByProject(
 }
 
 export async function getOrCreateGeneralConversation(
-  initiatorId: number,
-  targetUserId: number,
+  initiatorId: string,
+  targetUserId: string,
 ) {
   // Try to find an existing general conversation between these two
   let conv = await db.conversation.findFirst({

@@ -14,7 +14,7 @@ function splitCustomerName(fullName: string): { first_name: string; last_name: s
   };
 }
 
-function getRedirectionUrls(projectId: number, paymentId: number) {
+function getRedirectionUrls(projectId: string, paymentId: number) {
   const clientUrl = getClientUrl();
   const apiUrl = (process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 5000}`).replace(/\/$/, "");
 

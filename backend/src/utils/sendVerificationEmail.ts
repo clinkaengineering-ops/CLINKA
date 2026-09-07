@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { getPublicClientUrl } from "../config/clientUrl";
 import { getEmailFrom, verificationEmailHtml } from "./emailTemplate";
 
-export async function sendVerificationEmail(userId: number, email: string) {
+export async function sendVerificationEmail(userId: string, email: string) {
   const token = jwt.sign({ userId }, process.env.JWT_SECRET as string, { expiresIn: "1d" });
 
   const verifyUrl = `${getPublicClientUrl()}/verify-email?token=${token}`;

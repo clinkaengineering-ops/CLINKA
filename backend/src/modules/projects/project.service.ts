@@ -15,7 +15,7 @@ import { assertUserNotBanned } from "../messages/ban.service";
 export { markProjectFinished } from "./project.workflow.service";
 
 export async function createProject(
-  clientId: number,
+  clientId: string,
   data: CreateProjectInput,
 ) {
   const client = await db.user.findUnique({ where: { id: clientId } });
@@ -42,7 +42,7 @@ export async function createProject(
   return project;
 }
 
-async function notifyEngineersAboutNewProject(project: { id: number; title: string }) {
+async function notifyEngineersAboutNewProject(project: { id: string; title: string }) {
   const engineers = await db.user.findMany({
     where: {
       role: "ENGINEER",
@@ -92,7 +92,7 @@ export async function getProjects(query?: { q?: string; serviceType?: string }) 
   return projects;
 }
 
-export async function getMyProjects(clientId: number) {
+export async function getMyProjects(clientId: string) {
   const projects = await db.project.findMany({
     where: { clientId },
     include: {
@@ -112,7 +112,7 @@ export async function getMyProjects(clientId: number) {
   return projects;
 }
 
-export async function getMyOpenProjects(clientId: number) {
+export async function getMyOpenProjects(clientId: string) {
   const projects = await db.project.findMany({
     where: { clientId, status: "OPEN" },
     include: {
@@ -125,7 +125,7 @@ export async function getMyOpenProjects(clientId: number) {
   return projects;
 }
 
-export async function getProjectById(projectId: number) {
+export async function getProjectById(projectId: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: {
@@ -173,8 +173,8 @@ export async function getProjectById(projectId: number) {
 }
 
 export async function updateProject(
-  clientId: number,
-  projectId: number,
+  clientId: string,
+  projectId: string,
   data: UpdateProjectInput,
 ) {
   return db.$transaction(async (tx) => {
@@ -242,7 +242,7 @@ export async function updateProject(
   });
 }
 
-export async function deleteProject(clientId: number, projectId: number) {
+export async function deleteProject(clientId: string, projectId: string) {
   const project = await db.project.findUnique({ where: { id: projectId } });
   if (!project) throw new ApiError(404, "Project not found");
 
@@ -258,7 +258,7 @@ export async function deleteProject(clientId: number, projectId: number) {
 }
 
 /** Projects where the engineer has an accepted bid (active contracts). */
-export async function getAssignedProjects(engineerUserId: number) {
+export async function getAssignedProjects(engineerUserId: string) {
   await assertUserNotBanned(engineerUserId, "view assigned projects");
 
   const profile = await db.engineerProfile.findUnique({

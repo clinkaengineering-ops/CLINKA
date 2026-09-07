@@ -34,7 +34,7 @@ export async function markProjectFinishedController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.id;
+    const projectId = (req.params.id as string);
     const project = await markProjectFinished(req.user!.userId, projectId);
     res
       .status(200)
@@ -50,7 +50,7 @@ export async function submitProjectWorkController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.id;
+    const projectId = (req.params.id as string);
     let links: { url: string; name?: string }[] | undefined;
     if (typeof req.body.links === "string" && req.body.links.trim()) {
       links = JSON.parse(req.body.links);
@@ -85,7 +85,7 @@ export async function requestProjectRevisionController(
     const validated = requestRevisionSchema.parse(req.body);
     const project = await requestProjectRevision(
       req.user!.userId,
-      req.params.id,
+      (req.params.id as string),
       validated,
     );
     res
@@ -104,7 +104,7 @@ export async function approveProjectWorkController(
   try {
     const payment = await approveProjectWork(
       req.user!.userId,
-      req.params.id,
+      (req.params.id as string),
     );
     res
       .status(200)
@@ -123,7 +123,7 @@ export async function updateProjectProgressController(
     const validated = updateProgressSchema.parse(req.body);
     const project = await updateProjectProgress(
       req.user!.userId,
-      req.params.id,
+      (req.params.id as string),
       validated,
     );
     res
@@ -141,7 +141,7 @@ export async function getProjectSubmissionsController(
 ) {
   try {
     const submissions = await getProjectSubmissions(
-      req.params.id,
+      (req.params.id as string),
       req.user!.userId,
     );
     res
@@ -203,7 +203,7 @@ export async function getProjectByIdController(
       await assertUserNotBanned(req.user.userId, "view project details");
     }
 
-    const project = await getProjectById(req.params.id);
+    const project = await getProjectById((req.params.id as string));
     res
       .status(200)
       .json(ApiResponse(200, "Project fetched successfully", project));
@@ -269,7 +269,7 @@ export async function updateProjectController(
 
     const updatedProject = await updateProject(
       req.user!.userId,
-      req.params.id,
+      (req.params.id as string),
       validatedData,
     );
     res
@@ -286,7 +286,7 @@ export async function deleteProjectController(
   next: NextFunction,
 ) {
   try {
-    await deleteProject(req.user!.userId, req.params.id);
+    await deleteProject(req.user!.userId, (req.params.id as string));
     res.status(200).json(ApiResponse(200, "Project deleted successfully"));
   } catch (error) {
     next(error);

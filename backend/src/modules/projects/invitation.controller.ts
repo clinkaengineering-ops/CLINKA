@@ -18,11 +18,11 @@ export async function inviteEngineerController(
 ) {
   try {
     const validated = inviteEngineerSchema.parse(req.body);
-    const projectId = req.params.id;
+    const projectId = (req.params.id as string);
     const invitation = await inviteEngineerToProject(
       req.user!.userId,
       projectId,
-      validated.engineerId,
+      String(validated.engineerId),
     );
     res.status(201).json(ApiResponse(201, "Invitation sent", invitation));
   } catch (error) {
@@ -37,7 +37,7 @@ export async function respondInvitationController(
 ) {
   try {
     const validated = respondInvitationSchema.parse(req.body);
-    const invitationId = req.params.id;
+    const invitationId = (req.params.id as string);
     const metadata = {
       ip: req.ip,
       userAgent: req.headers["user-agent"],
@@ -45,7 +45,7 @@ export async function respondInvitationController(
     };
     const updated = await respondToInvitation(
       req.user!.userId,
-      invitationId,
+      Number(invitationId),
       validated.action,
       metadata
     );
@@ -67,7 +67,7 @@ export async function cancelInvitationController(
       userAgent: req.headers["user-agent"],
       source: "web",
     };
-    const updated = await cancelInvitation(req.user!.userId, invitationId, metadata);
+    const updated = await cancelInvitation(req.user!.userId, Number(invitationId), metadata);
     res.status(200).json(ApiResponse(200, "Invitation cancelled", updated));
   } catch (error) {
     next(error);
@@ -93,7 +93,7 @@ export async function getProjectInvitationsController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.id;
+    const projectId = (req.params.id as string);
     const invitations = await getProjectInvitations(req.user!.userId, projectId);
     res.status(200).json(ApiResponse(200, "Project invitations fetched", invitations));
   } catch (error) {
@@ -107,8 +107,8 @@ export async function markInvitationViewedController(
   next: NextFunction,
 ) {
   try {
-    const invitationId = req.params.id;
-    await markInvitationViewed(req.user!.userId, invitationId, {
+    const invitationId = (req.params.id as string);
+    await markInvitationViewed(req.user!.userId, Number(invitationId), {
       ip: req.ip,
       userAgent: req.headers["user-agent"],
     });

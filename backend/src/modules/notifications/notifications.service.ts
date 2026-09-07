@@ -9,7 +9,7 @@ import type { z } from "zod";
 
 type PrefsInput = z.infer<typeof updateNotificationPrefsSchema>;
 
-export async function getNotifications(userId: number, limit = 30) {
+export async function getNotifications(userId: string, limit = 30) {
   return db.notification.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -17,24 +17,24 @@ export async function getNotifications(userId: number, limit = 30) {
   });
 }
 
-export async function getUnreadCount(userId: number) {
+export async function getUnreadCount(userId: string) {
   return db.notification.count({ where: { userId, read: false } });
 }
 
-export async function markNotificationRead(userId: number, id: number) {
+export async function markNotificationRead(userId: string, id: number) {
   const n = await db.notification.findFirst({ where: { id, userId } });
   if (!n) throw new ApiError(404, "Notification not found");
   return db.notification.update({ where: { id }, data: { read: true } });
 }
 
-export async function markAllNotificationsRead(userId: number) {
+export async function markAllNotificationsRead(userId: string) {
   await db.notification.updateMany({
     where: { userId, read: false },
     data: { read: true },
   });
 }
 
-export async function getNotificationPrefs(userId: number) {
+export async function getNotificationPrefs(userId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { role: true, notificationPrefs: true },
@@ -46,7 +46,7 @@ export async function getNotificationPrefs(userId: number) {
   );
 }
 
-export async function updateNotificationPrefs(userId: number, data: PrefsInput) {
+export async function updateNotificationPrefs(userId: string, data: PrefsInput) {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { role: true, notificationPrefs: true },

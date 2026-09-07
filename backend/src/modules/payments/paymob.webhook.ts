@@ -77,7 +77,7 @@ export function verifyPaymobTransactionHmac(
 
 export function parsePaymobSpecialReference(
   reference: string | null | undefined,
-): { paymentId?: number; projectId?: number } | null {
+): { paymentId?: number; projectId?: string } | null {
   if (!reference?.trim()) return null;
 
   const paymentMatch = reference.match(/payment[-_]?(\d+)/i);

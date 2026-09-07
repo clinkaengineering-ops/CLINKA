@@ -55,7 +55,7 @@ function paymobResultToStatus(result: {
 /** Legacy rows created before balance-hold did not decrement wallet on create. */
 export async function getLegacyReservedWithdrawalAmount(
   tx: TxClient,
-  userId: number,
+  userId: string,
 ): Promise<number> {
   const pending = await tx.withdrawalRequest.aggregate({
     where: {
@@ -70,7 +70,7 @@ export async function getLegacyReservedWithdrawalAmount(
 
 export async function getSpendableBalance(
   tx: TxClient,
-  userId: number,
+  userId: string,
 ): Promise<number> {
   const wallet = await lockWalletForUpdate(tx, userId);
   const legacyReserved = await getLegacyReservedWithdrawalAmount(tx, userId);
@@ -78,7 +78,7 @@ export async function getSpendableBalance(
 }
 
 async function resolveEngineerNationalId(
-  engineerUserId: number,
+  engineerUserId: string,
   override?: string,
 ) {
   if (override?.trim()) {
@@ -131,8 +131,8 @@ async function releasePayoutBalance(
 async function loadWithdrawalForUpdate(tx: TxClient, withdrawalId: number) {
   const rows = await tx.$queryRaw<
     Array<{
-      id: number;
-      userId: number;
+      id: string;
+      userId: string;
       amount: number;
       status: WithdrawalRequestStatus;
       balanceHeldAt: Date | null;
@@ -148,7 +148,7 @@ async function loadWithdrawalForUpdate(tx: TxClient, withdrawalId: number) {
   return row;
 }
 
-async function getWalletForUser(tx: TxClient, userId: number) {
+async function getWalletForUser(tx: TxClient, userId: string) {
   return lockWalletForUpdate(tx, userId);
 }
 
@@ -402,7 +402,7 @@ function buildPaymobInput(
 }
 
 export async function createPaymobPayout(
-  engineerUserId: number,
+  engineerUserId: string,
   input: AutoWithdrawalInput,
   options?: { idempotencyKey?: string },
 ) {
@@ -609,7 +609,7 @@ export async function createPaymobPayout(
 }
 
 export async function createIbanPayout(
-  engineerUserId: number,
+  engineerUserId: string,
   input: InternationalWithdrawalInput,
   options?: { idempotencyKey?: string },
 ) {
@@ -997,7 +997,7 @@ export async function markPayoutNeedsManualReview(
 
 export async function markPayoutCompletedByAdmin(
   withdrawalId: number,
-  adminId: number,
+  adminId: string,
   adminNotes?: string,
 ) {
   return db.$transaction(async (tx) => {
@@ -1046,7 +1046,7 @@ export async function markPayoutCompletedByAdmin(
 
 export async function resolvePayoutManualReview(
   withdrawalId: number,
-  adminId: number,
+  adminId: string,
   action: "release_funds" | "mark_completed" | "cancel",
   reason?: string,
 ) {
@@ -1078,7 +1078,7 @@ export async function resolvePayoutManualReview(
 
 export async function cancelPayoutByAdmin(
   withdrawalId: number,
-  adminId: number,
+  adminId: string,
   reason?: string,
 ) {
   return db.$transaction(async (tx) => {
@@ -1137,7 +1137,7 @@ export async function getPayoutAuditTrail(withdrawalId: number) {
 }
 
 export async function createInstapayPayout(
-  engineerUserId: number,
+  engineerUserId: string,
   input: InstapayWithdrawalInput,
   options?: { idempotencyKey?: string },
 ) {
@@ -1234,7 +1234,7 @@ export async function createInstapayPayout(
 }
 
 export async function createEWalletPayout(
-  engineerUserId: number,
+  engineerUserId: string,
   input: EWalletWithdrawalInput,
   options?: { idempotencyKey?: string },
 ) {

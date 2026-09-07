@@ -173,7 +173,7 @@ function engineerProfileUpdate(meta?: EngineerSignupMeta) {
   };
 }
 
-async function engineerNeedsDocumentUpload(userId: number): Promise<boolean> {
+async function engineerNeedsDocumentUpload(userId: string): Promise<boolean> {
   const full = await db.user.findUnique({
     where: { id: userId },
     include: {

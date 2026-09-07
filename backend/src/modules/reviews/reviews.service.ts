@@ -28,7 +28,7 @@ async function recalculateEngineerRating(engineerProfileId: number) {
   });
 }
 
-async function getAcceptedBid(projectId: number) {
+async function getAcceptedBid(projectId: string) {
   return db.bid.findFirst({
     where: { projectId, status: "ACCEPTED" },
     include: {
@@ -38,8 +38,8 @@ async function getAcceptedBid(projectId: number) {
 }
 
 export async function createProjectReview(
-  clientId: number,
-  projectId: number,
+  clientId: string,
+  projectId: string,
   data: CreateReviewInput,
 ) {
   const project = await db.project.findUnique({
@@ -92,7 +92,7 @@ export async function createProjectReview(
   return review;
 }
 
-export async function getProjectReview(projectId: number) {
+export async function getProjectReview(projectId: string) {
   const review = await db.review.findUnique({
     where: { projectId },
     include: reviewInclude,
@@ -101,7 +101,7 @@ export async function getProjectReview(projectId: number) {
   return review;
 }
 
-export async function getEngineerReviews(engineerUserId: number) {
+export async function getEngineerReviews(engineerUserId: string) {
   const engineer = await db.user.findUnique({
     where: { id: engineerUserId, role: "ENGINEER" },
     include: { profile: true },
@@ -115,7 +115,7 @@ export async function getEngineerReviews(engineerUserId: number) {
   });
 }
 
-export async function listPendingReviews(clientId: number) {
+export async function listPendingReviews(clientId: string) {
   const projects = await db.project.findMany({
     where: {
       clientId,
@@ -149,7 +149,7 @@ export async function listPendingReviews(clientId: number) {
     }));
 }
 
-export async function listMyReviews(clientId: number) {
+export async function listMyReviews(clientId: string) {
   return db.review.findMany({
     where: { clientId },
     include: reviewInclude,
@@ -157,7 +157,7 @@ export async function listMyReviews(clientId: number) {
   });
 }
 
-export async function canReviewProject(clientId: number, projectId: number) {
+export async function canReviewProject(clientId: string, projectId: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: {

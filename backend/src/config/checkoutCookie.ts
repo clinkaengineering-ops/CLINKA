@@ -4,7 +4,7 @@ import { authCookieOptions } from "./cookies";
 export const CHECKOUT_RETURN_COOKIE = "clinka_checkout_return";
 
 export type CheckoutReturnCookie = {
-  projectId: number;
+  projectId: string;
   paymentId: number;
 };
 
@@ -35,7 +35,7 @@ export function readCheckoutReturnCookie(
     const parsed = JSON.parse(raw) as CheckoutReturnCookie;
     if (
       Number.isInteger(parsed.projectId) &&
-      parsed.projectId > 0 &&
+      parsed.projectId !== '' &&
       Number.isInteger(parsed.paymentId) &&
       parsed.paymentId > 0
     ) {

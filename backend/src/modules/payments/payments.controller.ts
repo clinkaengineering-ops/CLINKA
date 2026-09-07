@@ -53,7 +53,7 @@ export async function getCheckoutSessionController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.projectId;
+    const projectId = (req.params.projectId as string);
     const phone =
       typeof req.query.phone === "string" ? req.query.phone : undefined;
     const address =
@@ -81,7 +81,7 @@ export async function initiateCheckoutController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.projectId;
+    const projectId = (req.params.projectId as string);
     const input = initiateCheckoutSchema.parse(req.body);
     const result = await initiateProjectCheckout(
       req.user!.userId,
@@ -107,7 +107,7 @@ export async function getProjectPaymentController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.projectId;
+    const projectId = (req.params.projectId as string);
     const payment = await getProjectPayment(projectId, req.user!.userId);
     res
       .status(200)

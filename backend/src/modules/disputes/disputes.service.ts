@@ -4,7 +4,7 @@ import { logSystemEvent } from "../../utils/auditLogger";
 import { ensureWallet } from "../../utils/wallet";
 import { netEngineerAmount, recordPaymentLedger } from "../../utils/paymentLedger";
 
-export async function openDispute(clientId: number, projectId: number, reason: string) {
+export async function openDispute(clientId: string, projectId: string, reason: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: {
@@ -131,7 +131,7 @@ export async function openDispute(clientId: number, projectId: number, reason: s
   });
 }
 
-export async function resolveDispute(adminId: number, projectId: number, resolution: "ENGINEER" | "CLIENT", reason: string) {
+export async function resolveDispute(adminId: string, projectId: string, resolution: "ENGINEER" | "CLIENT", reason: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: {
@@ -238,7 +238,7 @@ export async function resolveDispute(adminId: number, projectId: number, resolut
   });
 }
 
-export async function escalateDispute(actorId: number, actorRole: string, projectId: number) {
+export async function escalateDispute(actorId: string, actorRole: string, projectId: string) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: { 
@@ -294,7 +294,7 @@ export async function escalateDispute(actorId: number, actorRole: string, projec
   });
 }
 
-export async function manualFreeze(adminId: number, engineerId: number, amount: number, reason: string) {
+export async function manualFreeze(adminId: string, engineerId: number, amount: number, reason: string) {
   const engineerProfile = await db.engineerProfile.findUnique({ where: { id: engineerId } });
   if (!engineerProfile) throw new ApiError(404, "Engineer not found");
   

@@ -39,8 +39,8 @@ export interface SubmitManualPaymentInput {
 }
 
 export async function submitManualPayment(
-  clientId: number,
-  projectId: number,
+  clientId: string,
+  projectId: string,
   input: SubmitManualPaymentInput,
 ) {
   const project = await db.project.findUnique({
@@ -142,8 +142,8 @@ export async function submitManualPayment(
 // ─── Client: Get my submissions for a project ──────────────────────────────
 
 export async function getManualPaymentSubmissions(
-  clientId: number,
-  projectId: number,
+  clientId: string,
+  projectId: string,
 ) {
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -250,7 +250,7 @@ export async function getAdminManualPaymentDetails(submissionId: number) {
 
 export async function adminVerifyManualPayment(
   submissionId: number,
-  adminUserId: number,
+  adminUserId: string,
   adminNote?: string,
 ) {
   // Atomic conditional update — prevents race conditions
@@ -354,7 +354,7 @@ export async function adminVerifyManualPayment(
 
 export async function adminRejectManualPayment(
   submissionId: number,
-  adminUserId: number,
+  adminUserId: string,
   reason?: string,
 ) {
   const updateResult = await db.manualPaymentSubmission.updateMany({
@@ -405,7 +405,7 @@ export async function adminRejectManualPayment(
 
 // ─── Client: Fetch manual payment settings (configured destinations) ───────
 
-export async function getManualPaymentSettingsForClient(userId: number) {
+export async function getManualPaymentSettingsForClient(userId: string) {
   // Ensure the user actually has a project awaiting payment
   const pendingProject = await db.project.findFirst({
     where: { clientId: userId, payment: { status: "PENDING" } },

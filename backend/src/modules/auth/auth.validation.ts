@@ -31,10 +31,7 @@ export const loginSchema = z.object({
 });
 
 export const verifyOtpSchema = z.object({
-  userId: z.coerce
-    .number({ error: "Invalid session" })
-    .int("Invalid session")
-    .positive("Invalid session"),
+  userId: z.string().uuid({ message: "Invalid session" }),
   otp: otpField,
 });
 

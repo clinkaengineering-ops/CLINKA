@@ -134,7 +134,7 @@ export async function applyClientAsEngineerController(
       .map((file) => getStoredUploadPath(file, "images")!)
       .filter((url) => url.trim().length > 0);
     const user = await applyClientAsEngineer(
-      req.user!.userId,
+      String(req.user!.userId),
       validatedData,
       portfolioUrls,
     );
@@ -158,7 +158,7 @@ export async function completeGoogleEngineerController(
       .map((file) => getStoredUploadPath(file, "images")!)
       .filter((url) => url.trim().length > 0);
     const user = await completeGoogleEngineerRegistration(
-      req.user!.userId,
+      String(req.user!.userId),
       validatedData,
       portfolioUrls,
     );
@@ -258,7 +258,7 @@ export async function resendVerificationController(
   next: NextFunction,
 ) {
   try {
-    await resendVerificationEmail(req.user!.userId, req.body.email);
+    await resendVerificationEmail(String(req.user!.userId), req.body.email);
     res.status(200).json(ApiResponse(200, "Verification email resent"));
   } catch (error) {
     next(error);
@@ -272,7 +272,7 @@ export async function changePasswordController(
 ) {
   try {
     const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
-    await changePassword(req.user!.userId, oldPassword, newPassword);
+    await changePassword(String(req.user!.userId), oldPassword, newPassword);
     res.status(200).json(ApiResponse(200, "Password changed successfully"));
   } catch (error) {
     next(error);
@@ -286,7 +286,7 @@ export async function requestEmailChangeController(
 ) {
   try {
     const { newEmail } = requestEmailChangeSchema.parse(req.body);
-    const result = await requestEmailChange(req.user!.userId, newEmail);
+    const result = await requestEmailChange(String(req.user!.userId), newEmail);
     res.status(200).json(ApiResponse(200, result.message, null));
   } catch (error) {
     next(error);
@@ -300,7 +300,7 @@ export async function confirmEmailChangeController(
 ) {
   try {
     const { otp } = confirmEmailChangeSchema.parse(req.body);
-    const user = await confirmEmailChange(req.user!.userId, otp);
+    const user = await confirmEmailChange(String(req.user!.userId), otp);
     res.status(200).json(ApiResponse(200, "Email updated successfully", user));
   } catch (error) {
     next(error);

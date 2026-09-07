@@ -6,9 +6,9 @@ import { openDispute, resolveDispute, manualFreeze } from "./disputes.service";
 import { getEngineerBalance } from "../payments/payments.service";
 
 describe("Disputes Integration Lifecycle", () => {
-  let clientId: number;
-  let engineerId: number;
-  let projectId: number;
+  let clientId: string;
+  let engineerId: string;
+  let projectId: string;
   let paymentId: number;
   let engineerProfileId: number;
 
@@ -145,9 +145,9 @@ describe("Disputes Integration Lifecycle", () => {
 });
 
 describe("Dispute Lifecycle - Client Refund & Withdrawal Guards", () => {
-  let clientId: number;
-  let engineerId: number;
-  let projectId: number;
+  let clientId: string;
+  let engineerId: string;
+  let projectId: string;
   let paymentId: number;
   let engineerProfileId: number;
 
@@ -270,10 +270,10 @@ describe("Dispute Lifecycle - Client Refund & Withdrawal Guards", () => {
 });
 
 describe("Dispute Cron Jobs", () => {
-  let clientId: number;
-  let engineerId: number;
-  let projectIdApprove: number;
-  let projectIdEscalate: number;
+  let clientId: string;
+  let engineerId: string;
+  let projectIdApprove: string;
+  let projectIdEscalate: string;
   let disputeIdEscalate: number;
   let engineerProfileId: number;
 

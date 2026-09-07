@@ -39,7 +39,7 @@ export async function logPayoutEvent(
     statusAfter?: WithdrawalRequestStatus | null;
     message?: string;
     metadata?: Record<string, unknown>;
-    actorId?: number;
+    actorId?: string;
     actorIp?: string;
     actorUserAgent?: string;
   },

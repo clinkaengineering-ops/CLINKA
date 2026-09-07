@@ -20,7 +20,7 @@ export async function getMyConversationsController(
   next: NextFunction,
 ) {
   try {
-    const data = await getMyConversations(req.user!.userId);
+    const data = await getMyConversations(String(req.user!.userId));
     res.status(200).json(ApiResponse(200, "Conversations fetched", data));
   } catch (error) {
     next(error);
@@ -33,10 +33,10 @@ export async function getMessagesController(
   next: NextFunction,
 ) {
   try {
-    const conversationId = req.params.id;
+    const conversationId = Number(req.params.id);
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 30;
-    const data = await getMessages(conversationId, req.user!.userId, page, limit);
+    const data = await getMessages(conversationId, String(req.user!.userId), page, limit);
     res.status(200).json(ApiResponse(200, "Messages fetched", data));
   } catch (error) {
     next(error);
@@ -49,7 +49,7 @@ export async function sendMessageController(
   next: NextFunction,
 ) {
   try {
-    const conversationId = req.params.id;
+    const conversationId = Number(req.params.id);
     const validatedData = sendMessageSchema.parse(req.body);
     const file = req.file as Express.Multer.File | undefined;
 
@@ -66,7 +66,7 @@ export async function sendMessageController(
       throw new ApiError(400, "Message must include text or a file");
     }
 
-    const message = await sendMessage(conversationId, req.user!.userId, payload);
+    const message = await sendMessage(conversationId, String(req.user!.userId), payload);
     broadcastNewMessage(conversationId, message);
     res.status(201).json(ApiResponse(201, "Message sent", message));
   } catch (error) {
@@ -80,7 +80,7 @@ export async function unreadMessagesCountController(
   next: NextFunction,
 ) {
   try {
-    const count = await getUnreadMessagesCount(req.user!.userId);
+    const count = await getUnreadMessagesCount(String(req.user!.userId));
     res.status(200).json(ApiResponse(200, "OK", { count }));
   } catch (error) {
     next(error);
@@ -93,8 +93,8 @@ export async function getConversationByProjectController(
   next: NextFunction,
 ) {
   try {
-    const projectId = req.params.projectId;
-    const data = await getConversationByProject(projectId, req.user!.userId);
+    const projectId = (req.params.projectId as string);
+    const data = await getConversationByProject(projectId, String(req.user!.userId));
     res.status(200).json(ApiResponse(200, "Conversation fetched", data));
   } catch (error) {
     next(error);
@@ -107,8 +107,8 @@ export async function getGeneralConversationController(
   next: NextFunction,
 ) {
   try {
-    const targetUserId = req.params.userId;
-    const data = await getOrCreateGeneralConversation(req.user!.userId, targetUserId);
+    const targetUserId = (req.params.userId as string);
+    const data = await getOrCreateGeneralConversation(String(req.user!.userId), targetUserId);
     res.status(200).json(ApiResponse(200, "Conversation fetched", data));
   } catch (error) {
     next(error);

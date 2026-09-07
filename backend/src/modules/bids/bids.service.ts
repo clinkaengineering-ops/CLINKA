@@ -5,16 +5,16 @@ import { CreateBidInput } from "./bids.validation";
 import { assertUserNotBanned } from "../messages/ban.service";
 
 export async function createBid(
-  engineerId: number,
-  projectId: number,
+  engineerUserId: string,
+  projectId: string,
   data: CreateBidInput,
 ) {
-  await assertUserNotBanned(engineerId, "place bids");
+  await assertUserNotBanned(engineerUserId, "place bids");
 
   const { price, duration, description } = data;
 
   // Check user is an engineer
-  const user = await db.user.findUnique({ where: { id: engineerId } });
+  const user = await db.user.findUnique({ where: { id: engineerUserId } });
   if (!user || user.role === "ADMIN") {
     throw new ApiError(403, "Admins cannot place bids");
   }
@@ -24,7 +24,7 @@ export async function createBid(
 
   // Get engineer profile
   const profile = await db.engineerProfile.findUnique({
-    where: { userId: engineerId },
+    where: { userId: engineerUserId },
   });
   if (!profile) throw new ApiError(404, "Engineer profile not found");
   if (profile.verificationStatus !== "APPROVED") {
@@ -76,7 +76,7 @@ export async function createBid(
     create: {
       projectId,
       clientId: project.clientId,
-      engineerId,
+      engineerId: engineerUserId,
     },
     update: {},
   });
@@ -84,7 +84,7 @@ export async function createBid(
   return bid;
 }
 
-export async function getBidsForProject(projectId: number) {
+export async function getBidsForProject(projectId: string) {
   const bids = await db.bid.findMany({
     where: { projectId },
     include: {
@@ -96,7 +96,7 @@ export async function getBidsForProject(projectId: number) {
   return bids;
 }
 
-export async function approveBid(clientId: number, bidId: number) {
+export async function approveBid(clientId: string, bidId: number) {
   // Get the bid
   const bid = await db.bid.findUnique({ where: { id: bidId } });
   if (!bid) throw new ApiError(404, "Bid not found");
@@ -167,7 +167,7 @@ await db.conversation.upsert({
   return { message: "Bid approved and project assigned to engineer" };
 }
 
-export async function listMyBids(engineerUserId: number) {
+export async function listMyBids(engineerUserId: string) {
   await assertUserNotBanned(engineerUserId, "view your bids");
 
   const profile = await db.engineerProfile.findUnique({
