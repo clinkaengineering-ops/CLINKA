@@ -33,7 +33,7 @@ export async function getMessagesController(
   next: NextFunction,
 ) {
   try {
-    const conversationId = Number(req.params.id);
+    const conversationId = req.params.id;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 30;
     const data = await getMessages(conversationId, req.user!.userId, page, limit);
@@ -49,7 +49,7 @@ export async function sendMessageController(
   next: NextFunction,
 ) {
   try {
-    const conversationId = Number(req.params.id);
+    const conversationId = req.params.id;
     const validatedData = sendMessageSchema.parse(req.body);
     const file = req.file as Express.Multer.File | undefined;
 
@@ -93,7 +93,7 @@ export async function getConversationByProjectController(
   next: NextFunction,
 ) {
   try {
-    const projectId = Number(req.params.projectId);
+    const projectId = req.params.projectId;
     const data = await getConversationByProject(projectId, req.user!.userId);
     res.status(200).json(ApiResponse(200, "Conversation fetched", data));
   } catch (error) {
@@ -107,7 +107,7 @@ export async function getGeneralConversationController(
   next: NextFunction,
 ) {
   try {
-    const targetUserId = Number(req.params.userId);
+    const targetUserId = req.params.userId;
     const data = await getOrCreateGeneralConversation(req.user!.userId, targetUserId);
     res.status(200).json(ApiResponse(200, "Conversation fetched", data));
   } catch (error) {

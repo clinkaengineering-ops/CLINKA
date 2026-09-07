@@ -62,7 +62,7 @@ router.post(
   proofUpload.single("proof"),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const projectId = Number(req.params.projectId);
+      const projectId = req.params.projectId;
       const input = submitManualPaymentSchema.parse(req.body);
       
       // Extract proof file metadata
@@ -121,7 +121,7 @@ router.get(
   t4AccountRateLimit,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const projectId = Number(req.params.projectId);
+      const projectId = req.params.projectId;
       const submissions = await getManualPaymentSubmissions(req.user!.userId, projectId);
       res.status(200).json(ApiResponse(200, "Submissions fetched", submissions));
     } catch (error) {

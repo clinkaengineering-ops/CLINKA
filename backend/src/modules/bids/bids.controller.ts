@@ -10,7 +10,7 @@ export async function createBidController(
 ) {
   try {
     const validatedData = createBidSchema.parse(req.body);
-    const projectId = Number(req.params.projectId);
+    const projectId = req.params.projectId;
     const bid = await createBid(req.user!.userId,projectId , validatedData);
     res.status(201).json(ApiResponse(201, "Bid created successfully", bid));
   } catch (error) {
@@ -24,7 +24,7 @@ export async function getBidsForProjectController(
   next: NextFunction,
 ) {
   try {
-    const projectId = Number(req.params.projectId);
+    const projectId = req.params.projectId;
     const bids = await getBidsForProject(projectId);
     res.status(200).json(ApiResponse(200, "Bids fetched successfully", bids));
   } catch (error) {

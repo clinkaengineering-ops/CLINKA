@@ -17,7 +17,7 @@ export async function createReviewController(
   next: NextFunction,
 ) {
   try {
-    const projectId = Number(req.params.projectId);
+    const projectId = req.params.projectId;
     const input = createReviewSchema.parse(req.body);
     const review = await createProjectReview(
       req.user!.userId,
@@ -36,7 +36,7 @@ export async function getProjectReviewController(
   next: NextFunction,
 ) {
   try {
-    const review = await getProjectReview(Number(req.params.projectId));
+    const review = await getProjectReview(req.params.projectId);
     res.status(200).json(ApiResponse(200, "Review fetched successfully", review));
   } catch (error) {
     next(error);
@@ -94,7 +94,7 @@ export async function canReviewProjectController(
   try {
     const result = await canReviewProject(
       req.user!.userId,
-      Number(req.params.projectId),
+      req.params.projectId,
     );
     res.status(200).json(ApiResponse(200, "Review eligibility checked", result));
   } catch (error) {

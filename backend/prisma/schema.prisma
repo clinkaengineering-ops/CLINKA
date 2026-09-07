@@ -175,7 +175,7 @@ enum PayoutAuditEvent {
 }
 
 model User {
-  id                Int      @id @default(autoincrement())
+  id                String   @id @default(uuid())
   name              String
   email             String   @unique
   password          String
@@ -212,11 +212,11 @@ model User {
 
 model Ban {
   id             Int       @id @default(autoincrement())
-  userId         Int       @unique
+  userId String       @unique
   reason         BanReason
   bannedAt       DateTime  @default(now())
   expiresAt      DateTime
-  bannedById     Int?
+  bannedById String?
   note           String?
   triggerMessage String?
   active         Boolean   @default(true)
@@ -227,7 +227,7 @@ model Ban {
 
 model EngineerProfile {
   id                 Int                @id @default(autoincrement())
-  userId             Int                @unique
+  userId String                @unique
   specialty          EngineerSpecialty
   nationality        String?
   bio                String?
@@ -298,8 +298,8 @@ model PortfolioProject {
 }
 
 model Project {
-  id                Int           @id @default(autoincrement())
-  clientId          Int
+  id                String        @id @default(uuid())
+  clientId String
   title             String
   description       String
   budget            Decimal       @db.Decimal(18, 2)
@@ -326,7 +326,7 @@ model Project {
 
 model Bid {
   id          Int       @id @default(autoincrement())
-  projectId   Int
+  projectId String
   engineerId  Int
   price       Decimal   @db.Decimal(18, 2)
   duration    String
@@ -340,8 +340,8 @@ model Bid {
 
 model Payment {
   id                Int           @id @default(autoincrement())
-  projectId         Int           @unique
-  clientId          Int
+  projectId String           @unique
+  clientId String
   engineerId        Int
   amountUsd         Decimal       @map("amount") @db.Decimal(18, 2)
   commission        Decimal       @db.Decimal(18, 2)
@@ -447,7 +447,7 @@ model PaymentLedgerEntry {
 
 model ProjectSubmission {
   id           Int      @id @default(autoincrement())
-  projectId    Int
+  projectId String
   engineerId   Int
   notes        String?
   revisionNote String?
@@ -471,7 +471,7 @@ model ProjectDeliverable {
 
 model Notification {
   id        Int      @id @default(autoincrement())
-  userId    Int
+  userId String
   type      String
   title     String
   body      String?
@@ -484,9 +484,9 @@ model Notification {
 
 model Conversation {
   id                 Int       @id @default(autoincrement())
-  projectId          Int?      @unique
-  clientId           Int
-  engineerId         Int
+  projectId String?      @unique
+  clientId String
+  engineerId         String
   clientLastReadAt   DateTime?
   engineerLastReadAt DateTime?
   createdAt          DateTime  @default(now())
@@ -503,7 +503,7 @@ model Conversation {
 model Message {
   id             Int      @id @default(autoincrement())
   conversationId Int
-  senderId       Int
+  senderId String
   content        String   @default("")
   attachmentUrl  String?
   attachmentName String?
@@ -516,8 +516,8 @@ model Message {
 
 model Review {
   id         Int      @id @default(autoincrement())
-  projectId  Int      @unique
-  clientId   Int
+  projectId String      @unique
+  clientId String
   engineerId Int
   rating     Int
   comment    String?
@@ -543,8 +543,8 @@ model SupportTicket {
   message      String
   status       SupportTicketStatus @default(OPEN)
   solution     String?
-  userId       Int?
-  resolvedById Int?
+  userId String?
+  resolvedById String?
   resolvedAt   DateTime?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
@@ -556,7 +556,7 @@ model SupportTicket {
 
 model Wallet {
   id               Int      @id @default(autoincrement())
-  userId           Int      @unique
+  userId String      @unique
   availableBalance Decimal  @default(0) @db.Decimal(18, 2)
   pendingBalance   Decimal  @default(0) @db.Decimal(18, 2)
   heldByDispute    Decimal  @default(0) @db.Decimal(18, 2)
@@ -585,7 +585,7 @@ model WalletTransaction {
 
 model WithdrawalRequest {
   id                         Int                     @id @default(autoincrement())
-  userId                     Int
+  userId String
   amount                     Decimal                 @db.Decimal(18, 2)
   method                     String
   accountNumber              String
@@ -647,7 +647,7 @@ model PayoutAuditLog {
   metadata       Json?
   previousHash   String?
   hash           String?
-  actorId        Int?
+  actorId String?
   actorIp        String?
   actorUserAgent String?
   createdAt      DateTime                 @default(now())
@@ -676,9 +676,9 @@ enum InvitationEventType {
 
 model ProjectInvitation {
   id         Int              @id @default(autoincrement())
-  projectId  Int
-  engineerId Int
-  clientId   Int
+  projectId String
+  engineerId String
+  clientId String
   status     InvitationStatus @default(PENDING)
   expiresAt  DateTime
   createdAt  DateTime         @default(now())
@@ -699,7 +699,7 @@ model InvitationEvent {
   id           Int                 @id @default(autoincrement())
   invitationId Int
   event        InvitationEventType
-  actorId      Int?
+  actorId String?
   metadata     Json?
   createdAt    DateTime            @default(now())
 
@@ -867,7 +867,7 @@ model ProfileAnalytics {
 model SystemAuditLog {
   id              Int      @id @default(autoincrement())
   timestamp       DateTime @default(now())
-  actorId         Int?
+  actorId String?
   actorRole       String
   action          String
   targetType      String
@@ -892,14 +892,14 @@ enum DisputeStatus {
 
 model Dispute {
   id              Int           @id @default(autoincrement())
-  projectId       Int           // NOT unique, but enforced at service level
-  openedById      Int
+  projectId String           // NOT unique, but enforced at service level
+  openedById String
   reason          String
   status          DisputeStatus @default(OPEN)
   openedAt        DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   resolvedAt      DateTime?
-  resolvedById    Int?          // System or Admin
+  resolvedById String?          // System or Admin
   resolutionNote  String?
   
   project         Project       @relation(fields: [projectId], references: [id])

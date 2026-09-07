@@ -18,7 +18,7 @@ export async function inviteEngineerController(
 ) {
   try {
     const validated = inviteEngineerSchema.parse(req.body);
-    const projectId = Number(req.params.id);
+    const projectId = req.params.id;
     const invitation = await inviteEngineerToProject(
       req.user!.userId,
       projectId,
@@ -37,7 +37,7 @@ export async function respondInvitationController(
 ) {
   try {
     const validated = respondInvitationSchema.parse(req.body);
-    const invitationId = Number(req.params.id);
+    const invitationId = req.params.id;
     const metadata = {
       ip: req.ip,
       userAgent: req.headers["user-agent"],
@@ -93,7 +93,7 @@ export async function getProjectInvitationsController(
   next: NextFunction,
 ) {
   try {
-    const projectId = Number(req.params.id);
+    const projectId = req.params.id;
     const invitations = await getProjectInvitations(req.user!.userId, projectId);
     res.status(200).json(ApiResponse(200, "Project invitations fetched", invitations));
   } catch (error) {
@@ -107,7 +107,7 @@ export async function markInvitationViewedController(
   next: NextFunction,
 ) {
   try {
-    const invitationId = Number(req.params.id);
+    const invitationId = req.params.id;
     await markInvitationViewed(req.user!.userId, invitationId, {
       ip: req.ip,
       userAgent: req.headers["user-agent"],

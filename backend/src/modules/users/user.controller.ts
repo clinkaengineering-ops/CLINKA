@@ -142,7 +142,7 @@ export async function deletePortfolioItemController(
   next: NextFunction
 ) {
   try {
-    await deletePortfolioItem(req.user!.userId, Number(req.params.id));
+    await deletePortfolioItem(req.user!.userId, req.params.id);
     res
       .status(200)
       .json(ApiResponse(200, "Portfolio item deleted successfully"));

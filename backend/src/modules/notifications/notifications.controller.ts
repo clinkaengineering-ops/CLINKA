@@ -45,7 +45,7 @@ export async function markReadController(
   try {
     const item = await markNotificationRead(
       req.user!.userId,
-      Number(req.params.id),
+      req.params.id,
     );
     res.status(200).json(ApiResponse(200, "OK", item));
   } catch (e) {
