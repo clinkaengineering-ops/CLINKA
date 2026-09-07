@@ -205,6 +205,10 @@ model User {
   resolvedTickets    SupportTicket[]     @relation("ResolvedSupportTickets")
   wallet             Wallet?
   withdrawalRequests WithdrawalRequest[]
+  approvedWithdrawals  WithdrawalRequest[] @relation("WithdrawalApprovedBy")
+  completedWithdrawals WithdrawalRequest[] @relation("WithdrawalCompletedBy")
+  rejectedWithdrawals  WithdrawalRequest[] @relation("WithdrawalRejectedBy")
+  verifiedManualPayments ManualPaymentSubmission[] @relation("ManualPaymentVerifiedBy")
 
   openedDisputes     Dispute[]           @relation("DisputeOpenedBy")
   resolvedDisputes   Dispute[]           @relation("DisputeResolvedBy")
@@ -416,7 +420,8 @@ model ManualPaymentSubmission {
   receivingWalletNumber    String? // E-Wallet number
   receivingInstapayAccount String? // InstaPay account handle
 
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment    Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  verifier   User?   @relation("ManualPaymentVerifiedBy", fields: [verifiedBy], references: [id], onDelete: SetNull)
 
   @@unique([paymentMethod, transactionReference])
 }
@@ -629,8 +634,11 @@ model WithdrawalRequest {
   createdAt                  DateTime                @default(now())
   updatedAt                  DateTime                @updatedAt
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  auditLogs PayoutAuditLog[]
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy  User?            @relation("WithdrawalApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  completedBy User?            @relation("WithdrawalCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  rejectedBy  User?            @relation("WithdrawalRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  auditLogs   PayoutAuditLog[]
 
   @@unique([userId, idempotencyKey])
   @@index([status, updatedAt])

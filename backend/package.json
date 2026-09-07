@@ -8,7 +8,7 @@
     "build": "prisma generate && npm run verify:migrations && tsc",
     "postinstall": "prisma generate",
     "start": "node dist/server.js",
-    "start:prod": "npx prisma migrate resolve --rolled-back 20260907170157_uuid_migration 2>/dev/null || true; npx prisma migrate resolve --rolled-back 20260907184000_withdrawal_admin_uuid 2>/dev/null || true; prisma migrate deploy && npm run verify:db-drift && node dist/server.js",
+    "start:prod": "prisma migrate deploy && npm run verify:db-drift && node dist/server.js",
     "verify:migrations": "node scripts/verify-migrations-cover-schema.js",
     "verify:db-drift": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code",
     "db:up": "docker compose up -d",
