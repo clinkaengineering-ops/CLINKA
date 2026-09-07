@@ -187,6 +187,93 @@ DELETE FROM "Ban" b WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = b."u
 UPDATE "Ban" SET "bannedById" = NULL
 WHERE "bannedById" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = "Ban"."bannedById");
 
+-- Orphan EngineerProfiles (and anything hanging off them) must go before FK re-add
+WITH orphan_engineers AS (
+  SELECT e."id"
+  FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+),
+orphan_portfolio AS (
+  SELECT p."id"
+  FROM "PortfolioItem" p
+  WHERE p."engineerId" IN (SELECT "id" FROM orphan_engineers)
+)
+DELETE FROM "PortfolioFile" pf
+WHERE pf."portfolioProjectId" IN (SELECT "id" FROM orphan_portfolio);
+
+WITH orphan_engineers AS (
+  SELECT e."id"
+  FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+),
+orphan_portfolio AS (
+  SELECT p."id"
+  FROM "PortfolioItem" p
+  WHERE p."engineerId" IN (SELECT "id" FROM orphan_engineers)
+)
+DELETE FROM "PortfolioProjectSkill" pps
+WHERE pps."portfolioProjectId" IN (SELECT "id" FROM orphan_portfolio);
+
+DELETE FROM "PortfolioItem" p
+WHERE p."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "Bid" b
+WHERE b."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "Payment" pay
+WHERE pay."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "Review" r
+WHERE r."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "ProfileSpecialization" ps
+WHERE ps."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "ProfileSkill" ps
+WHERE ps."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "ProfileServiceArea" psa
+WHERE psa."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "ProfileLanguage" pl
+WHERE pl."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "ProfileCertification" pc
+WHERE pc."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
+DELETE FROM "ProfileAnalytics" pa
+WHERE pa."engineerId" IN (
+  SELECT e."id" FROM "EngineerProfile" e
+  WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId")
+);
+
 DELETE FROM "EngineerProfile" e WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u."id" = e."userId");
 
 DELETE FROM "Bid" b WHERE NOT EXISTS (SELECT 1 FROM "Project" p WHERE p."id" = b."projectId");
