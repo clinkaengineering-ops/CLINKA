@@ -9,82 +9,82 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 */
 -- DropForeignKey
-ALTER TABLE "Ban" DROP CONSTRAINT "Ban_bannedById_fkey";
+ALTER TABLE "Ban" DROP CONSTRAINT IF EXISTS "Ban_bannedById_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Ban" DROP CONSTRAINT "Ban_userId_fkey";
+ALTER TABLE "Ban" DROP CONSTRAINT IF EXISTS "Ban_userId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Bid" DROP CONSTRAINT "Bid_projectId_fkey";
+ALTER TABLE "Bid" DROP CONSTRAINT IF EXISTS "Bid_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Conversation" DROP CONSTRAINT "Conversation_clientId_fkey";
+ALTER TABLE "Conversation" DROP CONSTRAINT IF EXISTS "Conversation_clientId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Conversation" DROP CONSTRAINT "Conversation_engineerId_fkey";
+ALTER TABLE "Conversation" DROP CONSTRAINT IF EXISTS "Conversation_engineerId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Conversation" DROP CONSTRAINT "Conversation_projectId_fkey";
+ALTER TABLE "Conversation" DROP CONSTRAINT IF EXISTS "Conversation_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Dispute" DROP CONSTRAINT "Dispute_openedById_fkey";
+ALTER TABLE "Dispute" DROP CONSTRAINT IF EXISTS "Dispute_openedById_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Dispute" DROP CONSTRAINT "Dispute_projectId_fkey";
+ALTER TABLE "Dispute" DROP CONSTRAINT IF EXISTS "Dispute_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Dispute" DROP CONSTRAINT "Dispute_resolvedById_fkey";
+ALTER TABLE "Dispute" DROP CONSTRAINT IF EXISTS "Dispute_resolvedById_fkey";
 
 -- DropForeignKey
-ALTER TABLE "EngineerProfile" DROP CONSTRAINT "EngineerProfile_userId_fkey";
+ALTER TABLE "EngineerProfile" DROP CONSTRAINT IF EXISTS "EngineerProfile_userId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Message" DROP CONSTRAINT "Message_senderId_fkey";
+ALTER TABLE "Message" DROP CONSTRAINT IF EXISTS "Message_senderId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Notification" DROP CONSTRAINT "Notification_userId_fkey";
+ALTER TABLE "Notification" DROP CONSTRAINT IF EXISTS "Notification_userId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Payment" DROP CONSTRAINT "Payment_clientId_fkey";
+ALTER TABLE "Payment" DROP CONSTRAINT IF EXISTS "Payment_clientId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Payment" DROP CONSTRAINT "Payment_projectId_fkey";
+ALTER TABLE "Payment" DROP CONSTRAINT IF EXISTS "Payment_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Project" DROP CONSTRAINT "Project_clientId_fkey";
+ALTER TABLE "Project" DROP CONSTRAINT IF EXISTS "Project_clientId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "ProjectInvitation" DROP CONSTRAINT "ProjectInvitation_clientId_fkey";
+ALTER TABLE "ProjectInvitation" DROP CONSTRAINT IF EXISTS "ProjectInvitation_clientId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "ProjectInvitation" DROP CONSTRAINT "ProjectInvitation_engineerId_fkey";
+ALTER TABLE "ProjectInvitation" DROP CONSTRAINT IF EXISTS "ProjectInvitation_engineerId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "ProjectInvitation" DROP CONSTRAINT "ProjectInvitation_projectId_fkey";
+ALTER TABLE "ProjectInvitation" DROP CONSTRAINT IF EXISTS "ProjectInvitation_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "ProjectSubmission" DROP CONSTRAINT "ProjectSubmission_projectId_fkey";
+ALTER TABLE "ProjectSubmission" DROP CONSTRAINT IF EXISTS "ProjectSubmission_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Review" DROP CONSTRAINT "Review_clientId_fkey";
+ALTER TABLE "Review" DROP CONSTRAINT IF EXISTS "Review_clientId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Review" DROP CONSTRAINT "Review_projectId_fkey";
+ALTER TABLE "Review" DROP CONSTRAINT IF EXISTS "Review_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "SupportTicket" DROP CONSTRAINT "SupportTicket_resolvedById_fkey";
+ALTER TABLE "SupportTicket" DROP CONSTRAINT IF EXISTS "SupportTicket_resolvedById_fkey";
 
 -- DropForeignKey
-ALTER TABLE "SupportTicket" DROP CONSTRAINT "SupportTicket_userId_fkey";
+ALTER TABLE "SupportTicket" DROP CONSTRAINT IF EXISTS "SupportTicket_userId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "SystemAuditLog" DROP CONSTRAINT "SystemAuditLog_actorId_fkey";
+ALTER TABLE "SystemAuditLog" DROP CONSTRAINT IF EXISTS "SystemAuditLog_actorId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "Wallet" DROP CONSTRAINT "Wallet_userId_fkey";
+ALTER TABLE "Wallet" DROP CONSTRAINT IF EXISTS "Wallet_userId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "WithdrawalRequest" DROP CONSTRAINT "WithdrawalRequest_userId_fkey";
+ALTER TABLE "WithdrawalRequest" DROP CONSTRAINT IF EXISTS "WithdrawalRequest_userId_fkey";
 
 -- AlterTable
 ALTER TABLE "Ban" ALTER COLUMN "userId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "userId"::text)::text,
@@ -123,7 +123,7 @@ ALTER COLUMN "clientId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(),
 ALTER TABLE "PayoutAuditLog" ALTER COLUMN "actorId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "actorId"::text)::text;
 
 -- AlterTable
-ALTER TABLE "Project" DROP CONSTRAINT "Project_pkey",
+ALTER TABLE "Project" DROP CONSTRAINT IF EXISTS "Project_pkey",
 ALTER COLUMN "id" DROP DEFAULT,
 ALTER COLUMN "id" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'project_' || "id"::text)::text,
 ALTER COLUMN "clientId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "clientId"::text)::text,
@@ -150,7 +150,7 @@ ALTER COLUMN "resolvedById" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_ur
 ALTER TABLE "SystemAuditLog" ALTER COLUMN "actorId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "actorId"::text)::text;
 
 -- AlterTable
-ALTER TABLE "User" DROP CONSTRAINT "User_pkey",
+ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_pkey",
 ALTER COLUMN "id" DROP DEFAULT,
 ALTER COLUMN "id" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "id"::text)::text,
 ADD CONSTRAINT "User_pkey" PRIMARY KEY ("id");
