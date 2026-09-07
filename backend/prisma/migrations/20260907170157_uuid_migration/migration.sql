@@ -128,7 +128,8 @@ ALTER COLUMN "id" DROP DEFAULT,
 ALTER COLUMN "id" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'project_' || "id"::text)::text,
 ALTER COLUMN "clientId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "clientId"::text)::text,
 ADD CONSTRAINT "Project_pkey" PRIMARY KEY ("id");
-DROP SEQUENCE "Project_id_seq";
+-- Sequence may already be gone after DROP DEFAULT / type change on a serial column
+DROP SEQUENCE IF EXISTS "Project_id_seq";
 
 -- AlterTable
 ALTER TABLE "ProjectInvitation" ALTER COLUMN "projectId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'project_' || "projectId"::text)::text,
@@ -154,7 +155,8 @@ ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_pkey",
 ALTER COLUMN "id" DROP DEFAULT,
 ALTER COLUMN "id" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "id"::text)::text,
 ADD CONSTRAINT "User_pkey" PRIMARY KEY ("id");
-DROP SEQUENCE "User_id_seq";
+-- Sequence may already be gone after DROP DEFAULT / type change on a serial column
+DROP SEQUENCE IF EXISTS "User_id_seq";
 
 -- AlterTable
 ALTER TABLE "Wallet" ALTER COLUMN "userId" SET DATA TYPE TEXT USING uuid_generate_v5(uuid_ns_url(), 'user_' || "userId"::text)::text;
