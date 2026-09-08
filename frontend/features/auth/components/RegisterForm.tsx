@@ -63,6 +63,7 @@ export function RegisterForm() {
   const [resumeMode, setResumeMode] = useState(false);
   const [googleMode, setGoogleMode] = useState(false);
   const [existingPortfolioCount, setExistingPortfolioCount] = useState(0);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -363,7 +364,7 @@ export function RegisterForm() {
   return (
     <Card className="p-6 sm:p-8">
       <p className="text-xs uppercase tracking-wider text-electric-600 font-bold">
-        {t("auth.step")} {displayStep} {t("auth.of")} {totalSteps}
+        <span>{t("auth.step")}</span> {displayStep} <span>{t("auth.of")}</span> {totalSteps}
       </p>
       <h1 className="mt-1 text-2xl font-bold">{displayStepLabel}</h1>
 
@@ -386,7 +387,7 @@ export function RegisterForm() {
 
       <div className="mt-6">
         {step === 1 && (
-          <div className="space-y-3">
+          <div key="step-1" className="space-y-3">
             {[
               {
                 role: "ENGINEER" as Role,
@@ -433,7 +434,7 @@ export function RegisterForm() {
         )}
 
         {step === 2 && !resumeMode && (
-          <div className="space-y-4">
+          <div key="step-2-normal" className="space-y-4">
             {role && (
               <>
                 <Button
@@ -553,7 +554,7 @@ export function RegisterForm() {
         )}
 
         {step === 2 && resumeMode && (
-          <div className="space-y-4">
+          <div key="step-2-resume" className="space-y-4">
             <p className="text-sm text-slate-500">{t("auth.portfolioResumeHint")}</p>
             <Field label={t("auth.email")} error={fieldErrors.email}>
               <Input
@@ -586,7 +587,7 @@ export function RegisterForm() {
         )}
 
         {step === 3 && role === "ENGINEER" && !resumeMode && (
-          <div className="space-y-4">
+          <div key="step-3-engineer" className="space-y-4">
             {googleMode && (
               <p className="text-sm text-slate-500">{t("auth.googleDocsHint")}</p>
             )}
@@ -659,11 +660,12 @@ export function RegisterForm() {
         </button>
 
         {step < totalSteps && !googleMode ? (
-          <Button onClick={goNext} icon={<IconArrow width={14} height={14} />}>
-            {t("auth.continue")}
+          <Button key="next-btn" onClick={goNext} icon={<IconArrow width={14} height={14} />}>
+            <span key="continue-text">{t("auth.continue")}</span>
           </Button>
         ) : (
           <Button
+            key="finish-btn"
             onClick={() => void handleDone()}
             disabled={
               loading ||
@@ -672,13 +674,17 @@ export function RegisterForm() {
             }
             icon={<IconCheck width={14} height={14} />}
           >
-            {loading ? t("auth.creating") : t("auth.finishBtn")}
+            {loading ? (
+              <span key="loading-text">{t("auth.creating")}</span>
+            ) : (
+              <span key="finish-text">{t("auth.finishBtn")}</span>
+            )}
           </Button>
         )}
       </div>
 
       <p className="text-center text-sm text-slate-500 mt-4">
-        {t("auth.have")}{" "}
+        <span>{t("auth.have")} </span>
         <Link href="/login" className="text-electric-600 font-semibold hover:underline">
           {t("auth.signInLink")}
         </Link>

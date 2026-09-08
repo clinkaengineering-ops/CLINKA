@@ -151,11 +151,11 @@ export function ProjectsPage() {
                     <span>·</span>
                     <span>{p._count?.bids ?? 0} {t("common.bids")}</span>
                     <span>·</span>
-                    <span>{t("common.posted")} {p.createdAt && !isNaN(new Date(p.createdAt).getTime()) ? new Date(p.createdAt).toLocaleDateString() : "Recently"}</span>
+                    <span><span>{t("common.posted")}</span> {p.createdAt && !isNaN(new Date(p.createdAt).getTime()) ? new Date(p.createdAt).toLocaleDateString() : "Recently"}</span>
                     {p.client && (
                       <>
                         <span>·</span>
-                        <span>{t("pm.postedBy")} {p.client.name}</span>
+                        <span><span>{t("pm.postedBy")}</span> {p.client.name}</span>
                       </>
                     )}
                   </div>

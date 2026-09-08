@@ -83,7 +83,8 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k="clinka-theme",t=localStorage.getItem(k),d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();`,
+            __html: `(function(){try{var k="clinka-theme",t=localStorage.getItem(k),d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();
+            (function(){if(typeof Node==="function"&&Node.prototype){var originalInsertBefore=Node.prototype.insertBefore;Node.prototype.insertBefore=function(newNode,referenceNode){if(referenceNode&&referenceNode.parentNode!==this){return newNode;}return originalInsertBefore.call(this,newNode,referenceNode);};var originalRemoveChild=Node.prototype.removeChild;Node.prototype.removeChild=function(child){if(child&&child.parentNode!==this){return child;}return originalRemoveChild.call(this,child);};}})();`,
           }}
         />
       </head>

@@ -80,8 +80,8 @@ export function EditProjectModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <Card className="w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
-          <h2 className="text-lg font-bold">{t("common.edit")} {t("pm.postModal.titleLabel")}</h2>
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-bold"><span>{t("common.edit")}</span> <span>{t("pm.postModal.titleLabel")}</span></h2>
           <button
             type="button"
             onClick={onClose}

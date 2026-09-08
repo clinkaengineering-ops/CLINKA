@@ -99,8 +99,8 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm">{inv.engineer?.name}</h4>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    {t("inv.sentOn")} {formatDate(inv.createdAt)}
+                  <div className="mt-2 text-xs text-slate-500">
+                    <span>{t("inv.sentOn")}</span> {formatDate(inv.createdAt)}
                   </div>
                 </div>
               </div>

@@ -166,7 +166,11 @@ export function PasswordChecklist({
           ) : (
             <Circle className="w-4 h-4" />
           )}
-          <span>{confirmMatch ? t("auth.passConfirm.match") : t("auth.passConfirm.mismatch")}</span>
+          {confirmMatch ? (
+            <span key="match">{t("auth.passConfirm.match")}</span>
+          ) : (
+            <span key="mismatch">{t("auth.passConfirm.mismatch")}</span>
+          )}
         </div>
       )}
     </div>

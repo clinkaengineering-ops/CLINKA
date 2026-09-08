@@ -167,8 +167,8 @@ export function AdminSupportTicketsPanel() {
                 </p>
                 <p className="mt-2 text-sm whitespace-pre-wrap">{selected.solution}</p>
                 {selected.resolvedBy && (
-                  <p className="mt-2 text-xs text-slate-400">
-                    {t("help.admin.resolvedBy")} {selected.resolvedBy.name}
+                  <p className="text-xs text-slate-500 mt-2">
+                    <span>{t("help.admin.resolvedBy")}</span> {selected.resolvedBy.name}
                     {selected.resolvedAt ? ` · ${formatDate(selected.resolvedAt)}` : ""}
                   </p>
                 )}

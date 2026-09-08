@@ -140,7 +140,11 @@ export function LoginForm() {
           icon={<IconArrow width={14} height={14} />}
           disabled={loading}
         >
-          {loading ? t("auth.signingIn") : t("auth.signin")}
+          {loading ? (
+            <span key="loading">{t("auth.signingIn")}</span>
+          ) : (
+            <span key="idle">{t("auth.signin")}</span>
+          )}
         </Button>
 
         <Divider label={t("common.or")} />
@@ -157,8 +161,8 @@ export function LoginForm() {
           </Button>
         </div>
 
-        <p className="text-center text-sm text-slate-500">
-          {t("auth.noAccount")}{" "}
+        <p className="text-center text-sm text-slate-500 mt-4">
+          <span>{t("auth.noAccount")} </span>
           <Link
             href="/register"
             className="text-electric-600 font-semibold hover:underline"

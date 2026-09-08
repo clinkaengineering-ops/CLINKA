@@ -18,6 +18,11 @@ export function resolveUploadError(err: unknown): ApiError | null {
   }
 
   const message = err instanceof Error ? err.message : String(err);
+
+  if (message === "Request aborted") {
+    return new ApiError(400, "Upload cancelled by client.");
+  }
+
   const code = (err as { code?: string }).code;
   const lower = message.toLowerCase();
 

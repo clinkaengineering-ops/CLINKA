@@ -91,8 +91,8 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
     return (
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-800 dark:text-amber-200">
         <p className="font-semibold">{t("bid.verificationRequired")}</p>
-        <p className="mt-1">
-          {t("bid.verificationPending")} {verification}
+        <p className="mt-2 text-sm text-slate-600">
+          <span>{t("bid.verificationPending")}</span> {verification}
         </p>
         <Link href="/settings" className="inline-block mt-3">
           <Button size="sm" variant="secondary">
@@ -207,12 +207,11 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
         <p className="mt-1 text-xs text-rose-500">{fieldErrors.description}</p>
       )}
 
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>
-          {t("pm.serviceFee", { fee: platformFeePercent })}{" "}
-          <span className="font-bold text-slate-900 dark:text-white">{formatMoney(net)}</span>
-        </span>
-      </div>
+      <p className="text-xs text-slate-500 mt-2">
+        <span>{t("pm.serviceFee", { fee: platformFeePercent })} </span>
+        <span className="font-bold text-slate-900 dark:text-white">{formatMoney(net)}</span>
+      </p>
+
       {error && <p className="mt-2 text-xs text-rose-500">{error}</p>}
       <Button
         className="mt-3 w-full"

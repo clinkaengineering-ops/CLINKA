@@ -72,7 +72,7 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
           {t("common.remote")}
         </span>
         <span className="sm:ms-auto text-xs text-slate-500 shrink-0">
-          {bidCount} {t("common.bids")} · {t("common.posted")}{" "}
+          {bidCount} <span>{t("common.bids")}</span> · <span>{t("common.posted")} </span>
           {project.createdAt && !isNaN(new Date(project.createdAt).getTime()) 
             ? new Date(project.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
             : "Recently"}
