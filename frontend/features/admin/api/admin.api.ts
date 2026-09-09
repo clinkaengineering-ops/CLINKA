@@ -563,8 +563,7 @@ export const recordAdminCompletion = (
   return unwrap(
     api.post<ApiResponse<AdminWithdrawalRequest>>(
       `/admin/withdrawals/${withdrawalId}/record-completion`,
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
+      formData
     ),
   );
 };

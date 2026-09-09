@@ -129,10 +129,7 @@ export const submitManualPayment = (
   unwrap(
     api.post<ApiResponse<unknown>>(
       `/payments/projects/${projectId}/manual-submit`,
-      payload,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
-      }
+      payload
     ),
   );
 

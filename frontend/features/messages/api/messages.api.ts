@@ -58,7 +58,6 @@ export const sendMessageWithAttachment = (
       `/messages/conversations/${conversationId}`,
       form,
       {
-        headers: { "Content-Type": "multipart/form-data" },
         timeout: 60_000,
       },
     ),

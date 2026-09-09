@@ -44,9 +44,7 @@ export const uploadAvatar = (file: File): Promise<Me> => {
   const form = new FormData();
   form.append("image", file);
   return unwrap(
-    api.post<ApiResponse<Me>>("/users/me/avatar", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<ApiResponse<Me>>("/users/me/avatar", form),
   );
 };
 
@@ -54,9 +52,7 @@ export const uploadCoverImage = (file: File): Promise<Me> => {
   const form = new FormData();
   form.append("image", file);
   return unwrap(
-    api.post<ApiResponse<Me>>("/users/me/cover", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<ApiResponse<Me>>("/users/me/cover", form),
   );
 };
 
@@ -99,9 +95,7 @@ export const uploadPortfolioItem = (
   form.append("image", file);
   form.append("description", description);
   return unwrap(
-    api.post<ApiResponse<PortfolioItem>>("/users/portfolio", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<ApiResponse<PortfolioItem>>("/users/portfolio", form),
   );
 };
 

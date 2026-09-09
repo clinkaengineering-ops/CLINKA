@@ -18,14 +18,10 @@ export const authApi = {
     api.post<{ data: User }>("/auth/register/client", data),
 
   registerEngineer: (data: FormData) =>
-    api.post<{ data: User }>("/auth/register/engineer", data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<{ data: User }>("/auth/register/engineer", data),
 
   resumeEngineerRegistration: (data: FormData) =>
-    api.post<{ data: User }>("/auth/register/engineer/resume", data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<{ data: User }>("/auth/register/engineer/resume", data),
 
   login: (data: { email: string; password: string }) =>
     api.post("/auth/login", data),
@@ -45,14 +41,10 @@ export const authApi = {
   logout: () => api.post("/auth/logout"),
 
   applyAsEngineer: (data: FormData) =>
-    api.post<{ data: User }>("/auth/apply-engineer", data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<{ data: User }>("/auth/apply-engineer", data),
 
   completeGoogleEngineer: (data: FormData) =>
-    api.post<{ data: User }>("/auth/register/engineer/google-complete", data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<{ data: User }>("/auth/register/engineer/google-complete", data),
 
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
     api.post("/auth/change-password", data),

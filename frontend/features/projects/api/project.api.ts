@@ -168,9 +168,7 @@ export async function submitProjectWork(
   for (const file of payload.files ?? []) {
     form.append("files", file);
   }
-  await api.post(`/projects/${projectId}/submit-work`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  await api.post(`/projects/${projectId}/submit-work`, form);
 }
 
 export async function requestProjectRevision(
