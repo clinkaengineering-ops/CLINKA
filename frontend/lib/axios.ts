@@ -1,5 +1,8 @@
 import axios from "axios";
 import { resolveApiBaseUrl } from "./apiBaseUrl";
+import { useLoadingStore } from "@/store/loadingStore";
+
+let uploadRequests = 0;
 
 const api = axios.create({
   withCredentials: true,
@@ -7,6 +10,13 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   config.baseURL = resolveApiBaseUrl();
+  
+  if (config.data instanceof FormData) {
+    (config as any)._isUpload = true;
+    uploadRequests++;
+    useLoadingStore.getState().setUploading(true);
+  }
+  
   return config;
 });
 
@@ -21,8 +31,19 @@ const PUBLIC_PATH_PREFIXES = [
 ];
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if ((response.config as any)?._isUpload) {
+      uploadRequests = Math.max(0, uploadRequests - 1);
+      if (uploadRequests === 0) useLoadingStore.getState().setUploading(false);
+    }
+    return response;
+  },
   (error) => {
+    if ((error.config as any)?._isUpload) {
+      uploadRequests = Math.max(0, uploadRequests - 1);
+      if (uploadRequests === 0) useLoadingStore.getState().setUploading(false);
+    }
+
     const requestUrl = String(error.config?.url ?? "");
     const isSessionProbe = requestUrl.includes("/users/me");
 

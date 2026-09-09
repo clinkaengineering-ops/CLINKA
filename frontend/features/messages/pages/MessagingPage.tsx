@@ -699,11 +699,7 @@ export function MessagingPage() {
                       disabled={sending || (!draft.trim() && !pendingFile)}
                       className="h-9 w-9 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-50 text-white flex items-center justify-center shadow-md shadow-electric-500/30"
                     >
-                      {sending ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      ) : (
-                        <IconSend width={16} height={16} />
-                      )}
+                      <IconSend width={16} height={16} />
                     </button>
                   </div>
                 </div>

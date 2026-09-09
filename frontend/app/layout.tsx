@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { I18nProvider } from "@/i18n";
 import { AuthProvider } from "@/features/auth/components/AuthProvider";
+import { GlobalUploadIndicator } from "@/components/UI/GlobalUploadIndicator";
 
 const brandLatin = Barlow({
   subsets: ["latin"],
@@ -93,6 +94,7 @@ export default function RootLayout({
           <I18nProvider>
             <AuthProvider>
               {children}
+              <GlobalUploadIndicator />
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>
