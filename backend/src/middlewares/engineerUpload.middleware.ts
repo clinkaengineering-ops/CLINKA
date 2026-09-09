@@ -83,4 +83,4 @@ const engineerUpload = multer({
 
 
 /** Use on routes that accept only portfolio images (e.g. resume registration). */
-export const engineerPortfolioOnly = engineerUpload.array("portfolio", 10);
+export const engineerPortfolioOnly = engineerUpload.fields([{ name: "portfolio", maxCount: 10 }]);
