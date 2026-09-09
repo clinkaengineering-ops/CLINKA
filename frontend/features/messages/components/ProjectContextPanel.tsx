@@ -30,6 +30,7 @@ interface ProjectPayment {
   status: "PENDING" | "FUNDED" | "RELEASED" | "REFUNDED";
   amountUsd: number;
   commission: number;
+  manualSubmissions?: { status: string }[];
 }
 
 interface ProjectContextPanelProps {
@@ -144,10 +145,13 @@ export function ProjectContextPanel({
   const paymentStatus = payment?.status ?? null;
   const latestSubmission = submissions[0];
 
+  const hasPendingPayment = payment?.manualSubmissions?.some(s => s.status === "PENDING");
+
   const showPayButton =
     isClient &&
     (projectStatus === "IN_PROGRESS" || projectStatus === "AWAITING_PAYMENT") &&
-    (paymentStatus === null || paymentStatus === "PENDING");
+    (paymentStatus === null || paymentStatus === "PENDING") &&
+    !hasPendingPayment;
 
   const showEscrowFundedBadge =
     projectStatus === "IN_PROGRESS" && paymentStatus === "FUNDED";
@@ -155,7 +159,8 @@ export function ProjectContextPanel({
   const showWaitingForPayment =
     isEngineer &&
     (projectStatus === "IN_PROGRESS" || projectStatus === "AWAITING_PAYMENT") &&
-    (paymentStatus === null || paymentStatus === "PENDING");
+    (paymentStatus === null || paymentStatus === "PENDING") &&
+    !hasPendingPayment;
 
   const showSubmitWork =
     isEngineer &&
@@ -277,6 +282,15 @@ export function ProjectContextPanel({
               {t("bal.status.awaiting_payment")}
             </p>
             <p className="text-xs text-slate-500 mt-0.5">{t("pay.waitingClient")}</p>
+          </div>
+        )}
+
+        {!loadingPayment && hasPendingPayment && (
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              Awaiting Admin Verification
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">Your payment was submitted and is waiting for admin verification.</p>
           </div>
         )}
 
