@@ -30,7 +30,22 @@ export async function getMe(userId: string) {
     },
   });
   if (!user) throw new ApiError(404, "User not found");
-  return stripPassword(user);
+
+  const safeUser = stripPassword(user);
+  let needsPortfolioUpload = false;
+
+  if (safeUser.role === "ENGINEER") {
+    if (!safeUser.profile) {
+      needsPortfolioUpload = true;
+    } else if (
+      safeUser.profile.verificationStatus === "PENDING" &&
+      safeUser.profile.portfolio.length < 3
+    ) {
+      needsPortfolioUpload = true;
+    }
+  }
+
+  return { ...safeUser, needsPortfolioUpload };
 }
 
 // ── updateMe ──────────────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ export interface User {
   email: string;
   role: Role;
   isVerified: boolean;
+  needsPortfolioUpload?: boolean;
   avatarUrl?: string | null;
   createdAt: string;
 }

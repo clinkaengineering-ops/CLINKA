@@ -117,9 +117,7 @@ export async function getPendingVerifications() {
     orderBy: { createdAt: "desc" },
   });
 
-  return engineers
-    .filter((e) => e.profile && hasCompleteEngineerApplication(e.profile))
-    .map((e) => {
+  return engineers.map((e) => {
       const p = e.profile!;
       const submittedAt = p.portfolio.reduce(
         (latest, item) => (item.createdAt > latest ? item.createdAt : latest),

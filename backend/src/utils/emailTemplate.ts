@@ -275,9 +275,9 @@ export function notificationEmailHtml(input: {
     contentHtml: bodyHtml,
     cta: input.actionUrl
       ? {
-          label: input.actionLabel ?? "Open CLINKA",
-          href: input.actionUrl,
-        }
+        label: input.actionLabel ?? "Open CLINKA",
+        href: input.actionUrl,
+      }
       : undefined,
   });
 }

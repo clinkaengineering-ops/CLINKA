@@ -72,6 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (user?.needsPortfolioUpload && !pathname.startsWith("/register") && !pathname.startsWith("/login") && !pathname.startsWith("/api")) {
+      router.replace("/register?role=engineer&step=3&google=1");
+      return;
+    }
+
     const needsAdmin = ADMIN_PREFIXES.some(
       (p) => pathname === p || pathname.startsWith(`${p}/`),
     );

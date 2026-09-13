@@ -30,6 +30,7 @@ export function useAdmin() {
   const [escrow, setEscrow] = useState<EscrowOverview | null>(null);
   const [disputes, setDisputes] = useState<ActiveDispute[]>([]);
   const [verifications, setVerifications] = useState<PendingVerification[]>([]);
+  const [incompleteVerifications, setIncompleteVerifications] = useState<PendingVerification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -47,6 +48,7 @@ export function useAdmin() {
       ]);
       setStats(s);
       setVerifications((v ?? []).filter(isReviewableVerification));
+      setIncompleteVerifications((v ?? []).filter((item) => !isReviewableVerification(item)));
       setAnalytics(a);
       setEscrow(e);
       setDisputes(d);
@@ -97,6 +99,7 @@ export function useAdmin() {
     escrow,
     disputes,
     verifications,
+    incompleteVerifications,
     loading,
     error,
     actionLoading,

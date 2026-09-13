@@ -32,6 +32,7 @@ export function AdminPage() {
     escrow,
     disputes,
     verifications,
+    incompleteVerifications,
     loading,
     error,
     actionLoading,
@@ -103,6 +104,7 @@ export function AdminPage() {
       {tab === "verifications" && (
         <AdminVerificationList
           verifications={verifications}
+          incompleteVerifications={incompleteVerifications}
           actionLoading={actionLoading}
           onApprove={approve}
           onReject={reject}

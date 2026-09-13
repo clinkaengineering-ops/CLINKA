@@ -7,6 +7,7 @@ import { isReviewableVerification, type PendingVerification } from "../api/admin
 
 interface Props {
   verifications: PendingVerification[];
+  incompleteVerifications?: PendingVerification[];
   actionLoading: number | null;
   onApprove: (profileId: number) => void;
   onReject: (profileId: number) => void;
@@ -14,6 +15,7 @@ interface Props {
 
 export function AdminVerificationList({
   verifications,
+  incompleteVerifications,
   actionLoading,
   onApprove,
   onReject,
@@ -22,6 +24,7 @@ export function AdminVerificationList({
   const reviewable = verifications.filter(isReviewableVerification);
 
   return (
+    <>
     <Card>
       <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <h2 className="font-bold">{t("ad.pendingVerifications")}</h2>
@@ -92,5 +95,42 @@ export function AdminVerificationList({
         )}
       </div>
     </Card>
+    {incompleteVerifications && incompleteVerifications.length > 0 && (
+      <Card className="mt-6 opacity-75">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h2 className="font-bold">Incomplete Registrations</h2>
+          <Badge color="slate">
+            {incompleteVerifications.length} Pending
+          </Badge>
+        </div>
+        <div className="p-5 text-sm text-slate-500 mb-2">
+          These engineers have signed up (e.g. via Google) but have not uploaded their portfolio yet. They are blocked from accessing the app until they complete it.
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          {incompleteVerifications.map((v) => (
+            <div
+              key={v.profileId}
+              className="p-4 flex items-center justify-between gap-4 flex-wrap"
+            >
+              <div>
+                <p className="font-semibold text-sm">{v.name}</p>
+                <p className="text-xs text-slate-500">
+                  {v.email} · {v.specialty}
+                </p>
+                {v.portfolios && v.portfolios.length > 0 && (
+                  <p className="text-xs text-amber-500 mt-1 font-medium">
+                    {v.portfolios.length} of 3 portfolio items uploaded
+                  </p>
+                )}
+              </div>
+              <div>
+                 <span className="text-xs font-medium text-slate-400 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md">Waiting for user</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    )}
+    </>
   );
 }
