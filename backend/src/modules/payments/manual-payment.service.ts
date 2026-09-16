@@ -4,6 +4,8 @@ import { recordPaymentLedger, netEngineerAmount } from "../../utils/paymentLedge
 import { ensureWallet, walletHoldReleaseDate } from "../../utils/wallet";
 import { createNotification } from "../../utils/notifications";
 import { logSystemEvent } from "../../utils/auditLogger";
+import transporter from "../../config/mailer";
+import { getEmailFrom, manualPaymentNotificationEmailHtml } from "../../utils/emailTemplate";
 
 function toNumber(value: number | { toString(): string }) {
   return typeof value === "number" ? value : Number(value.toString());
@@ -45,7 +47,7 @@ export async function submitManualPayment(
 ) {
   const project = await db.project.findUnique({
     where: { id: projectId },
-    include: { payment: true },
+    include: { payment: true, client: true },
   });
   if (!project) throw new ApiError(404, "Project not found");
   if (project.clientId !== clientId) {
@@ -124,8 +126,34 @@ export async function submitManualPayment(
   // Notify admins
   const admins = await db.user.findMany({
     where: { role: "ADMIN" },
-    select: { id: true },
+    select: { id: true, email: true },
   });
+  
+  const adminEmails = admins.map((a) => a.email?.trim()).filter((email): email is string => Boolean(email));
+  
+  if (adminEmails.length > 0) {
+    try {
+      await transporter.sendMail({
+        from: getEmailFrom(),
+        to: adminEmails.join(","),
+        subject: `New Manual Payment - ${input.currency} ${input.amount}`,
+        html: manualPaymentNotificationEmailHtml({
+          clientName: project.client.name,
+          clientEmail: project.client.email,
+          projectTitle: project.title,
+          amount: `${input.currency} ${input.amount}`,
+          method: input.paymentMethod,
+          submissionDate: new Date().toLocaleString("en-EG", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to send manual payment notification email", err);
+    }
+  }
+
   for (const admin of admins) {
     await createNotification(
       admin.id,

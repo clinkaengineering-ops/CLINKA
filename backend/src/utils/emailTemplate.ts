@@ -240,6 +240,62 @@ export function withdrawalNotificationEmailHtml(input: {
   });
 }
 
+export function manualPaymentNotificationEmailHtml(input: {
+  clientName: string;
+  clientEmail: string;
+  projectTitle: string;
+  amount: string;
+  method: string;
+  submissionDate: string;
+}): string {
+  const row = (label: string, value: string) =>
+    `<tr>
+      <td style="padding:10px 0;border-bottom:1px solid ${BRAND.border};color:${BRAND.muted};font-size:14px;width:40%;vertical-align:top;">${escapeHtml(label)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid ${BRAND.border};color:${BRAND.text};font-size:14px;font-weight:600;vertical-align:top;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  return buildEmailHtml({
+    title: "New manual payment submitted",
+    preheader: `Manual payment proof for ${input.amount} from ${input.clientName}`,
+    contentHtml: `
+      <p style="margin:0 0 20px;color:${BRAND.text};">
+        A client has submitted proof for a manual payment. Review the details below in the admin dashboard to verify it.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;">
+        ${row("Client", input.clientName)}
+        ${row("Email", input.clientEmail)}
+        ${row("Project", input.projectTitle)}
+        ${row("Amount", input.amount)}
+        ${row("Method", input.method)}
+        ${row("Submission date", input.submissionDate)}
+      </table>`,
+  });
+}
+
+export function workSubmittedEmailHtml(input: {
+  projectTitle: string;
+  engineerName: string;
+  projectUrl: string;
+}): string {
+  return buildEmailHtml({
+    title: "Project work ready for review",
+    preheader: `${input.engineerName} submitted work for ${input.projectTitle}`,
+    contentHtml: `
+      <p style="margin:0 0 20px;color:${BRAND.text};">
+        <strong>${escapeHtml(input.engineerName)}</strong> has submitted deliverables for the project <strong>"${escapeHtml(input.projectTitle)}"</strong>. 
+        The review window has now started.
+      </p>
+      <p style="margin:0 0 20px;color:${BRAND.text};">
+        Please review the work on Clinka. If everything looks good, you can approve it to release the payment. 
+        Otherwise, you can request revisions.
+      </p>`,
+    cta: {
+      label: "Review Work",
+      href: input.projectUrl,
+    },
+  });
+}
+
 export function newMessageEmailHtml(input: {
   senderName: string;
   projectTitle: string;

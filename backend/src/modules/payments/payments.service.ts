@@ -75,7 +75,6 @@ function formatUsd(amount: number) {
   return `\${Math.round(amount * 100) / 100}`;
 }
 
-/* OLD_WITHDRAWAL_START — Manual withdrawal email notification (commented out for auto-withdrawal via Paymob)
 async function sendWithdrawalRequestEmailToAdmins(input: {
   engineerName: string;
   engineerEmail: string;
@@ -118,7 +117,6 @@ async function sendWithdrawalRequestEmailToAdmins(input: {
     );
   }
 }
-OLD_WITHDRAWAL_END */
 
 async function getAcceptedAgreementForProject(projectId: string, projectBudget: number | any) {
   const bid = await db.bid.findFirst({
@@ -1075,19 +1073,39 @@ export async function createWithdrawalRequest(
   });
 
   const { createPaymobPayout, createIbanPayout, createInstapayPayout, createEWalletPayout } = await import("../payouts/payout.service");
+  let result;
   switch (payoutMethod) {
     case "PAYMOB":
-      return createPaymobPayout(engineerUserId, input as import("./payments.validation").AutoWithdrawalInput, { idempotencyKey });
+      result = await createPaymobPayout(engineerUserId, input as import("./payments.validation").AutoWithdrawalInput, { idempotencyKey });
+      break;
     case "IBAN":
-      return createIbanPayout(engineerUserId, input as import("./payments.validation").InternationalWithdrawalInput, { idempotencyKey });
+      result = await createIbanPayout(engineerUserId, input as import("./payments.validation").InternationalWithdrawalInput, { idempotencyKey });
+      break;
     case "INSTAPAY":
-      return createInstapayPayout(engineerUserId, input as import("./payments.validation").InstapayWithdrawalInput, { idempotencyKey });
+      result = await createInstapayPayout(engineerUserId, input as import("./payments.validation").InstapayWithdrawalInput, { idempotencyKey });
+      break;
     case "E_WALLET":
-      return createEWalletPayout(engineerUserId, input as import("./payments.validation").EWalletWithdrawalInput, { idempotencyKey });
+      result = await createEWalletPayout(engineerUserId, input as import("./payments.validation").EWalletWithdrawalInput, { idempotencyKey });
+      break;
     default:
       const ApiError = (await import("../../utils/ApiError")).default;
       throw new ApiError(400, `Unsupported payout method: ${payoutMethod}`);
   }
+
+  const user = await db.user.findUnique({ where: { id: engineerUserId }, select: { name: true, email: true } });
+  if (user) {
+    const accountNumber = input.iban || input.account || input.walletNumber || "N/A";
+    await sendWithdrawalRequestEmailToAdmins({
+      engineerName: user.name,
+      engineerEmail: user.email,
+      amount: Number(input.amount),
+      method: payoutMethod,
+      accountNumber,
+      requestDate: new Date(),
+    });
+  }
+
+  return result;
 }
 
 export async function listEngineerEscrow(engineerUserId: string) {

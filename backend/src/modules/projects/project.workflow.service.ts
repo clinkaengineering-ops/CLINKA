@@ -16,6 +16,9 @@ import {
   isSubmittableStatus,
 } from "./project.status";
 import { createNotification } from "../../utils/notifications";
+import transporter from "../../config/mailer";
+import { getEmailFrom, workSubmittedEmailHtml } from "../../utils/emailTemplate";
+import { getClientUrl } from "../../config/clientUrl";
 import {
   RequestRevisionInput,
   SubmitWorkInput,
@@ -228,6 +231,26 @@ export async function submitProjectWork(
     `The engineer submitted deliverables for "${project.title}". The review window has started/resumed.`,
     `/client/projects/${projectId}`,
   );
+
+  try {
+    const clientUser = await db.user.findUnique({ where: { id: project.clientId }, select: { email: true } });
+    const engineerUser = await db.user.findUnique({ where: { id: engineerUserId }, select: { name: true } });
+    
+    if (clientUser?.email && engineerUser?.name) {
+      await transporter.sendMail({
+        from: getEmailFrom(),
+        to: clientUser.email,
+        subject: `Work ready for review - ${project.title}`,
+        html: workSubmittedEmailHtml({
+          projectTitle: project.title,
+          engineerName: engineerUser.name,
+          projectUrl: `${getClientUrl()}/client/projects/${projectId}`,
+        }),
+      });
+    }
+  } catch (err) {
+    console.error("Failed to send work submitted email:", err);
+  }
 
   return result;
 }
