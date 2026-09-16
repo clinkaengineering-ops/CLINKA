@@ -99,20 +99,48 @@ export function BanManagementPanel() {
     }
   };
 
-  const handleBanSubmit = async () => {
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  const handleSearch = async () => {
     setBanError(null);
+    setSearchResults([]);
+    setSelectedUser(null);
     const id = identifier.trim();
     if (!id) {
-      setBanError("Enter a user ID or email");
+      setBanError("Enter a user ID, email, or name");
       return;
     }
-    setActionUserId(-1);
+    setActionUserId(-1); // using this as searching state
     try {
-      const user = await lookupAdminUser(id);
-      await banUserAdmin(user.id, note.trim() || undefined);
+      const users = await lookupAdminUser(id);
+      if (users.length === 0) {
+        setBanError("No users found");
+      } else {
+        setSearchResults(users);
+        if (users.length === 1) setSelectedUser(users[0]);
+      }
+    } catch (err) {
+      setBanError(axiosMessage(err));
+    } finally {
+      setActionUserId(null);
+    }
+  };
+
+  const handleBanSubmit = async () => {
+    if (!selectedUser) {
+      setBanError("Please select a user to ban");
+      return;
+    }
+    setBanError(null);
+    setActionUserId(-2); // banning state
+    try {
+      await banUserAdmin(selectedUser.id, note.trim() || undefined);
       setModalOpen(false);
       setIdentifier("");
       setNote("");
+      setSearchResults([]);
+      setSelectedUser(null);
       await load();
     } catch (err) {
       setBanError(axiosMessage(err));
@@ -130,7 +158,7 @@ export function BanManagementPanel() {
             onClick={() => setModalOpen(false)}
           >
             <Card
-              className="w-full max-w-md p-5 space-y-4 shadow-xl"
+              className="w-full max-w-md p-5 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto"
               role="dialog"
               aria-modal="true"
               aria-labelledby="ban-user-title"
@@ -141,33 +169,66 @@ export function BanManagementPanel() {
               </h3>
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">
-                  User ID or email
+                  User ID, email, or name
                 </label>
-                <input
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="mt-1 w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
-                  placeholder="42 or user@example.com"
-                />
+                <div className="flex gap-2 mt-1">
+                  <input
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    className="flex-1 h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
+                    placeholder="Search user..."
+                  />
+                  <Button onClick={handleSearch} disabled={actionUserId === -1 || !identifier.trim()}>
+                    {actionUserId === -1 ? "Searching..." : "Search"}
+                  </Button>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase">
-                  Note (optional)
-                </label>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  rows={2}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm resize-none"
-                />
-              </div>
+
+              {searchResults.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase">Select User</label>
+                  <div className="max-h-48 overflow-y-auto space-y-2 border border-slate-200 dark:border-slate-800 rounded-lg p-2 bg-slate-50 dark:bg-slate-900/50">
+                    {searchResults.map((u) => (
+                      <div
+                        key={u.id}
+                        className={`p-2 rounded cursor-pointer border transition-colors ${
+                          selectedUser?.id === u.id
+                            ? "border-rose-500 bg-rose-50 dark:bg-rose-900/20"
+                            : "border-transparent hover:bg-slate-100 dark:hover:bg-slate-800"
+                        }`}
+                        onClick={() => setSelectedUser(u)}
+                      >
+                        <p className="font-semibold text-sm">{u.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {u.email} • <Badge color="slate" className="scale-90 origin-left">{u.role}</Badge> • {u.id}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedUser && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase">
+                    Note (optional)
+                  </label>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm resize-none"
+                  />
+                </div>
+              )}
               {banError && <p className="text-sm text-rose-500">{banError}</p>}
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button variant="ghost" onClick={() => setModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleBanSubmit} disabled={actionUserId === -1}>
-                  {actionUserId === -1 ? "Banning…" : "Confirm ban"}
+                <Button onClick={handleBanSubmit} disabled={!selectedUser || actionUserId === -2} variant="danger">
+                  {actionUserId === -2 ? "Banning…" : "Confirm ban"}
                 </Button>
               </div>
             </Card>

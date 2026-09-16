@@ -37,21 +37,29 @@ export function AdminDisputesPanel() {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
 
+  const [lookupIdentifier, setLookupIdentifier] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!freezeModal.engineerId) return;
+    if (!lookupIdentifier.trim()) return;
     setIsLookingUp(true);
     setLookupError(null);
     setLookupResult(null);
+    setSearchResults([]);
     try {
-      const user = await lookupAdminUser(freezeModal.engineerId.toString());
-      if (user.role !== "ENGINEER") {
-        setLookupError("The provided ID does not belong to an Engineer.");
+      const users = await lookupAdminUser(lookupIdentifier);
+      const engineers = users.filter((u) => u.role === "ENGINEER" && u.profile?.id);
+      if (engineers.length === 0) {
+        setLookupError("No engineers found matching that criteria.");
+      } else if (engineers.length === 1) {
+        setFreezeModal({ open: true, engineerId: engineers[0].profile!.id });
+        setLookupResult({ name: engineers[0].name, email: engineers[0].email });
       } else {
-        setLookupResult({ name: user.name, email: user.email });
+        setSearchResults(engineers);
       }
     } catch (err) {
-      setLookupError("Could not resolve this ID to an engineer profile.");
+      setLookupError("Could not resolve this search to an engineer profile.");
     } finally {
       setIsLookingUp(false);
     }
@@ -249,26 +257,47 @@ export function AdminDisputesPanel() {
               </p>
               
               {!lookupResult ? (
-                <form id="lookup-form" onSubmit={handleLookup} className="space-y-4">
-                  <Field label="Engineer Profile ID">
-                    <input
-                      type="number"
-                      placeholder="e.g. 42"
-                      className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
-                      value={freezeModal.engineerId || ""}
-                      onChange={(e) => {
-                        setFreezeModal({ ...freezeModal, engineerId: Number(e.target.value) });
-                        setLookupError(null);
-                      }}
-                      required
-                    />
-                  </Field>
-                  {lookupError && (
-                    <div className="text-sm text-rose-600 bg-rose-50 p-2 rounded">
-                      {lookupError}
+                <div className="space-y-4">
+                  <form id="lookup-form" onSubmit={handleLookup} className="space-y-4">
+                    <Field label="Engineer Name, Email, or ID">
+                      <input
+                        type="text"
+                        placeholder="Search engineer..."
+                        className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-white"
+                        value={lookupIdentifier}
+                        onChange={(e) => {
+                          setLookupIdentifier(e.target.value);
+                          setLookupError(null);
+                        }}
+                        required
+                      />
+                    </Field>
+                    {lookupError && (
+                      <div className="text-sm text-rose-600 bg-rose-50 p-2 rounded">
+                        {lookupError}
+                      </div>
+                    )}
+                  </form>
+                  {searchResults.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto space-y-2 border border-slate-200 dark:border-slate-800 rounded-lg p-2 bg-slate-50 dark:bg-slate-900/50">
+                      <p className="text-xs font-semibold text-slate-500 uppercase">Select Engineer</p>
+                      {searchResults.map((u) => (
+                        <div
+                          key={u.id}
+                          className="p-2 rounded cursor-pointer border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          onClick={() => {
+                            setFreezeModal({ open: true, engineerId: u.profile!.id });
+                            setLookupResult({ name: u.name, email: u.email });
+                            setSearchResults([]);
+                          }}
+                        >
+                          <p className="font-semibold text-sm">{u.name}</p>
+                          <p className="text-xs text-slate-500">{u.email}</p>
+                        </div>
+                      ))}
                     </div>
                   )}
-                </form>
+                </div>
               ) : (
                 <form id="freeze-form" onSubmit={handleFreeze} className="space-y-4">
                   <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 mb-4">
@@ -319,16 +348,16 @@ export function AdminDisputesPanel() {
               >
                 Cancel
               </Button>
-              {!lookupResult ? (
+              {!lookupResult && searchResults.length === 0 ? (
                 <Button 
                   type="submit" 
                   form="lookup-form" 
                   className="!bg-electric-600 !text-white" 
-                  disabled={isLookingUp || !freezeModal.engineerId}
+                  disabled={isLookingUp || !lookupIdentifier.trim()}
                 >
                   {isLookingUp ? "Looking up..." : "Verify Engineer"}
                 </Button>
-              ) : (
+              ) : lookupResult ? (
                 <Button 
                   type="submit" 
                   form="freeze-form" 
@@ -337,7 +366,7 @@ export function AdminDisputesPanel() {
                 >
                   {freezing ? "Freezing..." : "Confirm & Freeze"}
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

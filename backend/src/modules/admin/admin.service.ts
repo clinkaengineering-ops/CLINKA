@@ -297,33 +297,30 @@ export async function unbanUser(adminId: string, targetUserId: string) {
 
 export async function lookupUser(identifier: string) {
   const trimmed = identifier.trim();
-  const asId = trimmed;
-  if (asId) {
-    const byId = await db.user.findFirst({
-      where: { id: asId },
-      select: { 
-        id: true, 
-        name: true, 
-        email: true, 
-        role: true,
-        wallet: { select: { availableBalance: true, pendingBalance: true, heldByDispute: true } }
-      },
-    });
-    if (byId) return byId;
-  }
+  if (!trimmed) return [];
 
-  const byEmail = await db.user.findUnique({
-    where: { email: trimmed.toLowerCase() },
-    select: { 
-      id: true, 
-      name: true, 
-      email: true, 
-      role: true,
-      wallet: { select: { availableBalance: true, pendingBalance: true, heldByDispute: true } }
+  const users = await db.user.findMany({
+    where: {
+      OR: [
+        { id: trimmed },
+        { email: { contains: trimmed, mode: "insensitive" } },
+        { name: { contains: trimmed, mode: "insensitive" } },
+        { profile: { slug: { contains: trimmed, mode: "insensitive" } } },
+      ],
     },
+    take: 20,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      profile: { select: { id: true } },
+      wallet: { select: { availableBalance: true, pendingBalance: true, heldByDispute: true } },
+    },
+    orderBy: { createdAt: "desc" },
   });
-  if (!byEmail) throw new ApiError(404, "User not found");
-  return byEmail;
+
+  return users;
 }
 
 export async function impersonateUser(targetUserId: string) {

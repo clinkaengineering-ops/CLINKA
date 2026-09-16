@@ -76,16 +76,13 @@ export const fetchAllBans = (): Promise<AdminBan[]> =>
 
 export const lookupAdminUser = (
   identifier: string,
-): Promise<{ id: number; name: string; email: string; role: string }> =>
+): Promise<{ id: string; name: string; email: string; role: string; wallet?: any; profile?: { id: number } }[]> =>
   unwrap(
-    api.get<ApiResponse<{ id: number; name: string; email: string; role: string }>>(
+    api.get<ApiResponse<{ id: string; name: string; email: string; role: string; wallet?: any; profile?: { id: number } }[]>>(
       "/admin/users/lookup",
       { params: { identifier } },
     ),
-  ).then((d) => {
-    if (!d) throw new Error("User not found");
-    return d;
-  });
+  ).then((d) => d ?? []);
 
 export const banUserAdmin = (userId: number, note?: string) =>
   unwrap(

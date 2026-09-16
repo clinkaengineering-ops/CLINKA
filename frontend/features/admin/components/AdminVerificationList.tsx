@@ -25,112 +25,112 @@ export function AdminVerificationList({
 
   return (
     <>
-    <Card>
-      <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-        <h2 className="font-bold">{t("ad.pendingVerifications")}</h2>
-        <Badge color="amber">
-          {reviewable.length} {t("ad.pending")}
-        </Badge>
-      </div>
-      <div className="divide-y divide-slate-100 dark:divide-slate-800">
-        {reviewable.length === 0 ? (
-          <p className="p-8 text-center text-sm text-slate-500">{t("ad.noPending")}</p>
-        ) : (
-          reviewable.map((v) => (
-            <div
-              key={v.profileId}
-              className="p-4 flex items-center justify-between gap-4 flex-wrap"
-            >
-              <div>
-                <p className="font-semibold text-sm">{v.name}</p>
-                <p className="text-xs text-slate-500">
-                  {v.email} · {v.specialty}
-                </p>
-                {v.portfolios && v.portfolios.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
-                      {t("auth.portfolioStep") || "Portfolios"}
-                    </p>
-                    <div className="flex gap-2 overflow-x-auto pb-2 max-w-[300px] sm:max-w-md">
-                      {v.portfolios.map((url, idx) => (
-                        <a
-                          key={idx}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="shrink-0 w-16 h-16 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden hover:opacity-80 transition"
-                        >
-                          <img
-                            src={url}
-                            alt={`Portfolio ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  icon={<IconCheck width={14} height={14} />}
-                  disabled={actionLoading === v.profileId}
-                  onClick={() => onApprove(v.profileId)}
-                >
-                  {t("ad.approve")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  icon={<IconClose width={14} height={14} />}
-                  disabled={actionLoading === v.profileId}
-                  onClick={() => onReject(v.profileId)}
-                >
-                  {t("ad.reject")}
-                </Button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </Card>
-    {incompleteVerifications && incompleteVerifications.length > 0 && (
-      <Card className="mt-6 opacity-75">
+      <Card>
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <h2 className="font-bold">Incomplete Registrations</h2>
-          <Badge color="slate">
-            {incompleteVerifications.length} Pending
+          <h2 className="font-bold">{t("ad.pendingVerifications")}</h2>
+          <Badge color="amber">
+            {reviewable.length} {t("ad.pending")}
           </Badge>
         </div>
-        <div className="p-5 text-sm text-slate-500 mb-2">
-          These engineers have signed up (e.g. via Google) but have not uploaded their portfolio yet. They are blocked from accessing the app until they complete it.
-        </div>
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {incompleteVerifications.map((v) => (
-            <div
-              key={v.profileId}
-              className="p-4 flex items-center justify-between gap-4 flex-wrap"
-            >
-              <div>
-                <p className="font-semibold text-sm">{v.name}</p>
-                <p className="text-xs text-slate-500">
-                  {v.email} · {v.specialty}
-                </p>
-                {v.portfolios && v.portfolios.length > 0 && (
-                  <p className="text-xs text-amber-500 mt-1 font-medium">
-                    {v.portfolios.length} of 3 portfolio items uploaded
+          {reviewable.length === 0 ? (
+            <p className="p-8 text-center text-sm text-slate-500">{t("ad.noPending")}</p>
+          ) : (
+            reviewable.map((v) => (
+              <div
+                key={v.profileId}
+                className="p-4 flex items-center justify-between gap-4 flex-wrap"
+              >
+                <div>
+                  <p className="font-semibold text-sm">{v.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {v.email} · {v.specialty}
                   </p>
-                )}
+                  {v.portfolios && v.portfolios.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
+                        {t("auth.portfolioStep") || "Portfolios"}
+                      </p>
+                      <div className="flex gap-2 overflow-x-auto pb-2 max-w-[300px] sm:max-w-md">
+                        {v.portfolios.map((url, idx) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 w-16 h-16 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden hover:opacity-80 transition"
+                          >
+                            <img
+                              src={url}
+                              alt={`Portfolio ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    icon={<IconCheck width={14} height={14} />}
+                    disabled={actionLoading === v.profileId}
+                    onClick={() => onApprove(v.profileId)}
+                  >
+                    {t("ad.approve")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    icon={<IconClose width={14} height={14} />}
+                    disabled={actionLoading === v.profileId}
+                    onClick={() => onReject(v.profileId)}
+                  >
+                    {t("ad.reject")}
+                  </Button>
+                </div>
               </div>
-              <div>
-                 <span className="text-xs font-medium text-slate-400 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md">Waiting for user</span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </Card>
-    )}
+      {incompleteVerifications && incompleteVerifications.length > 0 && (
+        <Card className="mt-6 opacity-75">
+          <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="font-bold">Incomplete Registrations</h2>
+            <Badge color="slate">
+              {incompleteVerifications.length} Pending
+            </Badge>
+          </div>
+          <div className="p-5 text-sm text-slate-500 mb-2">
+            These engineers have signed up (e.g. via Google) but have not uploaded their portfolio yet. They are blocked from accessing the app until they complete it.
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {incompleteVerifications.map((v) => (
+              <div
+                key={v.profileId}
+                className="p-4 flex items-center justify-between gap-4 flex-wrap"
+              >
+                <div>
+                  <p className="font-semibold text-sm">{v.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {v.email} · {v.specialty}
+                  </p>
+                  {v.portfolios && v.portfolios.length > 0 && (
+                    <p className="text-xs text-amber-500 mt-1 font-medium">
+                      {v.portfolios.length} of 3 portfolio items uploaded
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-400 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md">Waiting for user</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </>
   );
 }

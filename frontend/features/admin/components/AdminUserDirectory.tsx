@@ -20,6 +20,8 @@ export function AdminUserDirectory() {
   const [specialty, setSpecialty] = useState<"CIVIL" | "ARCHITECTURAL">("CIVIL");
   const [updating, setUpdating] = useState(false);
 
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!identifier.trim()) return;
@@ -27,12 +29,17 @@ export function AdminUserDirectory() {
     setLoading(true);
     setError(null);
     setUser(null);
+    setSearchResults([]);
     
     try {
-      const foundUser = await lookupAdminUser(identifier);
-      setUser(foundUser);
-      // In a real app, we'd also fetch their EngineerProfile here if they have one.
-      // For now, we'll just allow basic impersonation.
+      const users = await lookupAdminUser(identifier);
+      if (users.length === 0) {
+        setError("No users found matching that criteria");
+      } else if (users.length === 1) {
+        setUser(users[0]);
+      } else {
+        setSearchResults(users);
+      }
     } catch (err) {
       setError(axiosMessage(err));
     } finally {
@@ -83,7 +90,7 @@ export function AdminUserDirectory() {
             <input
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Enter User ID or Email"
+              placeholder="Enter User ID, Email, or Name"
               className="w-full h-10 ps-9 pe-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
             />
           </div>
@@ -93,6 +100,33 @@ export function AdminUserDirectory() {
         </form>
         {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
       </div>
+
+      {searchResults.length > 0 && !user && (
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-2 max-h-80 overflow-y-auto bg-slate-50 dark:bg-slate-900/20">
+          <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Select a user ({searchResults.length} found)</p>
+          {searchResults.map((u) => (
+            <div
+              key={u.id}
+              className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:border-electric-500 cursor-pointer transition-colors"
+              onClick={() => {
+                setUser(u);
+                setSearchResults([]);
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{u.name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{u.email}</p>
+                </div>
+                <div className="text-right">
+                  <Badge color="slate" className="mb-1">{u.role}</Badge>
+                  <p className="text-xs text-slate-400 font-mono">ID: {u.id.substring(0, 8)}...</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {user && (
         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
