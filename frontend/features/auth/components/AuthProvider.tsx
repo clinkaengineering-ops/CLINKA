@@ -22,7 +22,6 @@ const ADMIN_PREFIXES = ["/admin"];
 /** Client/engineer workspace routes — admins use /admin instead */
 const ADMIN_BLOCKED_PREFIXES = [
   "/dashboard",
-  "/messages",
   "/escrow",
   "/balance",
   "/reviews",

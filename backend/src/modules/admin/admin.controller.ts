@@ -86,14 +86,15 @@ export async function getPendingVerificationsController(
 }
 
 export async function updateVerificationController(
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) {
   try {
     const input = updateVerificationSchema.parse(req.body);
     const profileId = verificationProfileIdSchema.parse(req.params.profileId);
-    const user = await updateEngineerVerification(profileId, input);
+    const adminId = req.user!.userId;
+    const user = await updateEngineerVerification(profileId, input, adminId);
     res.status(200).json(ApiResponse(200, "Verification updated", user));
   } catch (error) {
     next(error);

@@ -145,6 +145,7 @@ export async function getPendingVerifications() {
 export async function updateEngineerVerification(
   profileId: number,
   data: UpdateVerificationInput,
+  adminId?: string,
 ) {
   const updated = await db.$transaction(async (tx) => {
     const profile = await tx.engineerProfile.findUnique({
@@ -212,6 +213,20 @@ export async function updateEngineerVerification(
   const refreshedUser = await db.user.findUnique({
     where: { id: updated.userId },
   });
+
+  if (data.status === "APPROVED" && adminId) {
+    try {
+      const { getOrCreateGeneralConversation, sendMessage } = await import(
+        "../messages/messages.service"
+      );
+      const conv = await getOrCreateGeneralConversation(adminId, updated.userId);
+      await sendMessage(conv.id, adminId, {
+        content: "Welcome to Clinka! We're thrilled to have you as an approved engineer on our platform. If you have any questions or need help getting started, just reply here.",
+      });
+    } catch (err) {
+      console.error("Failed to send automated welcome message:", err);
+    }
+  }
 
   return stripPassword(refreshedUser ?? updated.user);
 }
