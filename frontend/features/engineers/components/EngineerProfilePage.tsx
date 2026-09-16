@@ -112,37 +112,35 @@ export function EngineerProfilePage({ id }: { id: string }) {
                 size={104}
               />
             </div>
-            {!isAdmin && (
-              <div className="flex gap-2">
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                icon={<IconMessage width={14} height={14} />}
+                onClick={() => {
+                  if (!currentUser) {
+                    router.push(`/login?next=/engineers/${id}`);
+                    return;
+                  }
+                  router.push(`/messages?user=${id}`);
+                }}
+              >
+                {t("common.message")}
+              </Button>
+              {!isAdmin && currentUser?.role !== "ENGINEER" && (
                 <Button
-                  variant="secondary"
-                  icon={<IconMessage width={14} height={14} />}
+                  icon={<IconBriefcase width={14} height={14} />}
                   onClick={() => {
                     if (!currentUser) {
                       router.push(`/login?next=/engineers/${id}`);
                       return;
                     }
-                    router.push(`/messages?user=${id}`);
+                    setHireModalOpen(true);
                   }}
                 >
-                  {t("common.message")}
+                  {t("common.hire")}
                 </Button>
-                {currentUser?.role !== "ENGINEER" && (
-                  <Button
-                    icon={<IconBriefcase width={14} height={14} />}
-                    onClick={() => {
-                      if (!currentUser) {
-                        router.push(`/login?next=/engineers/${id}`);
-                        return;
-                      }
-                      setHireModalOpen(true);
-                    }}
-                  >
-                    {t("common.hire")}
-                  </Button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
           
           <div className="flex-1">
