@@ -35,15 +35,19 @@ const I18nCtx = createContext<Ctx>({
 
 const LANG_KEY = "clinka.lang";
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+export function I18nProvider({ children, serverLocale }: { children: ReactNode; serverLocale?: Lang }) {
+  const [lang, setLangState] = useState<Lang>(serverLocale ?? "en");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(LANG_KEY) as Lang | null;
-    if (stored === "en" || stored === "ar") setLangState(stored);
+    if (serverLocale) {
+      setLangState(serverLocale);
+    } else {
+      const stored = localStorage.getItem(LANG_KEY) as Lang | null;
+      if (stored === "en" || stored === "ar") setLangState(stored);
+    }
     setHydrated(true);
-  }, []);
+  }, [serverLocale]);
 
   const dir: "ltr" | "rtl" = lang === "ar" ? "rtl" : "ltr";
 

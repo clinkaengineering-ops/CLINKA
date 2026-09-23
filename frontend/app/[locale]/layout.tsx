@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow, Cairo } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
-import "./globals.css";
+import "../globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { I18nProvider } from "@/i18n";
 import { AuthProvider } from "@/features/auth/components/AuthProvider";
@@ -75,14 +75,48 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://clinka.com"),
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+export default async function RootLayout(props: Readonly<{
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }>) {
+  const { children } = props;
+  const params = await props.params;
+  const { locale } = params;
+
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "CLINKA",
+    url: "https://clinka.com",
+    logo: "https://clinka.com/brand/mark.svg",
+    sameAs: [
+      "https://twitter.com/clinka_hq"
+    ]
+  };
+
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "CLINKA",
+    url: "https://clinka.com",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://clinka.com/en/engineers?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
-    <html lang="en" suppressHydrationWarning className={`${brandLatin.variable} ${brandArabic.variable}`}>
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} suppressHydrationWarning className={`${brandLatin.variable} ${brandArabic.variable}`}>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var k="clinka-theme",t=localStorage.getItem(k),d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();
@@ -92,7 +126,7 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <I18nProvider>
+          <I18nProvider serverLocale={locale as "en" | "ar"}>
             <AuthProvider>
               {children}
               <GlobalUploadIndicator />

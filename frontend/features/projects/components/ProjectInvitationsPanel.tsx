@@ -90,7 +90,7 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
               <div className="flex gap-4 items-center min-w-[200px]">
                 <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center overflow-hidden shrink-0">
                   {inv.engineer?.avatarUrl ? (
-                    <img src={inv.engineer.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={inv.engineer.avatarUrl} alt={`${inv.engineer.name}'s avatar`} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-slate-500 font-bold text-sm">
                       {inv.engineer?.name?.charAt(0)}
