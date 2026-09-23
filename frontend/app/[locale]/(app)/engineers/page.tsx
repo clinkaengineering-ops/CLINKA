@@ -7,7 +7,7 @@ type Props = {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { locale } = await props.params;
-  const baseUrl = "https://clinka.com";
+  const baseUrl = "https://clinkaeng.com";
   return {
     title: "Hire Top Engineers | CLINKA",
     description: "Browse and hire top-rated civil, mechanical, electrical, and architectural engineers. Find the perfect freelance engineering talent for your next project.",
@@ -24,7 +24,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 export default async function Page(props: Props) {
   const { locale } = await props.params;
-  const baseUrl = "https://clinka.com";
+  const baseUrl = "https://clinkaeng.com";
   
   const jsonLd = {
     "@context": "https://schema.org",

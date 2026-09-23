@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://clinka.com",
+    url: "https://clinkaeng.com",
     siteName: "CLINKA",
     title: "CLINKA — The Premier Engineering & Architectural Marketplace",
     description:
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
     icon: "/brand/mark.svg",
     apple: "/brand/mark.png",
   },
-  metadataBase: new URL("https://clinka.com"),
+  metadataBase: new URL("https://clinkaeng.com"),
 };
 
 export default async function RootLayout(props: Readonly<{
@@ -87,8 +87,8 @@ export default async function RootLayout(props: Readonly<{
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "CLINKA",
-    url: "https://clinka.com",
-    logo: "https://clinka.com/brand/mark.svg",
+    url: "https://clinkaeng.com",
+    logo: "https://clinkaeng.com/brand/mark.svg",
     sameAs: [
       "https://twitter.com/clinka_hq"
     ]
@@ -98,10 +98,10 @@ export default async function RootLayout(props: Readonly<{
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "CLINKA",
-    url: "https://clinka.com",
+    url: "https://clinkaeng.com",
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://clinka.com/en/engineers?q={search_term_string}",
+      target: "https://clinkaeng.com/en/engineers?q={search_term_string}",
       "query-input": "required name=search_term_string"
     }
   };

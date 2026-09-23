@@ -38,6 +38,6 @@ export default function robots(): MetadataRoute.Robots {
         "/ar/invitations/",
       ],
     },
-    sitemap: "https://clinka.com/sitemap.xml",
+    sitemap: "https://clinkaeng.com/sitemap.xml",
   };
 }

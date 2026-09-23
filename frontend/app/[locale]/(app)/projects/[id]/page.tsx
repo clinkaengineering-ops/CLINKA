@@ -33,17 +33,17 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title: `${project.title} | CLINKA Projects`,
     description: project.description.slice(0, 155) + (project.description.length > 155 ? "..." : ""),
     alternates: {
-      canonical: `https://clinka.com/${locale}/projects/${project.id}`,
+      canonical: `https://clinkaeng.com/${locale}/projects/${project.id}`,
       languages: {
-        en: `https://clinka.com/en/projects/${project.id}`,
-        ar: `https://clinka.com/ar/projects/${project.id}`,
-        "x-default": `https://clinka.com/en/projects/${project.id}`,
+        en: `https://clinkaeng.com/en/projects/${project.id}`,
+        ar: `https://clinkaeng.com/ar/projects/${project.id}`,
+        "x-default": `https://clinkaeng.com/en/projects/${project.id}`,
       },
     },
     openGraph: {
       title: project.title,
       description: project.description.slice(0, 155),
-      url: `https://clinka.com/${locale}/projects/${project.id}`,
+      url: `https://clinkaeng.com/${locale}/projects/${project.id}`,
       type: "website",
     },
   };
@@ -64,7 +64,7 @@ export default async function ProjectPage(props: Props) {
     "@type": "WebPage",
     name: project.title,
     description: project.description,
-    url: `https://clinka.com/${locale}/projects/${project.id}`,
+    url: `https://clinkaeng.com/${locale}/projects/${project.id}`,
   };
 
   const breadcrumbJsonLd = {
@@ -75,13 +75,13 @@ export default async function ProjectPage(props: Props) {
         "@type": "ListItem",
         "position": 1,
         "name": "Projects",
-        "item": `https://clinka.com/${locale}/projects`
+        "item": `https://clinkaeng.com/${locale}/projects`
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": project.title,
-        "item": `https://clinka.com/${locale}/projects/${project.id}`
+        "item": `https://clinkaeng.com/${locale}/projects/${project.id}`
       }
     ]
   };

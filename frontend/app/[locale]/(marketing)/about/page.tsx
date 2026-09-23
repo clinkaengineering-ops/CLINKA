@@ -7,7 +7,7 @@ type Props = {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { locale } = await props.params;
-  const baseUrl = "https://clinka.com";
+  const baseUrl = "https://clinkaeng.com";
   return {
     title: "About Us | CLINKA",
     description: "Learn about CLINKA's mission to connect the world's best engineering talent with clients needing top-tier architectural and civil engineering services.",

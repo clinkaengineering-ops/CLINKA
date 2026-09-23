@@ -38,17 +38,17 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title: `${name} — ${specialty} Engineer | CLINKA`,
     description: desc,
     alternates: {
-      canonical: `https://clinka.com/${locale}/engineers/${engineer.id}`,
+      canonical: `https://clinkaeng.com/${locale}/engineers/${engineer.id}`,
       languages: {
-        en: `https://clinka.com/en/engineers/${engineer.id}`,
-        ar: `https://clinka.com/ar/engineers/${engineer.id}`,
-        "x-default": `https://clinka.com/en/engineers/${engineer.id}`,
+        en: `https://clinkaeng.com/en/engineers/${engineer.id}`,
+        ar: `https://clinkaeng.com/ar/engineers/${engineer.id}`,
+        "x-default": `https://clinkaeng.com/en/engineers/${engineer.id}`,
       },
     },
     openGraph: {
       title: `${name} — ${specialty}`,
       description: desc,
-      url: `https://clinka.com/${locale}/engineers/${engineer.id}`,
+      url: `https://clinkaeng.com/${locale}/engineers/${engineer.id}`,
       images: engineer.avatarUrl ? [{ url: engineer.avatarUrl }] : undefined,
       type: "profile",
     },
@@ -76,7 +76,7 @@ export default async function Page(props: Props) {
     "@type": "Person",
     name: engineer.name || "Engineer",
     jobTitle: engineer.profile?.specialty || "Engineer",
-    url: `https://clinka.com/${locale}/engineers/${engineer.id}`,
+    url: `https://clinkaeng.com/${locale}/engineers/${engineer.id}`,
   };
 
   if (engineer.avatarUrl) {
@@ -91,13 +91,13 @@ export default async function Page(props: Props) {
         "@type": "ListItem",
         "position": 1,
         "name": "Engineers",
-        "item": `https://clinka.com/${locale}/engineers`
+        "item": `https://clinkaeng.com/${locale}/engineers`
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": engineer.name || "Engineer",
-        "item": `https://clinka.com/${locale}/engineers/${engineer.id}`
+        "item": `https://clinkaeng.com/${locale}/engineers/${engineer.id}`
       }
     ]
   };
