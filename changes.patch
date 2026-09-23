@@ -1,0 +1,99 @@
+diff --git a/frontend/.env.example b/frontend/.env.example
+index 53823c2..00e10c2 100644
+--- a/frontend/.env.example
++++ b/frontend/.env.example
+@@ -11,6 +11,10 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+ # Payment currency shown in the UI (must match backend PAYMOB_CURRENCY)
+ NEXT_PUBLIC_PAYMENT_CURRENCY=USD
+ 
++# Google Analytics 4 Measurement ID (e.g. G-XXXXXXXXXX).
++# Leave unset locally — analytics only loads when this is present, so dev traffic isn't tracked.
++NEXT_PUBLIC_GA_ID=
++
+ # ── How it works ────────────────────────────────────────────────────
+ # `npm run dev` (localhost:3000):
+ #   - API calls go to /api → proxied to BACKEND_URL (avoids CORS/cookie issues)
+diff --git a/frontend/app/layout.tsx b/frontend/app/layout.tsx
+index 35a5763..e58b5d0 100644
+--- a/frontend/app/layout.tsx
++++ b/frontend/app/layout.tsx
+@@ -1,11 +1,14 @@
+ import type { Metadata } from "next";
+ import { Barlow, Cairo } from "next/font/google";
++import { GoogleAnalytics } from "@next/third-parties/google";
+ import "./globals.css";
+ import { ThemeProvider } from "@/components/theme";
+ import { I18nProvider } from "@/i18n";
+ import { AuthProvider } from "@/features/auth/components/AuthProvider";
+ import { GlobalUploadIndicator } from "@/components/UI/GlobalUploadIndicator";
+ 
++const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID;
++
+ const brandLatin = Barlow({
+   subsets: ["latin"],
+   weight: ["400", "500", "600", "700", "800", "900"],
+@@ -98,6 +101,7 @@ export default function RootLayout({
+             </AuthProvider>
+           </I18nProvider>
+         </ThemeProvider>
++        {GA_MEASUREMENT_ID && <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />}
+       </body>
+     </html>
+   );
+diff --git a/frontend/package-lock.json b/frontend/package-lock.json
+index 1fd8483..1d3fcb8 100644
+--- a/frontend/package-lock.json
++++ b/frontend/package-lock.json
+@@ -8,6 +8,7 @@
+       "name": "frontend",
+       "version": "0.1.0",
+       "dependencies": {
++        "@next/third-parties": "^16.3.6",
+         "axios": "^1.16.1",
+         "clinka": "file:..",
+         "clsx": "^2.1.1",
+@@ -740,6 +741,19 @@
+         "node": ">= 10"
+       }
+     },
++    "node_modules/@next/third-parties": {
++      "version": "16.3.6",
++      "resolved": "https://registry.npmjs.org/@next/third-parties/-/third-parties-16.3.6.tgz",
++      "integrity": "sha512-fYLwo7M3cPW78Va4lIrqDioDmgZK6I+ODXiNIJ+kg6NuoLYQl2RtZ9Sxe1+Jz0yB26hdDxuEIt3TQYQ8vlAFTg==",
++      "license": "MIT",
++      "dependencies": {
++        "third-party-capital": "1.0.20"
++      },
++      "peerDependencies": {
++        "next": "^13.0.0 || ^14.0.0 || ^15.0.0 || ^16.0.0-beta.0",
++        "react": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0"
++      }
++    },
+     "node_modules/@nodelib/fs.scandir": {
+       "version": "2.1.5",
+       "resolved": "https://registry.npmmirror.com/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz",
+@@ -5275,6 +5289,12 @@
+         "url": "https://opencollective.com/webpack"
+       }
+     },
++    "node_modules/third-party-capital": {
++      "version": "1.0.20",
++      "resolved": "https://registry.npmjs.org/third-party-capital/-/third-party-capital-1.0.20.tgz",
++      "integrity": "sha512-oB7yIimd8SuGptespDAZnNkzIz+NWaJCu2RMsbs4Wmp9zSDUM8Nhi3s2OOcqYuv3mN4hitXc8DVx+LyUmbUDiA==",
++      "license": "ISC"
++    },
+     "node_modules/tinyglobby": {
+       "version": "0.2.16",
+       "resolved": "https://registry.npmmirror.com/tinyglobby/-/tinyglobby-0.2.16.tgz",
+diff --git a/frontend/package.json b/frontend/package.json
+index 1f937bc..112cdeb 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -13,6 +13,7 @@
+     "test:smoke:tunnel": "node --experimental-strip-types tests/smoke.mts"
+   },
+   "dependencies": {
++    "@next/third-parties": "^16.3.6",
+     "axios": "^1.16.1",
+     "clinka": "file:..",
+     "clsx": "^2.1.1",

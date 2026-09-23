@@ -13,6 +13,7 @@
     "test:smoke:tunnel": "node --experimental-strip-types tests/smoke.mts"
   },
   "dependencies": {
+    "@next/third-parties": "^16.2.6",
     "axios": "^1.16.1",
     "clinka": "file:..",
     "clsx": "^2.1.1",

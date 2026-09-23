@@ -7,6 +7,8 @@ import { I18nProvider } from "@/i18n";
 import { AuthProvider } from "@/features/auth/components/AuthProvider";
 import { GlobalUploadIndicator } from "@/components/UI/GlobalUploadIndicator";
 
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID;
+
 const brandLatin = Barlow({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -99,10 +101,8 @@ export default function RootLayout({
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>
+        {GA_MEASUREMENT_ID && <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />}
       </body>
-      {process.env.NEXT_PUBLIC_GA_ID && (
-        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
-      )}
     </html>
   );
 }
