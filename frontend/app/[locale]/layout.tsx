@@ -68,10 +68,6 @@ export const metadata: Metadata = {
     images: ["/brand/twitter-card.jpg"],
     creator: "@clinka_hq",
   },
-  icons: {
-    icon: "/brand/mark.svg",
-    apple: "/brand/mark.png",
-  },
   metadataBase: new URL("https://clinkaeng.com"),
 };
 
