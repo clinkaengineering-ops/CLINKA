@@ -254,17 +254,19 @@ export default function ProjectMarketplace() {
         </p>
       )}
 
-      <div className="grid lg:grid-cols-[1fr_420px] gap-6 min-w-0 w-full">
-        <ProjectListPanel
-          projects={filtered}
-          loading={listLoading}
-          error={listError}
-          selectedId={effectiveSelected}
-          onSelect={handleSelect}
-        />
+      <div className="flex flex-col lg:flex-row gap-6 min-w-0 w-full">
+        <div className="flex-1 min-w-0">
+          <ProjectListPanel
+            projects={filtered}
+            loading={listLoading}
+            error={listError}
+            selectedId={effectiveSelected}
+            onSelect={handleSelect}
+          />
+        </div>
 
         {!isMobile && (
-          <div className="lg:sticky lg:top-20 h-fit min-w-0 w-full hidden lg:block">
+          <div className="lg:sticky lg:top-20 h-fit min-w-0 lg:w-[420px] shrink-0 hidden lg:block">
             <ProjectDetailPanel
               project={selectedProject ?? null}
               loading={(detailLoading && !!effectiveSelected) || listLoading}
