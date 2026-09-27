@@ -4,6 +4,11 @@
 /.wolf
 *.pdf
 *.zip
+*.docx
+*.diff
+*.patch
+*.sql
 ngrok.yml
 CLAUDE.md
 CLINKA_AI_PROJECT_BRIEF.md
+ZAIN_Marketing_Plan_Client.docx
