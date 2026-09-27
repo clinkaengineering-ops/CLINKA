@@ -21,9 +21,10 @@ import { getPublicConfig } from "@/lib/config.api";
 interface BidFormProps {
   project: Project;
   onSubmitted?: () => void;
+  isOwner?: boolean;
 }
 
-export function BidForm({ project, onSubmitted }: BidFormProps) {
+export function BidForm({ project, onSubmitted, isOwner }: BidFormProps) {
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
   const { me } = useMe();
@@ -60,6 +61,14 @@ export function BidForm({ project, onSubmitted }: BidFormProps) {
           </Button>
         </Link>
       </div>
+    );
+  }
+
+  if (isOwner) {
+    return (
+      <p className="text-sm text-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+        {t("pm.cannotBidOwnProject", { defaultValue: "You cannot bid on your own project." })}
+      </p>
     );
   }
 

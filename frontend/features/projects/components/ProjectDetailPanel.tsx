@@ -285,7 +285,7 @@ export function ProjectDetailPanel({
             />
           )}
 
-          {!isOwner && <BidForm project={project} onSubmitted={onRefresh} />}
+          <BidForm project={project} onSubmitted={onRefresh} isOwner={isOwner} />
         </div>
       </Card>
 

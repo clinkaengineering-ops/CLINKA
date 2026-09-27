@@ -77,7 +77,8 @@ export default async function RootLayout(props: Readonly<{
 }>) {
   const { children } = props;
   const params = await props.params;
-  const { locale } = params;
+  const rawLocale = params.locale;
+  const locale = (rawLocale === "en" || rawLocale === "ar") ? rawLocale : "en";
 
   const orgJsonLd = {
     "@context": "https://schema.org",

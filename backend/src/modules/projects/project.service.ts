@@ -39,6 +39,16 @@ export async function createProject(
     console.error("Failed to notify engineers about new project:", err);
   });
 
+  // Notify the client that their project was created successfully
+  createNotification(
+    clientId,
+    "NEW_PROJECT_POSTED",
+    "Project Posted Successfully",
+    `Your project "${project.title}" has been successfully posted. You will receive an email when engineers start placing bids.`,
+    `/projects/${project.id}`,
+    { force: true }
+  ).catch(console.error);
+
   return project;
 }
 
