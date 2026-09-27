@@ -41,6 +41,138 @@ type SendMailResult = {
   accepted: string[];
 };
 
+/** Resend free/default limit is 10 req/sec — stay under it with headroom. */
+const MIN_SEND_INTERVAL_MS = 120;
+const MAX_SEND_ATTEMPTS = 4;
+
+let lastSendAt = 0;
+let sendQueue: Promise<unknown> = Promise.resolve();
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function isRateLimitError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as {
+    statusCode?: number;
+    status?: number;
+    name?: string;
+    message?: string;
+  };
+  if (e.statusCode === 429 || e.status === 429) return true;
+  if (e.name === "rate_limit_exceeded") return true;
+  if (typeof e.message === "string" && /rate limit|too many requests/i.test(e.message)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Serialize outbound Resend calls and space them so concurrent notification
+ * blasts (e.g. NEW_PROJECT_POSTED) do not hit the 10 req/sec API cap.
+ */
+function enqueueSend<T>(fn: () => Promise<T>): Promise<T> {
+  const run = async () => {
+    const wait = Math.max(0, lastSendAt + MIN_SEND_INTERVAL_MS - Date.now());
+    if (wait > 0) await sleep(wait);
+    lastSendAt = Date.now();
+    return fn();
+  };
+
+  const result = sendQueue.then(run, run) as Promise<T>;
+  sendQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+async function sendViaResend(
+  options: MailOptions,
+  to: string[],
+): Promise<SendMailResult> {
+  const payload: Record<string, unknown> = {
+    from: options.from,
+    to,
+    subject: options.subject,
+    replyTo: options.replyTo,
+    headers: options.headers,
+    attachments: options.attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      content: attachment.content as Buffer | string | undefined,
+      path: attachment.path,
+      cid: attachment.cid,
+    })),
+  };
+
+  if (options.html?.trim()) {
+    payload.html = options.html;
+  } else if (options.text?.trim()) {
+    payload.text = options.text;
+  } else {
+    payload.text = "";
+  }
+
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
+    try {
+      const { data, error } = await resend!.emails.send(payload as any);
+
+      if (error) {
+        if (isRateLimitError(error) && attempt < MAX_SEND_ATTEMPTS) {
+          const backoff = attempt * 500;
+          console.warn(
+            `Resend rate limited — retrying in ${backoff}ms (attempt ${attempt}/${MAX_SEND_ATTEMPTS})`,
+            { recipient: to, subject: options.subject },
+          );
+          await sleep(backoff);
+          continue;
+        }
+
+        console.error("Email send failed (Resend API Error)", {
+          sender: options.from,
+          recipient: to,
+          subject: options.subject,
+          errorBody: error,
+        });
+        throw new ApiError(
+          502,
+          typeof error.message === "string"
+            ? error.message
+            : "Failed to send email via Resend",
+        );
+      }
+
+      return { messageId: data?.id ?? null, accepted: to };
+    } catch (err) {
+      lastError = err;
+      if (isRateLimitError(err) && attempt < MAX_SEND_ATTEMPTS) {
+        const backoff = attempt * 500;
+        console.warn(
+          `Resend rate limited — retrying in ${backoff}ms (attempt ${attempt}/${MAX_SEND_ATTEMPTS})`,
+          { recipient: to, subject: options.subject },
+        );
+        await sleep(backoff);
+        continue;
+      }
+
+      console.error("Email send failed (Exception)", {
+        sender: options.from,
+        recipient: to,
+        subject: options.subject,
+        error: err instanceof Error ? err.message : err,
+      });
+      throw err;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new ApiError(502, "Failed to send email via Resend");
+}
+
 const transporter = {
   // Nodemailer-compatible check used by some code paths.
   async verify() {
@@ -67,59 +199,7 @@ const transporter = {
     }
 
     const to = Array.isArray(options.to) ? options.to : [options.to];
-
-    // Resend typings are strict (html/text/template unions). We always send HTML when present
-    // (it's what this app uses), and fall back to text-only otherwise.
-    const payload: Record<string, unknown> = {
-      from: options.from,
-      to,
-      subject: options.subject,
-      replyTo: options.replyTo,
-      headers: options.headers,
-      attachments: options.attachments?.map((attachment) => ({
-        filename: attachment.filename,
-        content: attachment.content as Buffer | string | undefined,
-        path: attachment.path,
-        cid: attachment.cid,
-      })),
-    };
-
-    if (options.html?.trim()) {
-      payload.html = options.html;
-    } else if (options.text?.trim()) {
-      payload.text = options.text;
-    } else {
-      payload.text = "";
-    }
-
-    try {
-      const { data, error } = await resend.emails.send(payload as any);
-
-      if (error) {
-        console.error("Email send failed (Resend API Error)", {
-          sender: options.from,
-          recipient: to,
-          subject: options.subject,
-          errorBody: error,
-        });
-        throw new ApiError(
-          502,
-          typeof error.message === "string"
-            ? error.message
-            : "Failed to send email via Resend",
-        );
-      }
-
-      return { messageId: data?.id ?? null, accepted: to };
-    } catch (err) {
-      console.error("Email send failed (Exception)", {
-        sender: options.from,
-        recipient: to,
-        subject: options.subject,
-        error: err instanceof Error ? err.message : err,
-      });
-      throw err;
-    }
+    return enqueueSend(() => sendViaResend(options, to));
   },
 };
 

@@ -61,13 +61,15 @@ async function notifyEngineersAboutNewProject(project: { id: string; title: stri
     select: { id: true },
   });
 
+  // Sequential on purpose: each notification awaits its email through the
+  // shared Resend rate-limit queue (see config/mailer.ts).
   for (const eng of engineers) {
     await createNotification(
       eng.id,
       "NEW_PROJECT_POSTED",
       "New Project Posted",
       `A new project "${project.title}" was just posted. Submit your bid now!`,
-      `/projects?id=${project.id}`
+      `/projects?id=${project.id}`,
     );
   }
 }

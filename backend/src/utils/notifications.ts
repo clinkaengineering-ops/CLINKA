@@ -239,17 +239,21 @@ export async function createNotification(
 
   if (!shouldSendEmail(type, force, prefs)) return;
 
-  dispatchNotificationEmail(
-    user.email,
-    type,
-    title,
-    body,
-    link,
-    options?.email,
-  ).catch((error) => {
+  try {
+    // Await so bulk fans-outs (e.g. NEW_PROJECT_POSTED) feed the mailer
+    // queue sequentially instead of stampeding Resend's 10 req/sec limit.
+    await dispatchNotificationEmail(
+      user.email,
+      type,
+      title,
+      body,
+      link,
+      options?.email,
+    );
+  } catch (error) {
     console.error(
       `Failed to send notification email (${type}) to user ${userId}:`,
       error instanceof Error ? error.message : error,
     );
-  });
+  }
 }
