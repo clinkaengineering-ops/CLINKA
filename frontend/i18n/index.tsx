@@ -35,16 +35,20 @@ const I18nCtx = createContext<Ctx>({
 
 const LANG_KEY = "clinka.lang";
 
+const isValidLang = (l: unknown): l is Lang => l === "en" || l === "ar";
+
 export function I18nProvider({ children, serverLocale }: { children: ReactNode; serverLocale?: Lang }) {
-  const [lang, setLangState] = useState<Lang>(serverLocale ?? "en");
+  const [lang, setLangState] = useState<Lang>(
+    isValidLang(serverLocale) ? serverLocale : "en"
+  );
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (serverLocale) {
+    if (isValidLang(serverLocale)) {
       setLangState(serverLocale);
     } else {
       const stored = localStorage.getItem(LANG_KEY) as Lang | null;
-      if (stored === "en" || stored === "ar") setLangState(stored);
+      if (isValidLang(stored)) setLangState(stored);
     }
     setHydrated(true);
   }, [serverLocale]);
@@ -64,7 +68,9 @@ export function I18nProvider({ children, serverLocale }: { children: ReactNode; 
       setLang: setLangState,
       dir,
       t: (k: string, params?: Record<string, string | number>) => {
-        let str = dicts[lang][k] ?? dicts.en[k] ?? k;
+        const dict = dicts[lang] ?? dicts.en ?? {};
+        const fallback = dicts.en ?? {};
+        let str = dict[k] ?? fallback[k] ?? k;
         if (params) {
           for (const [key, value] of Object.entries(params)) {
             str = str.replace(new RegExp(`{${key}}`, "g"), String(value));
