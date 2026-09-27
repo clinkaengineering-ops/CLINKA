@@ -1,4 +1,4 @@
-import { ProjectsPage } from "@/features/projects/components/ProjectsPage";
+import ProjectsPage from "@/features/projects/Pages/ProjectPage";
 import { Metadata } from "next";
 
 type Props = {
@@ -25,16 +25,16 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function Page(props: Props) {
   const { locale } = await props.params;
   const baseUrl = "https://clinkaeng.com";
-  
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Service",
     "serviceType": "Engineering Projects",
     "provider": {
       "@type": "Organization",
-      "name": "CLINKA"
+      "name": "CLINKA",
     },
-    "url": `${baseUrl}/${locale}/projects`
+    "url": `${baseUrl}/${locale}/projects`,
   };
 
   return (
