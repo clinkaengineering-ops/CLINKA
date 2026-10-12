@@ -13,3 +13,7 @@ node_modules
 
 # logs
 *.log
+
+# coverage
+coverage/
+.nyc_output/

@@ -12,3 +12,5 @@ ngrok.yml
 CLAUDE.md
 CLINKA_AI_PROJECT_BRIEF.md
 ZAIN_Marketing_Plan_Client.docx
+coverage/
+*.lcov

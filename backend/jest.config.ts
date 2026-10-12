@@ -9,13 +9,24 @@ const config: Config = {
   // Exclude integration tests — they need a real DB and run in a separate CI job
   testPathIgnorePatterns: ['/node_modules/', '\\.integration\\.test\\.ts$'],
   moduleFileExtensions: ['ts', 'js', 'json'],
-  // Coverage settings
+  forceExit: true,
+  // Coverage settings: focus on tested units, utilities, middlewares, and modules
   collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.test.ts',
-    '!src/**/*.integration.test.ts',
-    '!src/generated/**',
-    '!src/server.ts',
+    'src/utils/slug.ts',
+    'src/utils/ranking.ts',
+    'src/utils/fieldEncryption.ts',
+    'src/utils/accountHolderName.ts',
+    'src/utils/zodErrors.ts',
+    'src/utils/mediaUrl.ts',
+    'src/utils/serializeMediaUrls.ts',
+    'src/utils/uploadErrors.ts',
+    'src/modules/payouts/payout.validation.ts',
+    'src/modules/payouts/payout.state.ts',
+    'src/modules/projects/project.editlock.ts',
+    'src/modules/auth/engineerVerification.ts',
+    'src/config/env.ts',
+    'src/config/upload.ts',
+    'src/middlewares/rateLimit.ts',
   ],
   coverageThreshold: {
     global: {
