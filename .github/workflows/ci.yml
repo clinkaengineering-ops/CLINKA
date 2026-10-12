@@ -25,15 +25,14 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clinka_test
       JWT_SECRET: test-dummy-jwt-secret-minimum-32-chars-long!
       NODE_ENV: test
-      RATE_LIMIT_DISABLED: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20 with npm cache
+      - name: Setup Node.js 22 with npm cache
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -71,10 +70,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20 with npm cache
+      - name: Setup Node.js 22 with npm cache
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -142,10 +141,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20 with npm cache
+      - name: Setup Node.js 22 with npm cache
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -169,10 +168,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Run backend security audit
         continue-on-error: true
