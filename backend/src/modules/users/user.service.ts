@@ -207,8 +207,6 @@ export async function getEngineers(query: z.infer<typeof searchQuerySchema>) {
     hourlyRateMax, startingPriceMax, availabilityStatus, sortBy, page, limit
   } = query;
 
-  const skip = (page - 1) * limit;
-
   // Build the nested profile where clause
   const profileWhere: any = { verificationStatus: "APPROVED" };
 
@@ -257,43 +255,71 @@ export async function getEngineers(query: z.infer<typeof searchQuerySchema>) {
     where.OR = orConditions;
   }
 
-  const engineers = await db.user.findMany({
+  const listInclude = {
+    profile: {
+      include: {
+        portfolio: true,
+        specializations: { include: { specialization: { include: { discipline: true } } } },
+        skills: { include: { skill: true } },
+        serviceAreas: { include: { serviceArea: true } },
+        reviews: {
+          include: { client: { select: { id: true, name: true } } },
+          orderBy: { createdAt: "desc" as const },
+        },
+      },
+    },
+  };
+
+  // Rank with a slim query, then hydrate only the current page.
+  const rankingRows = await db.user.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      createdAt: true,
       profile: {
-        include: {
-          portfolio: true,
-          specializations: { include: { specialization: { include: { discipline: true } } } },
-          skills: { include: { skill: true } },
-          serviceAreas: { include: { serviceArea: true } },
-          reviews: {
-            include: { client: { select: { id: true, name: true } } },
-            orderBy: { createdAt: "desc" },
-          },
+        select: {
+          id: true,
+          verificationLevel: true,
+          averageRating: true,
+          profileCompletion: true,
+          totalReviews: true,
+          availabilityStatus: true,
+          yearsOfExperience: true,
+          hourlyRateUSD: true,
+          startingProjectPriceUSD: true,
         },
       },
     },
   });
 
-  // Calculate scores and metrics for all returned engineers
-  const engineersWithScores = await Promise.all(
-    engineers.map(async (eng) => {
-      let completedProjects = 0;
-      if (eng.profile) {
-        completedProjects = await db.project.count({
-          where: {
-            status: "COMPLETED",
-            bids: { some: { engineerId: eng.profile.id, status: "ACCEPTED" } },
-          },
-        });
-      }
-      const score = calculateProfessionalScore(eng.profile, completedProjects);
-      return { ...eng, completedProjects, professionalScore: score };
-    })
+  const profileIds = rankingRows.flatMap((eng) =>
+    eng.profile?.id ? [eng.profile.id] : [],
   );
+  const completedByEngineer = new Map<number, number>();
+  if (profileIds.length > 0) {
+    const grouped = await db.bid.groupBy({
+      by: ["engineerId"],
+      where: {
+        engineerId: { in: profileIds },
+        status: "ACCEPTED",
+        project: { status: "COMPLETED" },
+      },
+      _count: { engineerId: true },
+    });
+    for (const row of grouped) {
+      completedByEngineer.set(row.engineerId, row._count.engineerId);
+    }
+  }
 
-  // Sorting
-  engineersWithScores.sort((a, b) => {
+  const ranked = rankingRows.map((eng) => {
+    const completedProjects = eng.profile
+      ? completedByEngineer.get(eng.profile.id) ?? 0
+      : 0;
+    const professionalScore = calculateProfessionalScore(eng.profile, completedProjects);
+    return { ...eng, completedProjects, professionalScore };
+  });
+
+  ranked.sort((a, b) => {
     switch (sortBy) {
       case "RELEVANCE":
         return b.professionalScore - a.professionalScore;
@@ -316,18 +342,37 @@ export async function getEngineers(query: z.infer<typeof searchQuerySchema>) {
     }
   });
 
-  // Pagination
-  const paginatedEngineers = engineersWithScores.slice(skip, skip + limit);
+  const totalCount = ranked.length;
+  const totalPages = Math.ceil(totalCount / limit);
+  const currentPage = totalPages === 0 ? 1 : Math.min(page, totalPages);
+  const skip = (currentPage - 1) * limit;
+  const pageRows = ranked.slice(skip, skip + limit);
+  const pageIds = pageRows.map((row) => row.id);
+
+  const hydrated =
+    pageIds.length === 0
+      ? []
+      : await db.user.findMany({
+          where: { id: { in: pageIds } },
+          include: listInclude,
+        });
+  const hydratedById = new Map(hydrated.map((eng) => [eng.id, eng]));
 
   return {
-    engineers: paginatedEngineers.map(eng => {
-      const { password, ...safe } = eng;
-      return safe;
+    engineers: pageRows.flatMap((row) => {
+      const eng = hydratedById.get(row.id);
+      if (!eng) return [];
+      const { password: _, ...safe } = eng;
+      return [{
+        ...safe,
+        completedProjects: row.completedProjects,
+        professionalScore: row.professionalScore,
+      }];
     }),
-    totalCount: engineersWithScores.length,
-    page,
+    totalCount,
+    page: currentPage,
     limit,
-    totalPages: Math.ceil(engineersWithScores.length / limit)
+    totalPages,
   };
 }
 

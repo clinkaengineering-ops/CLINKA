@@ -1,8 +1,9 @@
 // lib/api/user.api.ts
 // All user-related API calls in one place.
 // Types come from @/types — nothing is re-declared here.
+import type { AxiosRequestConfig } from "axios";
 import api from "@/lib/axios";
-import type { Me, Engineer, EngineerProfile, PortfolioItem } from "@/types";
+import type { Me, Engineer, PortfolioItem } from "@/types";
 
 // ── Generic ApiResponse wrapper (matches your backend util) ──────────────────
 export interface ApiResponse<T> {
@@ -58,8 +59,15 @@ export const uploadCoverImage = (file: File): Promise<Me> => {
 
 // ── Engineers ─────────────────────────────────────────────────────────────────
 
-/** GET /users/engineers — list of APPROVED engineers */
-export const getEngineers = (params?: {
+export interface EngineersListResponse {
+  engineers: Engineer[];
+  totalCount: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export type EngineersListParams = {
   q?: string;
   specialty?: string;
   nationality?: string;
@@ -70,8 +78,20 @@ export const getEngineers = (params?: {
   availabilityStatus?: string;
   sortBy?: string;
   page?: number;
-}): Promise<Engineer[]> =>
-  unwrap(api.get<ApiResponse<{engineers: Engineer[]}>>("/users/engineers", { params })).then(d => d.engineers);
+  limit?: number;
+};
+
+/** GET /users/engineers — paginated list of APPROVED engineers */
+export const getEngineers = (
+  params?: EngineersListParams,
+  config?: AxiosRequestConfig,
+): Promise<EngineersListResponse> =>
+  unwrap(
+    api.get<ApiResponse<EngineersListResponse>>("/users/engineers", {
+      ...config,
+      params,
+    }),
+  );
 
 /** GET /users/engineers/:idOrSlug — User UUID or profile slug */
 export const getEngineerById = (id: string): Promise<Engineer> =>

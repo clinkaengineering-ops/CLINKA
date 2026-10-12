@@ -8,10 +8,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let projects: any[] = [];
 
   try {
-    const engRes = await fetch(`${apiUrl}/users/engineers`);
-    if (engRes.ok) {
+    const pageSize = 100;
+    let page = 1;
+    let totalPages = 1;
+    while (page <= totalPages) {
+      const engRes = await fetch(
+        `${apiUrl}/users/engineers?page=${page}&limit=${pageSize}`,
+      );
+      if (!engRes.ok) break;
       const engJson = await engRes.json();
-      engineers = engJson.data?.engineers || [];
+      const batch = engJson.data?.engineers || [];
+      engineers = engineers.concat(batch);
+      totalPages = Math.max(1, Number(engJson.data?.totalPages) || 1);
+      if (batch.length === 0 || page >= 50) break;
+      page += 1;
     }
 
     const projRes = await fetch(`${apiUrl}/projects`);

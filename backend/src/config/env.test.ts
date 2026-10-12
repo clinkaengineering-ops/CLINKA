@@ -1,6 +1,3 @@
-import assert from "node:assert/strict";
-import { afterEach, beforeEach, describe, it } from "node:test";
-
 import { applyProductionUploadDefaults, validateProductionEnv } from "./env";
 
 describe("production upload env", () => {
@@ -21,8 +18,8 @@ describe("production upload env", () => {
     process.env.API_URL = "https://api.clinkaeng.com/";
     applyProductionUploadDefaults();
 
-    assert.equal(process.env.UPLOAD_DIR, "/app/uploads");
-    assert.equal(process.env.UPLOAD_BASE_URL, "https://api.clinkaeng.com");
+    expect(process.env.UPLOAD_DIR).toBe("/app/uploads");
+    expect(process.env.UPLOAD_BASE_URL).toBe("https://api.clinkaeng.com");
   });
 
   it("strips a mistaken /uploads suffix from UPLOAD_BASE_URL", () => {
@@ -30,7 +27,7 @@ describe("production upload env", () => {
     process.env.UPLOAD_BASE_URL = "https://api.clinkaeng.com/uploads/";
     applyProductionUploadDefaults();
 
-    assert.equal(process.env.UPLOAD_BASE_URL, "https://api.clinkaeng.com");
+    expect(process.env.UPLOAD_BASE_URL).toBe("https://api.clinkaeng.com");
   });
 
   it("does not fail validateProductionEnv when only upload vars were missing", () => {
@@ -48,7 +45,7 @@ describe("production upload env", () => {
     process.env.PAYMOB_INTEGRATION_IDS = "1";
 
     validateProductionEnv();
-    assert.equal(process.env.UPLOAD_DIR, "/app/uploads");
-    assert.equal(process.env.UPLOAD_BASE_URL, "https://api.clinkaeng.com");
+    expect(process.env.UPLOAD_DIR).toBe("/app/uploads");
+    expect(process.env.UPLOAD_BASE_URL).toBe("https://api.clinkaeng.com");
   });
 });

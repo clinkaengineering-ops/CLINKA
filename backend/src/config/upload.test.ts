@@ -1,8 +1,6 @@
-import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
 
 import {
   deleteUploadFile,
@@ -35,74 +33,53 @@ describe("upload config", () => {
   });
 
   it("generates safe extensions from mime type", () => {
-    assert.equal(
-      resolveStoredExtension("image/jpeg", "evil.exe"),
-      ".jpg",
-    );
-    assert.equal(
-      resolveStoredExtension("application/pdf", "report.PDF"),
-      ".pdf",
-    );
+    expect(resolveStoredExtension("image/jpeg", "evil.exe")).toBe(".jpg");
+    expect(resolveStoredExtension("application/pdf", "report.PDF")).toBe(".pdf");
   });
 
   it("validates mime type and extension together", () => {
-    assert.equal(
-      isAllowedUpload("image/png", "photo.png", IMAGE_MIME_TYPES),
-      true,
-    );
-    assert.equal(
-      isAllowedUpload("image/png", "photo.exe", IMAGE_MIME_TYPES),
-      false,
-    );
-    assert.equal(
-      isAllowedUpload("application/pdf", "photo.png", IMAGE_MIME_TYPES),
-      false,
-    );
+    expect(isAllowedUpload("image/png", "photo.png", IMAGE_MIME_TYPES)).toBe(true);
+    expect(isAllowedUpload("image/png", "photo.exe", IMAGE_MIME_TYPES)).toBe(false);
+    expect(isAllowedUpload("application/pdf", "photo.png", IMAGE_MIME_TYPES)).toBe(false);
   });
 
   it("normalizes stored upload paths", () => {
-    assert.equal(
-      normalizeStoredUploadPath("uploads/images/file.png"),
+    expect(normalizeStoredUploadPath("uploads/images/file.png")).toBe(
       "/uploads/images/file.png",
     );
-    assert.equal(
+    expect(
       normalizeStoredUploadPath("https://res.cloudinary.com/demo/image.png"),
-      "https://res.cloudinary.com/demo/image.png",
-    );
+    ).toBe("https://res.cloudinary.com/demo/image.png");
   });
 
   it("blocks path traversal when resolving absolute paths", () => {
     const storedPath = "/uploads/images/../../secret.txt";
-    assert.equal(storedPathToAbsolute(storedPath), null);
+    expect(storedPathToAbsolute(storedPath)).toBeNull();
   });
 
   it("resolves public URLs from stored paths", () => {
     process.env.UPLOAD_BASE_URL = "https://cdn.example.com";
-    assert.equal(
-      resolvePublicUploadUrl("/uploads/images/abc.png"),
+    expect(resolvePublicUploadUrl("/uploads/images/abc.png")).toBe(
       "https://cdn.example.com/uploads/images/abc.png",
     );
-    assert.equal(
+    expect(
       resolvePublicUploadUrl("https://res.cloudinary.com/demo/image.png"),
-      "https://res.cloudinary.com/demo/image.png",
-    );
+    ).toBe("https://res.cloudinary.com/demo/image.png");
   });
 
   it("derives upload base URL from API_URL without duplicating /uploads", () => {
     process.env.API_URL = "https://api.example.com/";
-    assert.equal(getUploadBaseUrl(), "https://api.example.com");
-    assert.equal(
-      resolvePublicUploadUrl("/uploads/avatars/user.png"),
+    expect(getUploadBaseUrl()).toBe("https://api.example.com");
+    expect(resolvePublicUploadUrl("/uploads/avatars/user.png")).toBe(
       "https://api.example.com/uploads/avatars/user.png",
     );
   });
 
   it("strips a trailing /uploads from UPLOAD_BASE_URL to avoid doubled paths", () => {
     process.env.UPLOAD_BASE_URL = "https://api.example.com/uploads/";
-    assert.equal(normalizeUploadOrigin(process.env.UPLOAD_BASE_URL), "https://api.example.com");
-    assert.equal(getUploadBaseUrl(), "https://api.example.com");
-    assert.equal(
-      resolvePublicUploadUrl("/uploads/avatars/user.png"),
+    expect(normalizeUploadOrigin(process.env.UPLOAD_BASE_URL)).toBe("https://api.example.com");
+    expect(getUploadBaseUrl()).toBe("https://api.example.com");
+    expect(resolvePublicUploadUrl("/uploads/avatars/user.png")).toBe(
       "https://api.example.com/uploads/avatars/user.png",
     );
   });
@@ -113,8 +90,7 @@ describe("upload config", () => {
       filename: "abc.png",
     } as Express.Multer.File;
 
-    assert.equal(
-      getStoredUploadPath(file, "avatars"),
+    expect(getStoredUploadPath(file, "avatars")).toBe(
       "/uploads/avatars/abc.png",
     );
   });
@@ -125,7 +101,7 @@ describe("upload config", () => {
     fs.writeFileSync(filePath, "test");
 
     deleteUploadFile("/uploads/images/delete-me.png");
-    assert.equal(fs.existsSync(filePath), false);
+    expect(fs.existsSync(filePath)).toBe(false);
 
     deleteUploadFile("/uploads/images/missing.png");
     deleteUploadFile("https://res.cloudinary.com/demo/image.png");

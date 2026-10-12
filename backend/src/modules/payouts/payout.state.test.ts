@@ -1,5 +1,3 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import ApiError from "../../utils/ApiError";
 import {
   assertPayoutTransition,
@@ -10,58 +8,53 @@ import {
 
 describe("normalizePaymobDisbursementStatus", () => {
   it("maps success variants", () => {
-    assert.equal(normalizePaymobDisbursementStatus("success"), "success");
-    assert.equal(normalizePaymobDisbursementStatus("Successful"), "success");
+    expect(normalizePaymobDisbursementStatus("success")).toBe("success");
+    expect(normalizePaymobDisbursementStatus("Successful")).toBe("success");
   });
 
   it("maps pending", () => {
-    assert.equal(normalizePaymobDisbursementStatus("pending"), "pending");
+    expect(normalizePaymobDisbursementStatus("pending")).toBe("pending");
   });
 
   it("maps everything else to failed", () => {
-    assert.equal(normalizePaymobDisbursementStatus("failed"), "failed");
-    assert.equal(normalizePaymobDisbursementStatus("rejected"), "failed");
+    expect(normalizePaymobDisbursementStatus("failed")).toBe("failed");
+    expect(normalizePaymobDisbursementStatus("rejected")).toBe("failed");
   });
 });
 
 describe("mapPaymobStatusToWithdrawalStatus", () => {
   it("maps Paymob statuses to internal withdrawal statuses", () => {
-    assert.equal(mapPaymobStatusToWithdrawalStatus("success"), "COMPLETED");
-    assert.equal(mapPaymobStatusToWithdrawalStatus("pending"), "PROCESSING");
-    assert.equal(mapPaymobStatusToWithdrawalStatus("failed"), "FAILED");
+    expect(mapPaymobStatusToWithdrawalStatus("success")).toBe("COMPLETED");
+    expect(mapPaymobStatusToWithdrawalStatus("pending")).toBe("PROCESSING");
+    expect(mapPaymobStatusToWithdrawalStatus("failed")).toBe("FAILED");
   });
 });
 
 describe("payout status transitions", () => {
   it("allows PENDING → SUBMITTED", () => {
-    assert.equal(canTransitionPayoutStatus("PENDING", "SUBMITTED"), true);
+    expect(canTransitionPayoutStatus("PENDING" as any, "SUBMITTED" as any)).toBe(true);
   });
 
   it("allows PROCESSING → COMPLETED", () => {
-    assert.equal(canTransitionPayoutStatus("PROCESSING", "COMPLETED"), true);
+    expect(canTransitionPayoutStatus("PROCESSING" as any, "COMPLETED" as any)).toBe(true);
   });
 
   it("blocks COMPLETED → PENDING", () => {
-    assert.equal(canTransitionPayoutStatus("COMPLETED", "PENDING"), false);
+    expect(canTransitionPayoutStatus("COMPLETED" as any, "PENDING" as any)).toBe(false);
   });
 
   it("allows manual review resolution paths", () => {
-    assert.equal(
-      canTransitionPayoutStatus("FAILED_NEEDS_MANUAL_REVIEW", "CANCELLED"),
-      true,
-    );
-    assert.equal(
-      canTransitionPayoutStatus("FAILED_NEEDS_MANUAL_REVIEW", "COMPLETED"),
-      true,
-    );
+    expect(
+      canTransitionPayoutStatus("FAILED_NEEDS_MANUAL_REVIEW" as any, "CANCELLED" as any),
+    ).toBe(true);
+    expect(
+      canTransitionPayoutStatus("FAILED_NEEDS_MANUAL_REVIEW" as any, "COMPLETED" as any),
+    ).toBe(true);
   });
 
   it("throws on invalid transitions", () => {
-    assert.throws(
-      () => assertPayoutTransition("COMPLETED", "FAILED"),
-      (err: unknown) =>
-        err instanceof ApiError &&
-        /Invalid payout status transition/.test(err.message),
+    expect(() => assertPayoutTransition("COMPLETED" as any, "FAILED" as any)).toThrow(
+      /Invalid payout status transition/,
     );
   });
 });

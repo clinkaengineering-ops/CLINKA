@@ -1,13 +1,45 @@
-import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { AddressInfo } from "node:net";
-import { after, before, describe, it } from "node:test";
 
 import express from "express";
 import helmet from "helmet";
+
+jest.mock("multer-storage-cloudinary", () => {
+  const multer = require("multer");
+  const crypto = require("crypto");
+  const p = require("path");
+  const f = require("fs");
+
+  return {
+    CloudinaryStorage: jest.fn().mockImplementation((options: any) => {
+      const folder = options?.params?.folder || "images";
+      return multer.diskStorage({
+        destination: (_req: any, _file: any, cb: any) => {
+          const dir = p.join(process.env.UPLOAD_DIR || "/tmp", folder);
+          f.mkdirSync(dir, { recursive: true });
+          cb(null, dir);
+        },
+        filename: (_req: any, file: any, cb: any) => {
+          const ext = p.extname(file.originalname).toLowerCase() || ".png";
+          cb(null, `${crypto.randomUUID()}${ext}`);
+        },
+      });
+    }),
+  };
+});
+
+jest.mock("./cloudinary", () => ({
+  __esModule: true,
+  default: {
+    uploader: {
+      destroy: jest.fn().mockResolvedValue({ result: "ok" }),
+    },
+    config: jest.fn(),
+  },
+}));
 
 import { isAllowedOrigin } from "./cors";
 import {
@@ -66,7 +98,6 @@ function createUploadApp() {
     res.status(201).json({ path: getStoredUploadPath(req.file, "images") });
   });
 
-
   app.use(errorHandler);
   return app;
 }
@@ -84,7 +115,11 @@ async function postFile(
     new Blob([new Uint8Array(body)], { type: contentType }),
     filename,
   );
-  return fetch(`${origin}${route}`, { method: "POST", body: form });
+  return fetch(`${origin}${route}`, {
+    method: "POST",
+    body: form,
+    headers: { connection: "close" },
+  });
 }
 
 describe("local upload HTTP flow", () => {
@@ -93,7 +128,7 @@ describe("local upload HTTP flow", () => {
   let server: http.Server;
   let origin = "";
 
-  before(async () => {
+  beforeAll(async () => {
     tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "clinka-upload-http-"));
     process.env.UPLOAD_DIR = tempUploadDir;
     process.env.CLIENT_URL = "https://clinkaeng.com";
@@ -102,8 +137,11 @@ describe("local upload HTTP flow", () => {
     ({ server, origin } = await listen(createUploadApp()));
   });
 
-  after(async () => {
+  afterAll(async () => {
     await new Promise<void>((resolve, reject) => {
+      if ((server as any)?.closeAllConnections) {
+        (server as any).closeAllConnections();
+      }
       server.close((err) => (err ? reject(err) : resolve()));
     });
     process.env = { ...originalEnv };
@@ -118,24 +156,23 @@ describe("local upload HTTP flow", () => {
       "image/png",
       PNG_1X1,
     );
-    assert.equal(uploaded.status, 201);
+    expect(uploaded.status).toBe(201);
     const payload = (await uploaded.json()) as { path: string };
-    assert.match(payload.path, /^\/uploads\/images\/[0-9a-f-]+\.png$/i);
+    expect(payload.path).toMatch(/^\/uploads\/images\/[0-9a-f-]+\.png$/i);
 
     const absolute = path.join(tempUploadDir, payload.path.replace("/uploads/", ""));
-    assert.equal(fs.existsSync(absolute), true);
-    assert.deepEqual(fs.readFileSync(absolute), PNG_1X1);
+    expect(fs.existsSync(absolute)).toBe(true);
+    expect(fs.readFileSync(absolute)).toEqual(PNG_1X1);
 
     const served = await fetch(`${origin}${payload.path}`, {
-      headers: { Origin: "https://clinkaeng.com" },
+      headers: { Origin: "https://clinkaeng.com", connection: "close" },
     });
-    assert.equal(served.status, 200);
-    assert.equal(served.headers.get("cross-origin-resource-policy"), "cross-origin");
-    assert.equal(served.headers.get("access-control-allow-origin"), "https://clinkaeng.com");
-    assert.match(served.headers.get("cache-control") ?? "", /immutable/);
-    assert.deepEqual(Buffer.from(await served.arrayBuffer()), PNG_1X1);
+    expect(served.status).toBe(200);
+    expect(served.headers.get("cross-origin-resource-policy")).toBe("cross-origin");
+    expect(served.headers.get("access-control-allow-origin")).toBe("https://clinkaeng.com");
+    expect(served.headers.get("cache-control") ?? "").toMatch(/immutable/);
+    expect(Buffer.from(await served.arrayBuffer())).toEqual(PNG_1X1);
   });
-
 
   it("rejects executable disguises and oversized files", async () => {
     const blocked = await postFile(
@@ -145,9 +182,9 @@ describe("local upload HTTP flow", () => {
       "image/png",
       PNG_1X1,
     );
-    assert.equal(blocked.status, 400);
+    expect(blocked.status).toBe(400);
     const blockedBody = (await blocked.json()) as { message: string };
-    assert.match(blockedBody.message, /not allowed/i);
+    expect(blockedBody.message).toMatch(/not allowed/i);
 
     const oversized = await postFile(
       origin,
@@ -156,13 +193,15 @@ describe("local upload HTTP flow", () => {
       "image/png",
       Buffer.alloc(2048, 1),
     );
-    assert.equal(oversized.status, 400);
+    expect(oversized.status).toBe(400);
     const oversizedBody = (await oversized.json()) as { message: string };
-    assert.match(oversizedBody.message, /too large/i);
+    expect(oversizedBody.message).toMatch(/too large/i);
   });
 
   it("does not serve files outside the upload root", async () => {
-    const leaked = await fetch(`${origin}/uploads/images/../../package.json`);
-    assert.notEqual(leaked.status, 200);
+    const leaked = await fetch(`${origin}/uploads/images/../../package.json`, {
+      headers: { connection: "close" },
+    });
+    expect(leaked.status).not.toBe(200);
   });
 });

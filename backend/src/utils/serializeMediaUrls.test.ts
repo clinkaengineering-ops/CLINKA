@@ -1,6 +1,3 @@
-import assert from "node:assert/strict";
-import { afterEach, beforeEach, describe, it } from "node:test";
-
 import { serializeMediaUrls } from "./serializeMediaUrls";
 
 class FakeDecimal {
@@ -37,25 +34,25 @@ describe("serializeMediaUrls", () => {
       coverImageUrl: "https://res.cloudinary.com/demo/image.png",
     });
 
-    assert.equal(result.avatarUrl, "https://cdn.example.com/uploads/avatars/abc.png");
-    assert.equal(result.coverImageUrl, "https://res.cloudinary.com/demo/image.png");
+    expect(result.avatarUrl).toBe("https://cdn.example.com/uploads/avatars/abc.png");
+    expect(result.coverImageUrl).toBe("https://res.cloudinary.com/demo/image.png");
   });
 
   it("preserves Date instances so JSON output stays an ISO timestamp", () => {
     const createdAt = new Date("2026-08-29T21:19:35.111Z");
     const result = serializeMediaUrls({ createdAt, nested: { updatedAt: createdAt } });
 
-    assert.equal(result.createdAt, createdAt);
-    assert.equal(result.nested.updatedAt, createdAt);
-    assert.equal(JSON.parse(JSON.stringify(result)).createdAt, createdAt.toISOString());
+    expect(result.createdAt).toBe(createdAt);
+    expect(result.nested.updatedAt).toBe(createdAt);
+    expect(JSON.parse(JSON.stringify(result)).createdAt).toBe(createdAt.toISOString());
   });
 
   it("preserves Prisma Decimal-like objects so amounts serialize as numbers/strings", () => {
     const amount = new FakeDecimal(1, 1, [2500], 25);
     const result = serializeMediaUrls({ amount, payment: { commission: amount } });
 
-    assert.equal(result.amount, amount);
-    assert.equal(JSON.parse(JSON.stringify(result)).amount, "25");
+    expect(result.amount).toBe(amount);
+    expect(JSON.parse(JSON.stringify(result)).amount).toBe("25");
   });
 
   it("does not rewrite non-upload url fields", () => {
@@ -65,17 +62,16 @@ describe("serializeMediaUrls", () => {
       proofUrl: "/uploads/documents/receipt.png",
     });
 
-    assert.equal(result.url, "https://paymob.example/webhook");
-    assert.equal(result.fileUrl, "https://cdn.example.com/uploads/projects/file.pdf");
-    assert.equal(result.proofUrl, "https://cdn.example.com/uploads/documents/receipt.png");
+    expect(result.url).toBe("https://paymob.example/webhook");
+    expect(result.fileUrl).toBe("https://cdn.example.com/uploads/projects/file.pdf");
+    expect(result.proofUrl).toBe("https://cdn.example.com/uploads/documents/receipt.png");
   });
 
   it("rewrites nested proofUrl used by payment review payloads", () => {
     const result = serializeMediaUrls({
       payment: { proofUrl: "/uploads/documents/receipt.png" },
     });
-    assert.equal(
-      result.payment.proofUrl,
+    expect(result.payment.proofUrl).toBe(
       "https://cdn.example.com/uploads/documents/receipt.png",
     );
   });
