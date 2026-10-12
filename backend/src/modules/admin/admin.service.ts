@@ -142,6 +142,43 @@ export async function getPendingVerifications() {
     });
 }
 
+async function getClinkaAdminSenderId(fallbackAdminId?: string): Promise<string> {
+  try {
+    const clinkaUser = await db.user.findFirst({
+      where: {
+        role: "ADMIN",
+        OR: [
+          { name: { in: ["CLINKA", "CLINKA Admin", "CLINKA Support"], mode: "insensitive" } },
+          { email: { in: ["support@clinkaeng.com", "admin@clinkaeng.com", "clinka@clinkaeng.com"], mode: "insensitive" } },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (clinkaUser) {
+      return clinkaUser.id;
+    }
+
+    const systemAdmin = await db.user.upsert({
+      where: { email: "support@clinkaeng.com" },
+      update: { name: "CLINKA", role: "ADMIN" },
+      create: {
+        email: "support@clinkaeng.com",
+        name: "CLINKA",
+        role: "ADMIN",
+        password: "$2a$10$SystemManagedAccountNoDirectLogin_" + Date.now(),
+        isVerified: true,
+      },
+      select: { id: true },
+    });
+
+    return systemAdmin.id;
+  } catch (err) {
+    console.error("Failed to resolve or create CLINKA admin account:", err);
+    return fallbackAdminId || "";
+  }
+}
+
 export async function updateEngineerVerification(
   profileId: number,
   data: UpdateVerificationInput,
@@ -214,15 +251,18 @@ export async function updateEngineerVerification(
     where: { id: updated.userId },
   });
 
-  if (data.status === "APPROVED" && adminId) {
+  if (data.status === "APPROVED") {
     try {
       const { getOrCreateGeneralConversation, sendMessage } = await import(
         "../messages/messages.service"
       );
-      const conv = await getOrCreateGeneralConversation(adminId, updated.userId);
-      await sendMessage(conv.id, adminId, {
-        content: "Welcome to Clinka! We're thrilled to have you as an approved engineer on our platform. If you have any questions or need help getting started, just reply here.",
-      });
+      const senderId = await getClinkaAdminSenderId(adminId);
+      if (senderId) {
+        const conv = await getOrCreateGeneralConversation(senderId, updated.userId);
+        await sendMessage(conv.id, senderId, {
+          content: "Welcome to Clinka! We're thrilled to have you as an approved engineer on our platform. If you have any questions or need help getting started, just reply here.",
+        });
+      }
     } catch (err) {
       console.error("Failed to send automated welcome message:", err);
     }
