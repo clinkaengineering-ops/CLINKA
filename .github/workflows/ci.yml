@@ -191,17 +191,47 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Deploy Backend to Coolify
+        continue-on-error: true
         env:
           COOLIFY_BACKEND_WEBHOOK: ${{ secrets.COOLIFY_BACKEND_WEBHOOK || secrets.COOLIFY_BACKEND_URL || secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN || '' }}
         if: env.COOLIFY_BACKEND_WEBHOOK != ''
         run: |
           echo "Triggering Coolify backend deployment webhook..."
-          curl -f -s -S -X POST "$COOLIFY_BACKEND_WEBHOOK" || curl -f -s -S -X GET "$COOLIFY_BACKEND_WEBHOOK"
+          AUTH_HEADER=()
+          if [ -n "$COOLIFY_API_TOKEN" ]; then
+            AUTH_HEADER=(-H "Authorization: Bearer $COOLIFY_API_TOKEN")
+          fi
+          HTTP_STATUS=$(curl -s -o /tmp/resp.txt -w "%{http_code}" -X POST "${AUTH_HEADER[@]}" "$COOLIFY_BACKEND_WEBHOOK" || curl -s -o /tmp/resp.txt -w "%{http_code}" -X GET "${AUTH_HEADER[@]}" "$COOLIFY_BACKEND_WEBHOOK" || echo "000")
+          echo "HTTP Status: $HTTP_STATUS"
+          cat /tmp/resp.txt
+          echo ""
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Coolify backend deployment triggered successfully."
+          else
+            echo "⚠️ Coolify backend webhook returned status $HTTP_STATUS. (If 401, check whether a Coolify API token is required via COOLIFY_API_TOKEN secret)."
+            exit 1
+          fi
 
       - name: Deploy Frontend to Coolify
+        continue-on-error: true
         env:
           COOLIFY_FRONTEND_WEBHOOK: ${{ secrets.COOLIFY_FRONTEND_WEBHOOK || secrets.COOLIFY_FRONTEND_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN || '' }}
         if: env.COOLIFY_FRONTEND_WEBHOOK != ''
         run: |
           echo "Triggering Coolify frontend deployment webhook..."
-          curl -f -s -S -X POST "$COOLIFY_FRONTEND_WEBHOOK" || curl -f -s -S -X GET "$COOLIFY_FRONTEND_WEBHOOK"
+          AUTH_HEADER=()
+          if [ -n "$COOLIFY_API_TOKEN" ]; then
+            AUTH_HEADER=(-H "Authorization: Bearer $COOLIFY_API_TOKEN")
+          fi
+          HTTP_STATUS=$(curl -s -o /tmp/resp.txt -w "%{http_code}" -X POST "${AUTH_HEADER[@]}" "$COOLIFY_FRONTEND_WEBHOOK" || curl -s -o /tmp/resp.txt -w "%{http_code}" -X GET "${AUTH_HEADER[@]}" "$COOLIFY_FRONTEND_WEBHOOK" || echo "000")
+          echo "HTTP Status: $HTTP_STATUS"
+          cat /tmp/resp.txt
+          echo ""
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Coolify frontend deployment triggered successfully."
+          else
+            echo "⚠️ Coolify frontend webhook returned status $HTTP_STATUS. (If 401, check whether a Coolify API token is required via COOLIFY_API_TOKEN secret)."
+            exit 1
+          fi
