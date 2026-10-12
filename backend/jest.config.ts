@@ -36,9 +36,10 @@ const config: Config = {
       statements: 30,
     },
   },
-  // Handle Prisma generated client
+  // Handle Prisma generated client and always mock database in unit tests
   moduleNameMapper: {
     '^(\\.\\.?/.*)\\.js$': '$1',
+    '^.*[\\/\\\\]config[\\/\\\\]db(\\.[jt]s)?$': '<rootDir>/src/__mocks__/config/db.ts',
   },
   transform: {
     '^.+\\.ts$': ['ts-jest', {
