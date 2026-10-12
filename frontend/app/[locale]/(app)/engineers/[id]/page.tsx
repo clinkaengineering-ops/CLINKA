@@ -66,8 +66,8 @@ export default async function Page(props: Props) {
   const { locale } = params;
   
   // Calculate average rating if review array exists
-  let ratingValue = 5;
-  let reviewCount = 1; // Fallback so schema is valid if no reviews
+  const ratingValue = 5;
+  const reviewCount = 1; // Fallback so schema is valid if no reviews
   // Assume engineer.reviews exists or can be aggregated, we use placeholders if missing
   // Since we don't have the exact structure of reviews in the Engineer type, we'll gracefully omit AggregateRating if 0
   

@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -21,6 +21,11 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clinka_test
+      JWT_SECRET: test-dummy-jwt-secret-minimum-32-chars-long!
+      NODE_ENV: test
+      RATE_LIMIT_DISABLED: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -179,3 +184,25 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high
 
+  deploy:
+    name: Coolify Continuous Deployment
+    needs: [backend, frontend, backend-integration]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    timeout-minutes: 10
+    steps:
+      - name: Deploy Backend to Coolify
+        env:
+          COOLIFY_BACKEND_WEBHOOK: ${{ secrets.COOLIFY_BACKEND_WEBHOOK || secrets.COOLIFY_BACKEND_URL || secrets.COOLIFY_WEBHOOK }}
+        if: env.COOLIFY_BACKEND_WEBHOOK != ''
+        run: |
+          echo "Triggering Coolify backend deployment webhook..."
+          curl -f -s -S -X POST "$COOLIFY_BACKEND_WEBHOOK" || curl -f -s -S -X GET "$COOLIFY_BACKEND_WEBHOOK"
+
+      - name: Deploy Frontend to Coolify
+        env:
+          COOLIFY_FRONTEND_WEBHOOK: ${{ secrets.COOLIFY_FRONTEND_WEBHOOK || secrets.COOLIFY_FRONTEND_URL }}
+        if: env.COOLIFY_FRONTEND_WEBHOOK != ''
+        run: |
+          echo "Triggering Coolify frontend deployment webhook..."
+          curl -f -s -S -X POST "$COOLIFY_FRONTEND_WEBHOOK" || curl -f -s -S -X GET "$COOLIFY_FRONTEND_WEBHOOK"
