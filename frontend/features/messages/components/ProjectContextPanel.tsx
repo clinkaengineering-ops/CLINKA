@@ -38,6 +38,7 @@ interface ProjectContextPanelProps {
   onProjectUpdated?: () => void | Promise<void>;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
+  onOpenRulesModal?: () => void;
 }
 
 export function ProjectContextPanel({
@@ -45,6 +46,7 @@ export function ProjectContextPanel({
   onProjectUpdated,
   isMobileOpen = false,
   onCloseMobile,
+  onOpenRulesModal,
 }: ProjectContextPanelProps) {
   const router = useRouter();
   const { t } = useI18n();
@@ -224,7 +226,7 @@ export function ProjectContextPanel({
       </div>
 
       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-        <MessagesPolicyNotice />
+        <MessagesPolicyNotice onClick={onOpenRulesModal} />
       </div>
 
       {!conversation.projectId ? null : (

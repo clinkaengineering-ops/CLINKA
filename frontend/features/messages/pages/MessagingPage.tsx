@@ -32,6 +32,7 @@ import { DateSeparator } from "../components/DateSeparator";
 import { MessageBubble } from "../components/MessageBubble";
 import { MessageAttachment } from "../components/MessageAttachment";
 import { ProjectContextPanel } from "../components/ProjectContextPanel";
+import { MessagesPolicyModal } from "../components/MessagesPolicyModal";
 import {
   groupConversationsByParticipant,
   type ParticipantInboxGroup,
@@ -125,6 +126,7 @@ export function MessagingPage() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [banAlert, setBanAlert] = useState<string | null>(null);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -361,6 +363,29 @@ export function MessagingPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (activeId == null) return;
+    try {
+      const seen = localStorage.getItem(`clinka_seen_chat_policy_${activeId}`);
+      if (!seen) {
+        setShowPolicyModal(true);
+      }
+    } catch {
+      // ignore localStorage errors (e.g. private mode)
+    }
+  }, [activeId]);
+
+  const handleClosePolicyModal = useCallback(() => {
+    setShowPolicyModal(false);
+    if (activeId != null) {
+      try {
+        localStorage.setItem(`clinka_seen_chat_policy_${activeId}`, "true");
+      } catch {
+        // ignore localStorage errors
+      }
+    }
+  }, [activeId]);
 
   const activeConv = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
@@ -745,12 +770,18 @@ export function MessagingPage() {
             conversation={activeConv}
             isMobileOpen={showMobileDetails}
             onCloseMobile={() => setShowMobileDetails(false)}
+            onOpenRulesModal={() => setShowPolicyModal(true)}
             onProjectUpdated={() => {
               void loadConversations();
             }}
           />
         </div>
       </Card>
+
+      <MessagesPolicyModal
+        open={showPolicyModal}
+        onClose={handleClosePolicyModal}
+      />
 
       {banAlert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

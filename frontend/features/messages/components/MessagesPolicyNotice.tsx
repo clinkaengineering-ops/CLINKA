@@ -3,11 +3,34 @@
 import { IconShield } from "@/components/Icons";
 import { useI18n } from "@/i18n";
 
-export function MessagesPolicyNotice() {
+interface MessagesPolicyNoticeProps {
+  onClick?: () => void;
+}
+
+export function MessagesPolicyNotice({ onClick }: MessagesPolicyNoticeProps = {}) {
   const { t } = useI18n();
 
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      className={`rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 transition ${
+        onClick
+          ? "cursor-pointer hover:border-amber-500/50 hover:bg-amber-500/15"
+          : ""
+      }`}
+    >
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300">
           <IconShield width={16} height={16} />

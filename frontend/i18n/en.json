@@ -829,6 +829,8 @@
   "msg.rules.title": "Messaging rules",
   "msg.rules.body": "Do not share phone numbers, email addresses, links, social handles, or ask to move the conversation off CLINKA. Keep all project communication and payments on the platform.",
   "msg.rules.banNote": "Breaking these rules can lead to a 30-day account suspension. Bans protect clients and engineers from scams and off-platform payment risk.",
+  "msg.rules.acknowledge": "I Understand & Agree",
+  "msg.rules.popupSubtitle": "Safety reminder for all project communications",
   "auth.welcome": "Welcome back",
   "auth.signinSub": "Sign in to your CLINKA workspace",
   "auth.email": "Email",
