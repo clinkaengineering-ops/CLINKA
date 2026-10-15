@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProjectDetailPanel } from "@/features/projects/components/ProjectDetailPanel";
+import { resolveApiBaseUrl } from "@/lib/apiBaseUrl";
 import type { Project } from "@/features/projects/api/project.api";
 
 interface Props {
@@ -8,7 +9,7 @@ interface Props {
 }
 
 async function getProject(id: string): Promise<Project | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+  const baseUrl = resolveApiBaseUrl();
   try {
     const res = await fetch(`${baseUrl}/projects/${id}`, { next: { revalidate: 60 } });
     if (!res.ok) return null;

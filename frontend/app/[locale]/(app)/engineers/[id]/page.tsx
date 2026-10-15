@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EngineerProfilePage } from "@/features/engineers/components/EngineerProfilePage";
+import { resolveApiBaseUrl } from "@/lib/apiBaseUrl";
 import type { Engineer } from "@/types";
 
 interface Props {
@@ -8,7 +9,7 @@ interface Props {
 }
 
 async function getEngineer(id: string): Promise<Engineer | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+  const baseUrl = resolveApiBaseUrl();
   try {
     // using fetch instead of axios for Next.js SSR caching
     const res = await fetch(`${baseUrl}/users/engineers/${id}`, { next: { revalidate: 60 } });

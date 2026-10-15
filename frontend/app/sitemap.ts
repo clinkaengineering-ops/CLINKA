@@ -1,8 +1,9 @@
 import { MetadataRoute } from "next";
+import { resolveApiBaseUrl } from "@/lib/apiBaseUrl";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://clinkaeng.com";
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+  const apiUrl = resolveApiBaseUrl();
 
   let engineers: any[] = [];
   let projects: any[] = [];
