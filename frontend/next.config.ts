@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
   // 1 document + 10 portfolio images; deliverables allow 10 × 25MB.
   experimental: {
     proxyClientMaxBodySize: "256mb",
+    cpus: 1,
+    workerThreads: false,
   },
   images: {
     remotePatterns: [

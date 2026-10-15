@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Avatar, Badge, Card } from "@/components/UI";
+import { Avatar, Card } from "@/components/UI";
 import {
   IconSearch,
   IconPaperclip,

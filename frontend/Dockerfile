@@ -7,6 +7,8 @@ WORKDIR /app/frontend
 # the "clinka": "file:.." dependency resolution — it has no real code.
 RUN mkdir -p /app && printf '{"name":"clinka","private":true}' > /app/package.json
 
+ENV NEXT_TELEMETRY_DISABLED=1
+
 COPY . .
 RUN npm install
 RUN npm run build
