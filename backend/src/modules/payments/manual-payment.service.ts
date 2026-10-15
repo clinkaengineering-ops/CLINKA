@@ -6,6 +6,7 @@ import { createNotification } from "../../utils/notifications";
 import { logSystemEvent } from "../../utils/auditLogger";
 import transporter from "../../config/mailer";
 import { getEmailFrom, manualPaymentNotificationEmailHtml } from "../../utils/emailTemplate";
+import { getAdminEmailRecipients } from "../../utils/adminNotifications";
 
 function toNumber(value: number | { toString(): string }) {
   return typeof value === "number" ? value : Number(value.toString());
@@ -124,18 +125,19 @@ export async function submitManualPayment(
   });
 
   // Notify admins
-  const admins = await db.user.findMany({
-    where: { role: "ADMIN" },
-    select: { id: true, email: true },
-  });
-  
-  const adminEmails = admins.map((a) => a.email?.trim()).filter((email): email is string => Boolean(email));
+  const [admins, adminEmails] = await Promise.all([
+    db.user.findMany({
+      where: { role: "ADMIN" },
+      select: { id: true, email: true },
+    }),
+    getAdminEmailRecipients(),
+  ]);
   
   if (adminEmails.length > 0) {
     try {
       await transporter.sendMail({
         from: getEmailFrom(),
-        to: adminEmails.join(","),
+        to: adminEmails,
         subject: `New Manual Payment - ${input.currency} ${input.amount}`,
         html: manualPaymentNotificationEmailHtml({
           clientName: project.client.name,

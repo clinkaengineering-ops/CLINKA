@@ -55,6 +55,22 @@ export async function autoEscalateDisputes() {
     where: {
       status: { in: ["OPEN", "AWAITING_ENGINEER_FIX"] },
       updatedAt: { lt: threeDaysAgo }
+    },
+    include: {
+      project: {
+        include: {
+          client: { select: { id: true, name: true, email: true } },
+          payment: {
+            include: {
+              engineer: {
+                include: {
+                  user: { select: { id: true, name: true, email: true } }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   });
 
@@ -77,6 +93,30 @@ export async function autoEscalateDisputes() {
         
         console.log(`Auto-escalated dispute ${dispute.id}`);
       });
+
+      // Notify Admins
+      try {
+        const { notifyAdminsDisputeEscalated } = await import("../utils/adminNotifications");
+        const engineerUser = dispute.project?.payment?.engineer?.user;
+        const amountStr = dispute.project?.payment?.amountUsd
+          ? `$${Number(dispute.project.payment.amountUsd).toFixed(2)}`
+          : undefined;
+
+        await notifyAdminsDisputeEscalated({
+          disputeId: dispute.id,
+          projectId: dispute.projectId,
+          projectTitle: dispute.project?.title ?? `Project #${dispute.projectId}`,
+          clientName: dispute.project?.client?.name,
+          clientEmail: dispute.project?.client?.email,
+          engineerName: engineerUser?.name,
+          engineerEmail: engineerUser?.email,
+          reason: dispute.reason,
+          amount: amountStr,
+          escalatedAt: new Date(),
+        });
+      } catch (err) {
+        console.error("Failed to notify admins of auto-escalated dispute:", err);
+      }
     } catch (e) {
       console.error(`Error auto-escalating dispute ${dispute.id}:`, e);
     }

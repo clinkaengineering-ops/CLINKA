@@ -237,6 +237,10 @@ export function withdrawalNotificationEmailHtml(input: {
         ${row("Account number", input.accountNumber)}
         ${row("Request date", input.requestDate)}
       </table>`,
+    cta: {
+      label: "View in Admin Dashboard",
+      href: `${getPublicClientUrl()}/admin?tab=payouts`,
+    },
   });
 }
 
@@ -269,6 +273,97 @@ export function manualPaymentNotificationEmailHtml(input: {
         ${row("Method", input.method)}
         ${row("Submission date", input.submissionDate)}
       </table>`,
+    cta: {
+      label: "Review Payment Proof",
+      href: `${getPublicClientUrl()}/admin/finance/payments`,
+    },
+  });
+}
+
+export function supportTicketNotificationEmailHtml(input: {
+  ticketId: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  submissionDate: string;
+  userRegistered?: boolean;
+}): string {
+  const row = (label: string, value: string) =>
+    `<tr>
+      <td style="padding:10px 0;border-bottom:1px solid ${BRAND.border};color:${BRAND.muted};font-size:14px;width:35%;vertical-align:top;">${escapeHtml(label)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid ${BRAND.border};color:${BRAND.text};font-size:14px;font-weight:600;vertical-align:top;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  return buildEmailHtml({
+    title: "New Support Ticket",
+    preheader: `Support inquiry #${input.ticketId} from ${input.name}: ${input.subject}`,
+    contentHtml: `
+      <p style="margin:0 0 20px;color:${BRAND.text};">
+        A new support inquiry has been submitted through the contact form. Details are below:
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        ${row("Ticket #", `#${input.ticketId}`)}
+        ${row("Sender", input.name)}
+        ${row("Email", input.email)}
+        ${row("Subject", input.subject)}
+        ${row("User Status", input.userRegistered ? "Registered Member" : "Guest / Visitor")}
+        ${row("Received At", input.submissionDate)}
+      </table>
+      <div style="margin:20px 0;padding:16px;background-color:${BRAND.ice};border-left:4px solid ${BRAND.teal};border-radius:4px;">
+        <strong style="display:block;margin-bottom:8px;font-size:14px;color:${BRAND.teal};">Message:</strong>
+        <p style="margin:0;color:${BRAND.text};font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(input.message)}</p>
+      </div>`,
+    cta: {
+      label: "View Support Tickets",
+      href: `${getPublicClientUrl()}/admin?tab=support`,
+    },
+  });
+}
+
+export function disputeEscalatedNotificationEmailHtml(input: {
+  disputeId: number;
+  projectId: string;
+  projectTitle: string;
+  clientName?: string;
+  clientEmail?: string;
+  engineerName?: string;
+  engineerEmail?: string;
+  reason: string;
+  amount?: string;
+  escalatedAt: string;
+}): string {
+  const row = (label: string, value: string) =>
+    `<tr>
+      <td style="padding:10px 0;border-bottom:1px solid ${BRAND.border};color:${BRAND.muted};font-size:14px;width:35%;vertical-align:top;">${escapeHtml(label)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid ${BRAND.border};color:${BRAND.text};font-size:14px;font-weight:600;vertical-align:top;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  return buildEmailHtml({
+    title: "Dispute Escalated to Admin",
+    preheader: `Dispute escalated for project: ${input.projectTitle}`,
+    contentHtml: `
+      <p style="margin:0 0 20px;color:${BRAND.text};">
+        A project dispute has been escalated for administrator intervention and final decision.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        ${row("Project", input.projectTitle)}
+        ${input.amount ? row("Escrow Amount", input.amount) : ""}
+        ${input.clientName ? row("Client", `${input.clientName}${input.clientEmail ? ` (${input.clientEmail})` : ""}`) : ""}
+        ${input.engineerName ? row("Engineer", `${input.engineerName}${input.engineerEmail ? ` (${input.engineerEmail})` : ""}`) : ""}
+        ${row("Escalated At", input.escalatedAt)}
+      </table>
+      <div style="margin:20px 0;padding:16px;background-color:${BRAND.ice};border-left:4px solid ${BRAND.copper};border-radius:4px;">
+        <strong style="display:block;margin-bottom:8px;font-size:14px;color:${BRAND.copper};">Dispute Reason:</strong>
+        <p style="margin:0;color:${BRAND.text};font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(input.reason)}</p>
+      </div>
+      <p style="margin:0;color:${BRAND.muted};font-size:14px;">
+        Please review project deliverables, revision logs, and chat history before rendering a decision in the admin dashboard.
+      </p>`,
+    cta: {
+      label: "Review & Resolve Dispute",
+      href: `${getPublicClientUrl()}/admin?tab=disputes`,
+    },
   });
 }
 

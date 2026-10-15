@@ -173,6 +173,14 @@ async function sendViaResend(
     : new ApiError(502, "Failed to send email via Resend");
 }
 
+function normalizeRecipients(to: MailAddress): string[] {
+  const raw = Array.isArray(to) ? to : [to];
+  return raw
+    .flatMap((item) => (typeof item === "string" ? item.split(",") : []))
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
 const transporter = {
   // Nodemailer-compatible check used by some code paths.
   async verify() {
@@ -187,18 +195,21 @@ const transporter = {
 
   // Nodemailer-compatible subset used across the app.
   async sendMail(options: MailOptions): Promise<SendMailResult> {
+    const to = normalizeRecipients(options.to);
+    if (to.length === 0) {
+      return { messageId: null, accepted: [] };
+    }
+
     if (!resend) {
       // In non-production environments, fail softly so local dev/tests can run
       // even when RESEND_API_KEY is missing.
       console.warn(
         "RESEND_API_KEY is not set — skipping email send to",
-        options.to,
+        to,
       );
-      const accepted = Array.isArray(options.to) ? options.to : [options.to];
-      return { messageId: null, accepted };
+      return { messageId: null, accepted: to };
     }
 
-    const to = Array.isArray(options.to) ? options.to : [options.to];
     return enqueueSend(() => sendViaResend(options, to));
   },
 };

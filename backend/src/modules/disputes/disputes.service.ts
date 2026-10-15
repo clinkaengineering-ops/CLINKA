@@ -3,6 +3,7 @@ import ApiError from "../../utils/ApiError";
 import { logSystemEvent } from "../../utils/auditLogger";
 import { ensureWallet } from "../../utils/wallet";
 import { netEngineerAmount, recordPaymentLedger } from "../../utils/paymentLedger";
+import { notifyAdminsDisputeEscalated } from "../../utils/adminNotifications";
 
 export async function openDispute(clientId: string, projectId: string, reason: string) {
   const project = await db.project.findUnique({
@@ -242,7 +243,16 @@ export async function escalateDispute(actorId: string, actorRole: string, projec
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: { 
-      payment: true,
+      client: { select: { id: true, name: true, email: true } },
+      payment: {
+        include: {
+          engineer: {
+            include: {
+              user: { select: { id: true, name: true, email: true } }
+            }
+          }
+        }
+      },
       disputes: { where: { status: { in: ["OPEN", "AWAITING_ENGINEER_FIX"] } } } 
     },
   });
@@ -251,8 +261,8 @@ export async function escalateDispute(actorId: string, actorRole: string, projec
   const activeDispute = project.disputes[0];
   if (!activeDispute) throw new ApiError(400, "No active dispute eligible for escalation");
 
-  return db.$transaction(async (tx) => {
-    const updatedDispute = await tx.dispute.update({
+  const updatedDispute = await db.$transaction(async (tx) => {
+    const updated = await tx.dispute.update({
       where: { id: activeDispute.id },
       data: { status: "ESCALATED_TO_ADMIN" }
     });
@@ -270,28 +280,55 @@ export async function escalateDispute(actorId: string, actorRole: string, projec
     const payment = project.payment;
     if (payment) {
       const profile = await tx.engineerProfile.findUnique({ where: { id: payment.engineerId } });
-      await tx.notification.createMany({
-        data: [
-          {
-            userId: profile!.userId,
-            type: "DISPUTE_ESCALATED",
-            title: "Dispute Escalated",
-            body: `The dispute for "${project.title}" has been escalated to Admin.`,
-            link: `/engineer/projects/${project.id}`
-          },
-          {
-            userId: project.clientId,
-            type: "DISPUTE_ESCALATED",
-            title: "Dispute Escalated",
-            body: `The dispute for "${project.title}" has been escalated to Admin.`,
-            link: `/client/projects/${project.id}`
-          }
-        ]
-      });
+      if (profile) {
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: profile.userId,
+              type: "DISPUTE_ESCALATED",
+              title: "Dispute Escalated",
+              body: `The dispute for "${project.title}" has been escalated to Admin.`,
+              link: `/engineer/projects/${project.id}`
+            },
+            {
+              userId: project.clientId,
+              type: "DISPUTE_ESCALATED",
+              title: "Dispute Escalated",
+              body: `The dispute for "${project.title}" has been escalated to Admin.`,
+              link: `/client/projects/${project.id}`
+            }
+          ]
+        });
+      }
     }
 
-    return updatedDispute;
+    return updated;
   });
+
+  // Notify Admins via email and in-app notifications
+  try {
+    const engineerUser = project.payment?.engineer?.user;
+    const amountStr = project.payment?.amountUsd
+      ? `$${Number(project.payment.amountUsd).toFixed(2)}`
+      : undefined;
+
+    await notifyAdminsDisputeEscalated({
+      disputeId: activeDispute.id,
+      projectId: project.id,
+      projectTitle: project.title,
+      clientName: project.client?.name,
+      clientEmail: project.client?.email,
+      engineerName: engineerUser?.name,
+      engineerEmail: engineerUser?.email,
+      reason: activeDispute.reason,
+      amount: amountStr,
+      escalatedAt: new Date(),
+    });
+  } catch (err) {
+    console.error("Failed to notify admins of dispute escalation:", err);
+  }
+
+  return updatedDispute;
 }
 
 export async function manualFreeze(adminId: string, engineerId: number, amount: number, reason: string) {

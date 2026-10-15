@@ -51,6 +51,7 @@ import {
   getEmailFrom,
   withdrawalNotificationEmailHtml,
 } from "../../utils/emailTemplate";
+import { getAdminEmailRecipients } from "../../utils/adminNotifications";
 import {
   ensureWallet,
   settleMaturedWalletTransactions,
@@ -83,20 +84,14 @@ async function sendWithdrawalRequestEmailToAdmins(input: {
   accountNumber: string;
   requestDate: Date;
 }) {
-  const admins = await db.user.findMany({
-    where: { role: "ADMIN" },
-    select: { email: true },
-  });
-  const recipients = admins
-    .map((a) => a.email?.trim())
-    .filter((email): email is string => Boolean(email));
+  const recipients = await getAdminEmailRecipients();
 
   if (recipients.length === 0) return;
 
   try {
     await transporter.sendMail({
       from: getEmailFrom(),
-      to: recipients.join(","),
+      to: recipients,
       subject: `New Withdrawal Request - ${formatUsd(input.amount)}`,
       html: withdrawalNotificationEmailHtml({
         engineerName: input.engineerName,

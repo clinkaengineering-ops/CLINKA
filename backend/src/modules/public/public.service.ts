@@ -1,5 +1,6 @@
 import db from "../../config/db";
 import { CreateSupportTicketInput } from "./public.validation";
+import { notifyAdminsSupportTicket } from "../../utils/adminNotifications";
 
 export function getSupportContactEmail() {
   return (
@@ -13,7 +14,7 @@ export async function createSupportTicket(
   data: CreateSupportTicketInput,
   userId?: string,
 ) {
-  return db.supportTicket.create({
+  const ticket = await db.supportTicket.create({
     data: {
       name: data.name,
       email: data.email,
@@ -22,6 +23,23 @@ export async function createSupportTicket(
       userId: userId ?? null,
     },
   });
+
+  // Notify admins asynchronously with ticket details
+  try {
+    await notifyAdminsSupportTicket({
+      ticketId: ticket.id,
+      name: ticket.name,
+      email: ticket.email,
+      subject: ticket.subject,
+      message: ticket.message,
+      userId: ticket.userId ?? undefined,
+      submissionDate: ticket.createdAt,
+    });
+  } catch (err) {
+    console.error("Failed to dispatch admin notification for support ticket:", err);
+  }
+
+  return ticket;
 }
 
 function formatCompactCurrency(amount: number): string {

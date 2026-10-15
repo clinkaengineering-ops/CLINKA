@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/utils/cn";
 import { Button, Card } from "@/components/UI";
@@ -22,10 +23,43 @@ import { AdminDisputesPanel } from "../components/AdminDisputesPanel";
 
 type AdminTab = "overview" | "verifications" | "users" | "projects" | "reviews" | "disputes" | "financials" | "payouts" | "bans" | "chats" | "analytics" | "logs" | "support";
 
+const VALID_TABS: Record<string, AdminTab> = {
+  overview: "overview",
+  verifications: "verifications",
+  verification: "verifications",
+  users: "users",
+  projects: "projects",
+  reviews: "reviews",
+  disputes: "disputes",
+  dispute: "disputes",
+  financials: "financials",
+  payouts: "payouts",
+  bans: "bans",
+  chats: "chats",
+  analytics: "analytics",
+  logs: "logs",
+  support: "support",
+};
+
 export function AdminPage() {
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
-  const [tab, setTab] = useState<AdminTab>("overview");
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get("tab")?.toLowerCase();
+
+  const [tab, setTab] = useState<AdminTab>(() => {
+    if (urlTab && VALID_TABS[urlTab]) {
+      return VALID_TABS[urlTab];
+    }
+    return "overview";
+  });
+
+  useEffect(() => {
+    if (urlTab && VALID_TABS[urlTab]) {
+      setTab(VALID_TABS[urlTab]);
+    }
+  }, [urlTab]);
+
   const {
     stats,
     analytics,
