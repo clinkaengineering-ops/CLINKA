@@ -45,10 +45,19 @@ export function subscribeSocketHandlers(
   if (handlers.onError) sock.on("error", handlers.onError);
 }
 
-export function unsubscribeSocketHandlers(sock: Socket) {
-  sock.off("message:new");
-  sock.off("presence:update");
-  sock.off("typing:start");
-  sock.off("typing:stop");
-  sock.off("error");
+export function unsubscribeSocketHandlers(
+  sock: Socket,
+  handlers: {
+    onMessage?: (msg: ChatMessage) => void;
+    onPresence?: (data: PresenceUpdate) => void;
+    onTypingStart?: (data: TypingEvent) => void;
+    onTypingStop?: (data: TypingEvent) => void;
+    onError?: (err: { message: string }) => void;
+  },
+) {
+  if (handlers.onMessage) sock.off("message:new", handlers.onMessage);
+  if (handlers.onPresence) sock.off("presence:update", handlers.onPresence);
+  if (handlers.onTypingStart) sock.off("typing:start", handlers.onTypingStart);
+  if (handlers.onTypingStop) sock.off("typing:stop", handlers.onTypingStop);
+  if (handlers.onError) sock.off("error", handlers.onError);
 }

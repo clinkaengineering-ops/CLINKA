@@ -14,14 +14,21 @@ export function useMessageSocket(
   conversationId: number | null,
   onNewMessage: (msg: ChatMessage) => void,
   onError?: (err: { message: string }) => void,
+  /** Called after the server confirmed we joined the room (also after every reconnect). */
+  onJoined?: (conversationId: number) => void,
 ) {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
+
   const onNewMessageRef = useRef(onNewMessage);
-  
+  const onErrorRef = useRef(onError);
+  const onJoinedRef = useRef(onJoined);
+
   useEffect(() => {
     onNewMessageRef.current = onNewMessage;
-  }, [onNewMessage]);
+    onErrorRef.current = onError;
+    onJoinedRef.current = onJoined;
+  });
 
   useEffect(() => {
     const sock = getMessageSocket();
@@ -44,14 +51,14 @@ export function useMessageSocket(
         setTypingUserId((cur) => (cur === userId ? null : cur));
       },
       onError: (err: { message: string }) => {
-        if (onError) onError(err);
+        onErrorRef.current?.(err);
       },
     };
 
     subscribeSocketHandlers(sock, handlers);
 
     return () => {
-      unsubscribeSocketHandlers(sock);
+      unsubscribeSocketHandlers(sock, handlers);
     };
   }, []);
 
@@ -72,16 +79,21 @@ export function useMessageSocket(
     };
   }, []);
 
+  // Join the room; once the server confirms, ask the page to re-sync history.
+  // This runs again after every reconnect, so messages missed while offline are recovered.
   useEffect(() => {
+    if (!connected || conversationId == null) return;
     const sock = getMessageSocket();
-    if (!connected) return;
+    let cancelled = false;
 
-    if (conversationId != null) {
-      sock.emit("conversation:join", conversationId);
-      return () => {
-        sock.emit("conversation:leave", conversationId);
-      };
-    }
+    sock.emit("conversation:join", conversationId, () => {
+      if (!cancelled) onJoinedRef.current?.(conversationId);
+    });
+
+    return () => {
+      cancelled = true;
+      sock.emit("conversation:leave", conversationId);
+    };
   }, [conversationId, connected]);
 
   const sendViaSocket = (content: string) => {

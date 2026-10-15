@@ -36,6 +36,7 @@ import {
   groupConversationsByParticipant,
   type ParticipantInboxGroup,
 } from "../utils/groupConversations";
+import { mergeMessages } from "../lib/mergeMessages";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -131,6 +132,11 @@ export function MessagingPage() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handledNavKeyRef = useRef<string | null>(null);
   const resolvingURLRef = useRef(false);
+  const activeIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
 
   const loadConversations = useCallback(async () => {
     setLoadingList(true);
@@ -153,33 +159,45 @@ export function MessagingPage() {
     }
   }, []);
 
-  const loadMessages = useCallback(async (conversationId: number) => {
-    setLoadingMessages(true);
-    setSendError(null);
-    try {
-      const page = await fetchMessages(conversationId, 1, 100);
-      setMessages(page.messages);
-    } catch (e: unknown) {
-      const err = e as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      setSendError(
-        err?.response?.data?.message ??
-          err?.message ??
-          "Failed to load messages",
-      );
-      setMessages([]);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, []);
+  const loadMessages = useCallback(
+    async (conversationId: number, opts?: { silent?: boolean }) => {
+      const silent = opts?.silent === true;
+      if (!silent) {
+        setLoadingMessages(true);
+        setSendError(null);
+      }
+      try {
+        const page = await fetchMessages(conversationId, 1, 100);
+        // The user may have switched chats while this request was running: ignore stale data.
+        if (activeIdRef.current !== conversationId) return;
+        // MERGE (never overwrite) so live socket messages are not lost.
+        setMessages((prev) => mergeMessages(prev, page.messages));
+      } catch (e: unknown) {
+        if (silent || activeIdRef.current !== conversationId) return;
+        const err = e as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        setSendError(
+          err?.response?.data?.message ??
+            err?.message ??
+            "Failed to load messages",
+        );
+        setMessages([]);
+      } finally {
+        if (!silent && activeIdRef.current === conversationId) {
+          setLoadingMessages(false);
+        }
+      }
+    },
+    [],
+  );
 
   const handleNewSocketMessage = useCallback((msg: ChatMessage) => {
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === msg.id)) return prev;
-      return [...prev, msg];
-    });
+    // Only show the message if it belongs to the conversation that is open right now.
+    if (msg.conversationId === activeIdRef.current) {
+      setMessages((prev) => mergeMessages(prev, [msg]));
+    }
     setConversations((prev) =>
       prev.map((c) =>
         c.id === msg.conversationId
@@ -199,13 +217,21 @@ export function MessagingPage() {
     sendViaSocket,
     emitTypingStart,
     emitTypingStop,
-  } = useMessageSocket(activeId, handleNewSocketMessage, (err) => {
-    if (err.message.toLowerCase().includes("suspended")) {
-      setBanAlert(err.message);
-    } else {
-      setSendError(err.message);
-    }
-  });
+  } = useMessageSocket(
+    activeId,
+    handleNewSocketMessage,
+    (err) => {
+      if (err.message.toLowerCase().includes("suspended")) {
+        setBanAlert(err.message);
+      } else {
+        setSendError(err.message);
+      }
+    },
+    (joinedId) => {
+      // Room joined (or re-joined after reconnect): silently fetch anything we missed.
+      void loadMessages(joinedId, { silent: true });
+    },
+  );
 
   const inboxGroups = useMemo(
     () => groupConversationsByParticipant(conversations),
@@ -312,6 +338,7 @@ export function MessagingPage() {
 
   useEffect(() => {
     if (activeId == null) return;
+    setMessages([]);
     loadMessages(activeId);
   }, [activeId, loadMessages]);
 
@@ -630,7 +657,7 @@ export function MessagingPage() {
                                 side={isMe ? "me" : "them"}
                               />
                               {msg.content.trim() ? (
-                                <p className="whitespace-pre-wrap break-words">
+                                <p dir="auto" className="whitespace-pre-wrap break-words">
                                   {msg.content}
                                 </p>
                               ) : null}
@@ -682,6 +709,7 @@ export function MessagingPage() {
                     </button>
                     <textarea
                       rows={1}
+                      dir="auto"
                       placeholder={t("msg.write")}
                       value={draft}
                       onChange={(e) => handleDraftChange(e.target.value)}

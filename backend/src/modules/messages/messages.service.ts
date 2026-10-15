@@ -51,7 +51,7 @@ export async function getMyConversations(userId: string) {
       client: { select: { id: true, name: true, avatarUrl: true } },
       engineer: { select: { id: true, name: true, avatarUrl: true } },
       messages: {
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 50,
       },
     },
@@ -141,18 +141,22 @@ export async function getMessages(
 
   await markConversationRead(conversationId, userId);
 
-  const [messages, total] = await Promise.all([
+  // Page 1 = the NEWEST `limit` messages. We query newest-first (stable order by
+  // the auto-increment id), then reverse so the client receives oldest -> newest.
+  const [newestFirst, total] = await Promise.all([
     db.message.findMany({
-      where: { conversationId },
+      where: { conversationId: Number(conversationId) },
       include: {
         sender: { select: { id: true, name: true, role: true } },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { id: "desc" },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    db.message.count({ where: { conversationId } }),
+    db.message.count({ where: { conversationId: Number(conversationId) } }),
   ]);
+
+  const messages = newestFirst.reverse();
 
   return { messages, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
@@ -216,29 +220,40 @@ export async function sendMessage(
 
   const recipientId =
     conv.clientId === senderId ? conv.engineerId : conv.clientId;
-  const project = conv.projectId
-    ? await db.project.findUnique({
-        where: { id: conv.projectId },
-        select: { title: true },
-      })
-    : null;
+  const conversationProjectId = conv.projectId;
+  const senderName = message.sender.name;
+  const preview = formatLastMessagePreview(message) ?? "New message";
 
-  const preview =
-    formatLastMessagePreview(message) ?? "New message";
+  // Fire-and-forget: the message must be returned (and broadcast) immediately.
+  // Notification + email can take seconds and must NEVER delay or reorder chat.
+  void (async () => {
+    try {
+      const project = conversationProjectId
+        ? await db.project.findUnique({
+            where: { id: conversationProjectId },
+            select: { title: true },
+          })
+        : null;
 
-  await createNotification(
-    recipientId,
-    "NEW_MESSAGE",
-    "New message",
-    preview.slice(0, 120),
-    conv.projectId ? `/messages?project=${conv.projectId}` : `/messages?user=${senderId}`,
-    {
-      email: {
-        senderName: message.sender.name,
-        projectTitle: project?.title ?? "General Chat",
-      },
-    },
-  );
+      await createNotification(
+        recipientId,
+        "NEW_MESSAGE",
+        "New message",
+        preview.slice(0, 120),
+        conversationProjectId
+          ? `/messages?project=${conversationProjectId}`
+          : `/messages?user=${senderId}`,
+        {
+          email: {
+            senderName,
+            projectTitle: project?.title ?? "General Chat",
+          },
+        },
+      );
+    } catch (err) {
+      console.error("[messages] failed to notify recipient", err);
+    }
+  })();
 
   return message;
 }

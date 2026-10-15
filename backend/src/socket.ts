@@ -1,7 +1,9 @@
 import { Server as HttpServer } from "http";
 import { Server as SocketServer, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
+import db from "./config/db";
 import { sendMessage } from "./modules/messages/messages.service";
+import { sendMessageSchema } from "./modules/messages/messages.validation";
 import { isAllowedOrigin } from "./config/cors";
 
 interface SocketUser {
@@ -63,31 +65,70 @@ export function initSocket(httpServer: HttpServer) {
     onlineUsers.get(user.userId)!.add(socket.id);
     socketServer.emit("presence:update", { userId: user.userId, online: true });
 
-    // Join a conversation room
-    socket.on("conversation:join", (conversationId: number) => {
-      socket.join(`conv:${conversationId}`);
-    });
-
-    // Leave a conversation room
-    socket.on("conversation:leave", (conversationId: number) => {
-      socket.leave(`conv:${conversationId}`);
-    });
-
-    // Send message via socket
+    // Join a conversation room — ONLY if the user is a participant.
+    // The optional `ack` callback tells the client the join is complete.
     socket.on(
-      "message:send",
-      async (data: { conversationId: number; content: string }) => {
+      "conversation:join",
+      async (conversationId: unknown, ack?: () => void) => {
         try {
-          const message = await sendMessage(data.conversationId, user.userId, {
-            content: data.content,
+          const id = Number(conversationId);
+          if (!Number.isInteger(id) || id <= 0) return;
+
+          const conv = await db.conversation.findUnique({
+            where: { id },
+            select: { clientId: true, engineerId: true },
           });
-          // Broadcast to everyone in the room (including sender)
-          broadcastNewMessage(data.conversationId, message);
-        } catch (err: any) {
-          socket.emit("error", { message: err.message });
+          if (!conv) return;
+
+          const me = String(user.userId);
+          if (conv.clientId !== me && conv.engineerId !== me) return;
+
+          await socket.join(`conv:${id}`);
+          if (typeof ack === "function") ack();
+        } catch (err) {
+          console.error("[socket] conversation:join failed", err);
         }
       },
     );
+
+    // Leave a conversation room
+    socket.on("conversation:leave", (conversationId: unknown) => {
+      const id = Number(conversationId);
+      if (Number.isInteger(id) && id > 0) socket.leave(`conv:${id}`);
+    });
+
+    // Send message via socket.
+    // Messages from ONE socket are processed strictly one after another so they
+    // are saved and broadcast in exactly the order the user sent them.
+    let sendQueue: Promise<void> = Promise.resolve();
+
+    socket.on("message:send", (data: { conversationId?: unknown; content?: unknown }) => {
+      sendQueue = sendQueue.then(async () => {
+        try {
+          const conversationId = Number(data?.conversationId);
+          if (!Number.isInteger(conversationId) || conversationId <= 0) {
+            socket.emit("error", { message: "Invalid conversation" });
+            return;
+          }
+
+          const parsed = sendMessageSchema.safeParse({
+            content: typeof data?.content === "string" ? data.content : "",
+          });
+          if (!parsed.success) {
+            socket.emit("error", {
+              message: parsed.error.issues[0]?.message ?? "Invalid message",
+            });
+            return;
+          }
+
+          const message = await sendMessage(conversationId, user.userId, parsed.data);
+          // Broadcast to everyone in the room (including sender)
+          broadcastNewMessage(conversationId, message);
+        } catch (err: any) {
+          socket.emit("error", { message: err.message });
+        }
+      });
+    });
 
     // Typing indicators
     socket.on("typing:start", (conversationId: number) => {

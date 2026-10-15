@@ -34,8 +34,8 @@ export async function getMessagesController(
 ) {
   try {
     const conversationId = Number(req.params.id);
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 30;
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 100);
     const data = await getMessages(conversationId, String(req.user!.userId), page, limit);
     res.status(200).json(ApiResponse(200, "Messages fetched", data));
   } catch (error) {
