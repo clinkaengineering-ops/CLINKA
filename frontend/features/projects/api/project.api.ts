@@ -190,7 +190,7 @@ export async function updateProjectProgress(
 }
 
 export const openDispute = (projectId: string, reason: string) =>
-  unwrap(api.post<ApiResponse<any>>(`/disputes/open`, { projectId, reason }));
+  unwrap(api.post<ApiResponse<unknown>>(`/disputes/open`, { projectId, reason }));
 
 export async function fetchProjectSubmissions(
   projectId: string,

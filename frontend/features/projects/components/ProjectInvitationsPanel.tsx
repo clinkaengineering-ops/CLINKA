@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Spinner, Badge } from "@/components/UI";
 import { useI18n } from "@/i18n";
-import { formatCurrency, formatDate } from "@/lib/formatters";
+import { formatDate } from "@/lib/formatters";
 import { cancelInvitation, fetchProjectInvitations, ProjectInvitation } from "../../invitations/api/invitation.api";
 
 export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
@@ -18,7 +18,7 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
       setLoading(true);
       const data = await fetchProjectInvitations(projectId);
       setInvitations(data);
-    } catch (e) {
+    } catch {
       setError("Failed to load invitations");
     } finally {
       setLoading(false);
@@ -27,6 +27,7 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     loadInvitations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const handleCancel = async (id: number) => {
@@ -34,14 +35,15 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
       setActionLoading(id);
       await cancelInvitation(id);
       await loadInvitations();
-    } catch (e: any) {
-      alert(e.response?.data?.message || "Failed to cancel invitation");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      alert(err.response?.data?.message || "Failed to cancel invitation");
     } finally {
       setActionLoading(null);
     }
   };
 
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusBadgeColor = (status: string): "amber" | "green" | "rose" | "slate" => {
     switch (status) {
       case "PENDING": return "amber";
       case "ACCEPTED": return "green";
@@ -90,6 +92,7 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
               <div className="flex gap-4 items-center min-w-[200px]">
                 <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center overflow-hidden shrink-0">
                   {inv.engineer?.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={inv.engineer.avatarUrl} alt={`${inv.engineer.name}'s avatar`} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-slate-500 font-bold text-sm">
@@ -106,7 +109,7 @@ export function ProjectInvitationsPanel({ projectId }: { projectId: string }) {
               </div>
 
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <Badge color={getStatusBadgeColor(inv.status) as any}>
+                <Badge color={getStatusBadgeColor(inv.status)}>
                   {t(`inv.status_${inv.status.toLowerCase()}`)}
                 </Badge>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Field, Input } from "@/components/UI";
+import { Button, Field } from "@/components/UI";
 import { useI18n } from "@/i18n";
 
 export function ReportIssueModal({
@@ -34,8 +34,9 @@ export function ReportIssueModal({
     try {
       await onSubmit(reason);
       setReason(""); // Reset on success
-    } catch (err: any) {
-      setError(err.message || "Failed to open dispute");
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setError(e?.message || "Failed to open dispute");
     }
   };
 

@@ -24,7 +24,6 @@ export function ProjectBidsList({
   const bids = project.bids ?? [];
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [justApproved, setJustApproved] = useState(false);
 
   if (!bids.length) {
     return (
@@ -39,7 +38,6 @@ export function ProjectBidsList({
     setError(null);
     try {
       await approveBid(bid.id);
-      setJustApproved(true);
       onUpdated?.();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };
@@ -55,20 +53,6 @@ export function ProjectBidsList({
         {t("stat.bids")} ({bids.length})
       </p>
       {error && <p className="text-xs text-rose-500">{error}</p>}
-      {(justApproved || project.status === "IN_PROGRESS") && (
-        <div className="rounded-xl border border-electric-500/30 bg-electric-500/5 p-3 text-sm space-y-2">
-          <p className="font-semibold text-electric-700 dark:text-electric-300">
-            {t("pm.bidAcceptedNextSteps")}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/messages?project=${project.id}`}>
-              <Button size="sm" variant="secondary">
-                {t("bal.openChat")}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
       {bids.map((bid) => (
         <div
           key={bid.id}

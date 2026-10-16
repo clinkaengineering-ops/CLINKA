@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge, Button, Card } from "@/components/UI";
 import { IconStar } from "@/components/Icons";
 import { useI18n } from "@/i18n";
@@ -38,6 +39,7 @@ export function ProjectDetailPanel({
   onRefresh,
 }: ProjectDetailPanelProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -46,6 +48,14 @@ export function ProjectDetailPanel({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      router.refresh();
+    }
+  };
 
   if (loading) {
     return (
@@ -76,9 +86,17 @@ export function ProjectDetailPanel({
     );
   }
 
-  const label = SERVICE_TYPE_LABELS[project.serviceType] ?? project.serviceType;
   const bidCount = project._count?.bids ?? project.bids?.length ?? 0;
   const isOwner = user?.id === project.clientId;
+  const hasAcceptedBid = project.bids?.some((b) => b.status === "ACCEPTED");
+  const showNextSteps =
+    (project.status === "IN_PROGRESS" ||
+      project.status === "AWAITING_PAYMENT" ||
+      hasAcceptedBid) &&
+    project.status !== "COMPLETED" &&
+    project.status !== "CANCELLED" &&
+    project.status !== "CLOSED";
+
   const permissions = project.permissions;
   const canEditContent = permissions?.canEditContent ?? false;
   const canToggleStatus = permissions?.canToggleStatus ?? false;
@@ -99,7 +117,7 @@ export function ProjectDetailPanel({
           ? t("pm.projectClosedSuccess")
           : t("pm.projectReopenedSuccess"),
       });
-      onRefresh?.();
+      handleRefresh();
     } catch (err) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -256,22 +274,31 @@ export function ProjectDetailPanel({
 
           {isOwner && <ProjectInvitationsPanel projectId={project.id} />}
 
+          {/* Bid accepted — next steps (Open chat) */}
+          {showNextSteps && (
+            <div className="rounded-xl border border-electric-500/30 bg-electric-500/5 p-3 text-sm space-y-2">
+              <p className="font-semibold text-electric-700 dark:text-electric-300">
+                {t("pm.bidAcceptedNextSteps")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link href={`/messages?project=${project.id}`}>
+                  <Button size="sm" variant="secondary">
+                    {t("bal.openChat")}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Card: directly under open chat, above bids */}
+          <ProjectPaymentCard project={project} onUpdated={handleRefresh} />
+
+          {/* Bids list: below payment */}
           <ProjectBidsList
             project={project}
             canManage={isOwner && user?.role === "CLIENT"}
-            onUpdated={onRefresh}
+            onUpdated={handleRefresh}
           />
-
-          <ProjectPaymentCard project={project} onUpdated={onRefresh} />
-
-          {isOwner && project.status === "IN_PROGRESS" && (
-            <Link
-              href={`/messages?project=${project.id}`}
-              className="block text-center text-sm font-semibold text-electric-600 hover:underline"
-            >
-              {t("pm.openProjectChat")}
-            </Link>
-          )}
 
           {isOwner && (project.status === "IN_PROGRESS" || project.status === "COMPLETED") && (
             <ProjectReviewSection
@@ -281,11 +308,11 @@ export function ProjectDetailPanel({
                 project.bids?.find((b) => b.status === "ACCEPTED")?.engineer.user
                   .name
               }
-              onSubmitted={onRefresh}
+              onSubmitted={handleRefresh}
             />
           )}
 
-          <BidForm project={project} onSubmitted={onRefresh} isOwner={isOwner} />
+          <BidForm project={project} onSubmitted={handleRefresh} isOwner={isOwner} />
         </div>
       </Card>
 
@@ -295,7 +322,7 @@ export function ProjectDetailPanel({
           open={editOpen}
           project={project}
           onClose={() => setEditOpen(false)}
-          onUpdated={onRefresh}
+          onUpdated={handleRefresh}
         />
       )}
 

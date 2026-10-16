@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Card, Field, Input } from "@/components/UI";
+import { Badge, Button, Card, Field } from "@/components/UI";
 import { PasswordInput } from "@/components/PasswordInput";
 import { PasswordChecklist } from "@/components/PasswordChecklist";
 import { IconCheck } from "@/components/Icons";

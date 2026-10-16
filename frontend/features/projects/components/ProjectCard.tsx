@@ -1,21 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { Badge, Button, Card } from "../../../components/UI";
+import { Badge, Card } from "../../../components/UI";
 import {
-  IconArrow,
-  IconBolt,
-  IconBriefcase,
-  IconClock,
   IconLocation,
-  IconSearch,
-  IconStar,
   IconWallet,
 } from "../../../components/Icons";
 import { useI18n } from "../../../i18n";
 import { cn } from "../../../utils/cn";
 import { formatMoney } from "@/features/escrow/utils/formatMoney";
-import { useProjects } from "../hooks/useProjects";
 import type { Project, ServiceType } from "../api/project.api";
 import { isReviewableStatus } from "../utils/projectStatus";
 
@@ -97,10 +89,10 @@ export function ProjectCard({ project, selected, onClick }: ProjectCardProps) {
         {project.status === "COMPLETED" && (
           <Badge color="green">{t("pay.status.completed")}</Badge>
         )}
-        {project.payment?.manualSubmissions?.some((s: any) => s.status === "PENDING") && (
+        {project.payment?.manualSubmissions?.some((s: { status?: string }) => s.status === "PENDING") && (
           <Badge color="amber">{t("pay.status.manualPending")}</Badge>
         )}
-        {project.payment?.manualSubmissions?.some((s: any) => s.status === "REJECTED") && !project.payment?.manualSubmissions?.some((s: any) => s.status === "PENDING") && (
+        {project.payment?.manualSubmissions?.some((s: { status?: string }) => s.status === "REJECTED") && !project.payment?.manualSubmissions?.some((s: { status?: string }) => s.status === "PENDING") && (
           <Badge color="rose">{t("pay.status.manualRejected")}</Badge>
         )}
       </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Button, Card, StatCard } from "@/components/UI";
 import { IconStar, IconCheck } from "@/components/Icons";
 import { useI18n } from "@/i18n";

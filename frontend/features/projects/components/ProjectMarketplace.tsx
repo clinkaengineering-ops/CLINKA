@@ -68,12 +68,13 @@ export default function ProjectMarketplace() {
     refetch: refetchAssigned,
   } = useAssignedProjects(isEngineer);
 
-  const projects =
-    viewMode === "mine" && isClient
+  const projects = useMemo(() => {
+    return viewMode === "mine" && isClient
       ? (myProjects ?? [])
       : viewMode === "contracts" && isEngineer
         ? (assignedProjects ?? [])
         : (allProjects ?? []);
+  }, [viewMode, isClient, myProjects, isEngineer, assignedProjects, allProjects]);
   const listLoading =
     viewMode === "mine" && isClient
       ? myLoading
@@ -159,7 +160,7 @@ export default function ProjectMarketplace() {
       }
       router.replace("/projects", { scroll: false });
     }
-  }, [searchParams, user, router, isClient, initialDraft]);
+  }, [searchParams, user, router, isClient, isEngineer, initialDraft]);
 
   const handlePostClick = () => {
     if (!user) {

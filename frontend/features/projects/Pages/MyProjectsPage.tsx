@@ -14,7 +14,6 @@ import { formatMoney } from "@/features/escrow/utils/formatMoney";
 import {
   STATUS_COLORS,
   STATUS_LABEL_KEYS,
-  type ProjectStatus,
 } from "../utils/projectStatus";
 import type { Project } from "../api/project.api";
 import type { MyBid } from "@/features/bids/api/bids.api";
@@ -84,7 +83,7 @@ function ClientMyProjects() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const allProjects = projects ?? [];
+  const allProjects = useMemo(() => projects ?? [], [projects]);
 
   const statusTabs: StatusTab[] = [
     { key: "ALL", label: t("mp.allStatuses") },

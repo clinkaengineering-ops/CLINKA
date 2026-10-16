@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card } from "@/components/UI";
-import { IconFilter, IconSearch, IconBriefcase, IconArrow } from "@/components/Icons";
+import { IconFilter, IconSearch } from "@/components/Icons";
 import { cn } from "@/utils/cn";
 import { useI18n } from "@/i18n";
 import { formatMoney } from "@/features/escrow/utils/formatMoney";
