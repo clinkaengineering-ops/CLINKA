@@ -296,6 +296,40 @@ describe("rate limit other tiers", () => {
     expect(result.nextCalled).toBe(true);
   });
 
+  it("T2 checkout exhaustion does not block work approval on a different path", async () => {
+    const ip = "10.8.0.40";
+    const user = { userId: "123e4567-e89b-12d3-a456-426614174040", role: "CLIENT" };
+    const checkoutReq = {
+      ip,
+      socket: { remoteAddress: ip } as Request["socket"],
+      user,
+      method: "POST",
+      url: "/projects/proj-1/checkout",
+      baseUrl: "/api/payments",
+      path: "/projects/proj-1/checkout",
+    };
+    const approveReq = {
+      ip,
+      socket: { remoteAddress: ip } as Request["socket"],
+      user,
+      method: "POST",
+      url: "/proj-1/approve",
+      baseUrl: "/api/projects",
+      path: "/proj-1/approve",
+    };
+
+    await exceedLimit(t2IpRateLimiter, T2_MAX, checkoutReq);
+    await exceedLimit(t2AccountRateLimit, T2_MAX, checkoutReq);
+
+    const ipApprove = await dispatch(t2IpRateLimiter, approveReq);
+    expect(is429(ipApprove)).toBe(false);
+    expect(ipApprove.nextCalled).toBe(true);
+
+    const accountApprove = await dispatch(t2AccountRateLimit, approveReq);
+    expect(is429(accountApprove)).toBe(false);
+    expect(accountApprove.nextCalled).toBe(true);
+  });
+
   it("adminRateLimit sets Retry-After when the per-admin cap is exceeded", async () => {
     const user = { userId: "123e4567-e89b-12d3-a456-426614174004", role: "ADMIN" };
     for (let i = 0; i < 30; i += 1) {

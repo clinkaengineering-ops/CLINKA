@@ -42,6 +42,13 @@ function clientIp(req: Request): string {
   return ipKeyGenerator(raw);
 }
 
+/** Method + path so checkout retries do not exhaust the shared T2 bucket for approve. */
+function requestRouteKey(req: Request): string {
+  const method = (req.method || "GET").toUpperCase();
+  const path = `${req.baseUrl || ""}${req.path || req.url || "/"}`.split("?")[0];
+  return `${method}:${path}`;
+}
+
 function requestIdentity(req: Request): string | undefined {
   const userId = (req as AuthRequest).user?.userId;
   if (userId != null) return `user:${userId}`;
@@ -117,6 +124,7 @@ export function createUserIdRateLimit(opts: {
   message: string;
   name: string;
   audit: boolean;
+  key?: (req: Request, userId: string) => string;
 }): RequestHandler {
   const buckets = new Map<string, { count: number; windowStart: number }>();
 
@@ -131,10 +139,11 @@ export function createUserIdRateLimit(opts: {
     }
 
     const now = Date.now();
-    const record = buckets.get(userId);
+    const bucketKey = opts.key ? opts.key(req, userId) : userId;
+    const record = buckets.get(bucketKey);
 
     if (!record || now - record.windowStart > opts.windowMs) {
-      buckets.set(userId, { count: 1, windowStart: now });
+      buckets.set(bucketKey, { count: 1, windowStart: now });
       return next();
     }
 
@@ -221,6 +230,7 @@ export const t2IpRateLimiter = createIpRateLimiter({
   message: "Too many financial requests. Please try again later.",
   name: "t2.ip",
   audit: true,
+  key: (req) => `ip:${clientIp(req)}:${requestRouteKey(req)}`,
 });
 
 export const t2AccountRateLimit = createUserIdRateLimit({
@@ -229,6 +239,7 @@ export const t2AccountRateLimit = createUserIdRateLimit({
   message: "Too many financial requests. Please try again later.",
   name: "t2.account",
   audit: true,
+  key: (req, userId) => `user:${userId}:${requestRouteKey(req)}`,
 });
 
 export const t3IpRateLimiter = createIpRateLimiter({

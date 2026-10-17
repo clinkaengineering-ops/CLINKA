@@ -42,7 +42,9 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
       onUpdated?.();
     } catch (err) {
       console.error(err);
-      alert(t("pay.approveFailed"));
+      const apiMessage = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      alert(apiMessage || t("pay.approveFailed"));
     } finally {
       setLoading(false);
     }
