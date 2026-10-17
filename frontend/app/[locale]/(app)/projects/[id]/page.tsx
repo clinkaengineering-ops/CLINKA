@@ -11,7 +11,7 @@ interface Props {
 async function getProject(id: string): Promise<Project | null> {
   const baseUrl = resolveApiBaseUrl();
   try {
-    const res = await fetch(`${baseUrl}/projects/${id}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${baseUrl}/projects/${id}`, { cache: "no-store" });
     if (!res.ok) return null;
     const json = await res.json();
     return json.data;

@@ -223,14 +223,14 @@ export async function resolveDispute(adminId: string, projectId: string, resolut
           type: "DISPUTE_RESOLVED",
           title: "Dispute Resolved",
           body: `The dispute for "${project.title}" has been resolved in favor of the ${resolution === "ENGINEER" ? "Engineer" : "Client"}.`,
-          link: `/engineer/projects/${project.id}`
+          link: `/projects/${project.id}`
         },
         {
           userId: project.clientId,
           type: "DISPUTE_RESOLVED",
           title: "Dispute Resolved",
           body: `The dispute for "${project.title}" has been resolved in favor of the ${resolution === "ENGINEER" ? "Engineer" : "Client"}.`,
-          link: `/client/projects/${project.id}`
+          link: `/projects/${project.id}`
         }
       ]
     });
@@ -288,14 +288,14 @@ export async function escalateDispute(actorId: string, actorRole: string, projec
               type: "DISPUTE_ESCALATED",
               title: "Dispute Escalated",
               body: `The dispute for "${project.title}" has been escalated to Admin.`,
-              link: `/engineer/projects/${project.id}`
+              link: `/projects/${project.id}`
             },
             {
               userId: project.clientId,
               type: "DISPUTE_ESCALATED",
               title: "Dispute Escalated",
               body: `The dispute for "${project.title}" has been escalated to Admin.`,
-              link: `/client/projects/${project.id}`
+              link: `/projects/${project.id}`
             }
           ]
         });

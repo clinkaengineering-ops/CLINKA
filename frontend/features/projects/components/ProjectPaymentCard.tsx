@@ -23,6 +23,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
   const [loading, setLoading] = useState(false);
+  const [approved, setApproved] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
 
@@ -39,6 +40,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
     setLoading(true);
     try {
       await approveProjectWork(project.id);
+      setApproved(true);
       onUpdated?.();
     } catch (err) {
       console.error(err);
@@ -110,7 +112,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
         </div>
       </Card>
     );
-  } else if (isReviewableStatus(project.status)) {
+  } else if (isReviewableStatus(project.status) && !approved) {
     card = (
       <Card className="p-5 border-s-4 border-s-amber-500 bg-amber-50 dark:bg-amber-900/10">
         <div className="flex items-start justify-between gap-4">
@@ -190,7 +192,7 @@ export function ProjectPaymentCard({ project, onUpdated }: ProjectPaymentCardPro
         </div>
       </Card>
     );
-  } else if (project.status === "COMPLETED" && project.payment?.status === "RELEASED") {
+  } else if (approved || (project.status === "COMPLETED" && project.payment?.status === "RELEASED")) {
     card = (
       <Card className="p-5 border-s-4 border-s-green-500 bg-green-50 dark:bg-green-900/10">
         <div className="flex items-start justify-between gap-4">
