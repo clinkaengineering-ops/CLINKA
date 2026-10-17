@@ -39,17 +39,62 @@ const BLOCKED_EXTENSIONS = new Set([
 ]);
 
 const MIME_TO_EXTENSIONS: Record<string, readonly string[]> = {
+  // Images
   "image/jpeg": [".jpg", ".jpeg"],
   "image/png": [".png"],
   "image/gif": [".gif"],
   "image/webp": [".webp"],
+  // PDF & Documents
   "application/pdf": [".pdf"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+  "application/vnd.ms-excel": [".xls"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+  "application/msword": [".doc"],
+  "text/csv": [".csv"],
+  "text/plain": [".txt"],
+  "text/xml": [".xml", ".landxml"],
+  "application/xml": [".xml", ".landxml"],
+  // Archives & Compressed
   "application/zip": [".zip"],
   "application/x-zip-compressed": [".zip"],
+  "application/x-zip": [".zip"],
+  "multipart/x-zip": [".zip"],
+  "application/x-rar-compressed": [".rar"],
+  "application/vnd.rar": [".rar"],
+  "application/x-rar": [".rar"],
+  "application/x-7z-compressed": [".7z"],
+  "application/x-tar": [".tar"],
+  "application/tar": [".tar"],
+  "application/gzip": [".gz", ".tgz"],
+  "application/x-gzip": [".gz", ".tgz"],
+  "application/x-bzip2": [".bz2"],
+  // Video
   "video/mp4": [".mp4"],
   "video/webm": [".webm"],
   "video/quicktime": [".mov"],
+  // CAD, BIM, 3D
+  "image/vnd.dwg": [".dwg"],
+  "image/x-dwg": [".dwg"],
+  "application/acad": [".dwg"],
+  "application/x-acad": [".dwg"],
+  "application/autocad_dwg": [".dwg"],
+  "application/dwg": [".dwg"],
+  "application/x-dwg": [".dwg"],
+  "image/vnd.dxf": [".dxf"],
+  "image/x-dxf": [".dxf"],
+  "application/dxf": [".dxf"],
+  "application/x-dxf": [".dxf"],
+  "application/x-step": [".step", ".stp", ".ifc"],
+  "model/step": [".step", ".stp"],
+  "model/iges": [".iges", ".igs"],
+  "model/stl": [".stl"],
+  "model/obj": [".obj"],
+  "application/vnd.sketchup.skp": [".skp"],
+  "application/vnd.google-earth.kml+xml": [".kml"],
+  "application/vnd.google-earth.kmz": [".kmz"],
 };
+
+export const BLOCKED_FILE_EXTENSIONS: ReadonlySet<string> = BLOCKED_EXTENSIONS;
 
 export function getUploadRoot(): string {
   const configured = process.env.UPLOAD_DIR?.trim();
@@ -116,18 +161,22 @@ export function isAllowedUpload(
   mimetype: string,
   originalname: string,
   allowedMimeTypes: ReadonlySet<string>,
+  allowedExtensions?: ReadonlySet<string>,
 ): boolean {
   if (!allowedMimeTypes.has(mimetype)) return false;
 
   const ext = sanitizeExtension(path.extname(originalname));
-  const allowedExts = MIME_TO_EXTENSIONS[mimetype];
+  if (!ext) return false;
 
+  if (allowedExtensions && !allowedExtensions.has(ext)) {
+    return false;
+  }
+
+  const allowedExts = MIME_TO_EXTENSIONS[mimetype];
   if (allowedExts) {
-    if (!ext) return false;
     return allowedExts.includes(ext);
   }
 
-  if (!ext) return mimetype !== "application/octet-stream";
   return true;
 }
 
@@ -244,6 +293,7 @@ export interface UploadMiddlewareOptions {
   allowedMimeTypes: ReadonlySet<string>;
   maxFileSize: number;
   maxFiles?: number;
+  allowedExtensions?: ReadonlySet<string>;
 }
 
 export function createUploadMiddleware(
@@ -257,7 +307,19 @@ export function createUploadMiddleware(
       ...(options.maxFiles !== undefined ? { files: options.maxFiles } : {}),
     },
     fileFilter: (_req, file, cb) => {
-      if (isAllowedUpload(file.mimetype, file.originalname, options.allowedMimeTypes)) {
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (BLOCKED_EXTENSIONS.has(ext)) {
+        cb(new Error("FILE_TYPE_BLOCKED_DANGEROUS"));
+        return;
+      }
+      if (
+        isAllowedUpload(
+          file.mimetype,
+          file.originalname,
+          options.allowedMimeTypes,
+          options.allowedExtensions,
+        )
+      ) {
         cb(null, true);
         return;
       }

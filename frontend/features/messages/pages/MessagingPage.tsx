@@ -68,9 +68,147 @@ function isSameDay(a: string, b: string): boolean {
   );
 }
 
-const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
-const ACCEPTED_FILE_TYPES =
-  "image/jpeg,image/png,image/gif,image/webp,application/pdf";
+const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024; // 50 MB
+
+const BLOCKED_FILE_EXTENSIONS = new Set([
+  ".exe",
+  ".bat",
+  ".cmd",
+  ".com",
+  ".msi",
+  ".sh",
+  ".bash",
+  ".ps1",
+  ".php",
+  ".phtml",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".jsx",
+  ".tsx",
+  ".html",
+  ".htm",
+  ".svg",
+  ".wasm",
+]);
+
+const ACCEPTED_FILE_EXTENSIONS = new Set([
+  // Images
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  // Documents & Office / Spreadsheets
+  ".pdf",
+  ".xlsx",
+  ".xls",
+  ".docx",
+  ".doc",
+  ".csv",
+  ".txt",
+  // Compressed / Archives
+  ".zip",
+  ".rar",
+  ".7z",
+  ".tar",
+  ".gz",
+  ".tgz",
+  ".bz2",
+  // CAD & 2D/3D Drawing Formats
+  ".dwg",
+  ".dxf",
+  ".dgn",
+  ".dwf",
+  ".dwfx",
+  // BIM & Revit Formats
+  ".rvt",
+  ".rfa",
+  ".rte",
+  ".ifc",
+  ".nwd",
+  ".nwc",
+  ".nwf",
+  // Architectural & 3D Modeling
+  ".skp",
+  ".pln",
+  ".pla",
+  ".3ds",
+  ".max",
+  ".blend",
+  ".obj",
+  ".stl",
+  ".step",
+  ".stp",
+  ".iges",
+  ".igs",
+  ".fbx",
+  ".dae",
+  // Civil / Structural / Survey
+  ".sdb",
+  ".edb",
+  ".std",
+  ".landxml",
+  ".xml",
+  ".kml",
+  ".kmz",
+]);
+
+const ACCEPTED_FILE_TYPES = [
+  "image/*",
+  "application/pdf",
+  ".pdf",
+  // Archives
+  ".zip",
+  ".rar",
+  ".7z",
+  ".tar",
+  ".gz",
+  ".tgz",
+  ".bz2",
+  // Engineering, CAD, BIM, Arch, Civil
+  ".dwg",
+  ".dxf",
+  ".dgn",
+  ".dwf",
+  ".dwfx",
+  ".rvt",
+  ".rfa",
+  ".rte",
+  ".ifc",
+  ".nwd",
+  ".nwc",
+  ".nwf",
+  ".skp",
+  ".pln",
+  ".pla",
+  ".3ds",
+  ".max",
+  ".blend",
+  ".obj",
+  ".stl",
+  ".step",
+  ".stp",
+  ".iges",
+  ".igs",
+  ".fbx",
+  ".dae",
+  ".sdb",
+  ".edb",
+  ".std",
+  ".landxml",
+  ".xml",
+  ".kml",
+  ".kmz",
+  // Docs & Data
+  ".xlsx",
+  ".xls",
+  ".docx",
+  ".doc",
+  ".csv",
+  ".txt",
+].join(",");
 
 function messagePreview(msg: ChatMessage): string {
   const text = msg.content.trim();
@@ -433,10 +571,44 @@ export function MessagingPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      setSendError("File must be 10 MB or smaller");
+
+    // Scenario 1: Empty file
+    if (file.size === 0) {
+      setSendError("The selected file is empty (0 bytes). Please choose a valid file.");
       return;
     }
+
+    // Scenario 2: File exceeds 50 MB
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      setSendError(
+        `File is too large (${sizeMb} MB). The maximum allowed file size is 50 MB.`,
+      );
+      return;
+    }
+
+    const extMatch = file.name.match(/\.[0-9a-z]+$/i);
+    const ext = extMatch ? extMatch[0].toLowerCase() : "";
+
+    // Scenario 3: Blocked executable / script files
+    if (ext && BLOCKED_FILE_EXTENSIONS.has(ext)) {
+      setSendError(
+        `File format not allowed. Executable and script files (${ext}) are blocked for security reasons.`,
+      );
+      return;
+    }
+
+    // Scenario 4: Unsupported format
+    const isImage = file.type.startsWith("image/");
+    const isAllowedExt = ext ? ACCEPTED_FILE_EXTENSIONS.has(ext) : false;
+
+    if (!isAllowedExt && !isImage) {
+      setSendError(
+        `Unsupported file format (${ext || "unknown"}). Allowed formats: Images, PDF, Office documents, Archives (.zip, .rar, .7z, etc.), and Engineering/CAD/BIM files (.dwg, .rvt, .ifc, etc.).`,
+      );
+      return;
+    }
+
     setSendError(null);
     setPendingFile(file);
   };
@@ -727,7 +899,7 @@ export function MessagingPage() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={sending}
-                      title="Attach file (images or PDF, max 10 MB)"
+                      title="Attach file (Images, PDF, CAD, BIM, Archives, max 50 MB)"
                       className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 disabled:opacity-50"
                     >
                       <IconPaperclip width={16} height={16} />

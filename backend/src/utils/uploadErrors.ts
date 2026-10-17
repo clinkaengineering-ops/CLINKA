@@ -1,7 +1,8 @@
 import { MulterError } from "multer";
 import ApiError from "./ApiError";
 
-const CHAT_ALLOWED_LABEL = "JPG, PNG, GIF, WebP, or PDF";
+const CHAT_ALLOWED_LABEL =
+  "images, PDF, documents, archives (ZIP, RAR, 7z), or engineering files (DWG, RVT, IFC, etc.)";
 
 export function resolveUploadError(err: unknown): ApiError | null {
   if (err instanceof ApiError) return err;
@@ -21,6 +22,13 @@ export function resolveUploadError(err: unknown): ApiError | null {
 
   if (message === "Request aborted") {
     return new ApiError(400, "Upload cancelled by client.");
+  }
+
+  if (message === "FILE_TYPE_BLOCKED_DANGEROUS") {
+    return new ApiError(
+      400,
+      "File format not allowed. Executable and script files (.exe, .bat, .sh, .cmd, etc.) are blocked for security reasons.",
+    );
   }
 
   const code = (err as { code?: string }).code;

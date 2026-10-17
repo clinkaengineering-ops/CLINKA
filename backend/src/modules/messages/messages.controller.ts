@@ -53,6 +53,10 @@ export async function sendMessageController(
     const validatedData = sendMessageSchema.parse(req.body);
     const file = req.file as Express.Multer.File | undefined;
 
+    if (file && file.size === 0) {
+      throw new ApiError(400, "The selected file is empty (0 bytes). Please select a valid file.");
+    }
+
     const payload = {
       ...validatedData,
       ...(file && {

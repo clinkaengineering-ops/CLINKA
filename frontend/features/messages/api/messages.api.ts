@@ -58,7 +58,7 @@ export const sendMessageWithAttachment = (
       `/messages/conversations/${conversationId}`,
       form,
       {
-        timeout: 60_000,
+        timeout: 180_000,
       },
     ),
   );
