@@ -183,10 +183,15 @@ export function isAllowedUpload(
 export function createCloudinaryUpload(category: UploadCategory) {
   return new CloudinaryStorage({
     cloudinary,
-    params: {
-      folder: category,
-      resource_type: "auto",
-    } as any,
+    params: async (_req: any, file: Express.Multer.File) => {
+      const ext = resolveStoredExtension(file.mimetype, file.originalname);
+      const uid = crypto.randomBytes(8).toString("hex");
+      return {
+        folder: category,
+        resource_type: "auto" as const,
+        public_id: `${uid}${ext}`,
+      };
+    },
   });
 }
 
@@ -262,13 +267,29 @@ export async function deleteUploadFile(storedPath: string | null | undefined): P
   try {
     // If it's a Cloudinary URL, extract the public_id and delete it
     if (storedPath.includes("cloudinary.com")) {
-      const parts = storedPath.split("/");
-      const filenameWithExt = parts.pop();
-      const folder = parts.pop();
-      if (filenameWithExt && folder) {
-        const filename = filenameWithExt.split(".")[0];
-        const publicId = `${folder}/${filename}`;
-        await cloudinary.uploader.destroy(publicId);
+      // URL format: https://res.cloudinary.com/<cloud>/[image|raw|video]/upload/v<version>/<folder>/<public_id>
+      const url = new URL(storedPath);
+      const segments = url.pathname.split("/");
+      // Find 'upload' segment, everything after version is the public_id
+      const uploadIdx = segments.indexOf("upload");
+      if (uploadIdx >= 0 && uploadIdx + 2 < segments.length) {
+        // Detect resource_type from URL path (image, raw, video)
+        const resourceType = (segments[uploadIdx - 1] || "image").toLowerCase();
+        // Skip the version segment (v12345...) — public_id is all segments after it
+        let publicId = segments.slice(uploadIdx + 2).join("/");
+        if (resourceType !== "raw") {
+          // For image/video, Cloudinary appends the format extension to the URL, but the public_id does not have it
+          const lastDot = publicId.lastIndexOf(".");
+          if (lastDot > 0) {
+            publicId = publicId.slice(0, lastDot);
+          }
+        }
+        if (publicId) {
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType as "image" | "raw" | "video",
+            invalidate: true,
+          });
+        }
       }
       return;
     }

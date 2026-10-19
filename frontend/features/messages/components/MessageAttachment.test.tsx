@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import { MessageAttachment } from "./MessageAttachment";
 import type { ChatMessage } from "../types";
 
@@ -78,5 +78,61 @@ describe("MessageAttachment", () => {
     render(<MessageAttachment message={msg} side="me" />);
     expect(screen.getByText("spec.pdf")).toBeInTheDocument();
     expect(screen.getByText("PDF")).toBeInTheDocument();
+  });
+
+  it("renders archive badge for .rar file", () => {
+    const msg: ChatMessage = {
+      ...baseMessage,
+      attachmentUrl: "https://res.cloudinary.com/demo/raw/upload/v1/documents/archive.rar",
+      attachmentName: "Sample RAR File.rar",
+      attachmentMime: "application/x-rar-compressed",
+    };
+    render(<MessageAttachment message={msg} side="them" />);
+    expect(screen.getByText("Sample RAR File.rar")).toBeInTheDocument();
+    expect(screen.getByText("RAR")).toBeInTheDocument();
+  });
+
+  it("intercepts cross-origin download and triggers blob download with original filename", async () => {
+    const msg: ChatMessage = {
+      ...baseMessage,
+      attachmentUrl: "https://res.cloudinary.com/demo/raw/upload/v1/documents/txnhlizhfd74v78zqiz2.zip",
+      attachmentName: "81FLMLZT+OL.zip",
+      attachmentMime: "application/zip",
+    };
+
+    const mockBlob = new Blob(["fake zip content"], { type: "application/zip" });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(mockBlob),
+    } as any);
+
+    const createObjectURLSpy = vi.fn().mockReturnValue("blob:http://localhost/mock-uuid");
+    const revokeObjectURLSpy = vi.fn();
+    window.URL.createObjectURL = createObjectURLSpy;
+    window.URL.revokeObjectURL = revokeObjectURLSpy;
+
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(<MessageAttachment message={msg} side="me" />);
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("download", "81FLMLZT+OL.zip");
+
+    // Click the download link via fireEvent inside act
+    await act(async () => {
+      fireEvent.click(link);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    // Verify fetch was called with cross-origin URL
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://res.cloudinary.com/demo/raw/upload/v1/documents/txnhlizhfd74v78zqiz2.zip",
+    );
+
+    expect(createObjectURLSpy).toHaveBeenCalledWith(mockBlob);
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:http://localhost/mock-uuid");
+
+    globalThis.fetch = originalFetch;
+    clickSpy.mockRestore();
   });
 });

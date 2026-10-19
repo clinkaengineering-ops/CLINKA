@@ -2,6 +2,7 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import crypto from "node:crypto";
 import { AddressInfo } from "node:net";
 import express from "express";
 import { MulterError } from "multer";
@@ -126,6 +127,14 @@ function createChatApp() {
         },
       });
     });
+  });
+
+  app.get("/uploads/documents/:filename", (req, res) => {
+    const filePath = path.join(process.env.UPLOAD_DIR || "/tmp", "documents", req.params.filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send("Not found");
+    }
+    res.download(filePath);
   });
 
   app.use(errorHandler);
@@ -340,5 +349,69 @@ describe("Chat file upload HTTP flow", () => {
     expect(body.message).toBe(
       "File is too large. Maximum allowed size for chat attachments is 50 MB.",
     );
+  });
+
+  it("verifies 100% end-to-end byte-for-byte integrity for compressed archives (.zip and .rar)", async () => {
+    // Generate a realistic binary archive payload with known checksum/content
+    const zipPayload = Buffer.concat([
+      ZIP_HEADER,
+      Buffer.from("ENCLOSED_IMAGE_DATA_81FLMLZT+OL_ARCHIVE_BINARY_DATA"),
+      crypto.randomBytes(1024),
+    ]);
+
+    const { status: zipStatus, body: zipBody } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "81FLMLZT+OL.zip",
+      "application/zip",
+      zipPayload,
+    );
+
+    expect(zipStatus).toBe(201);
+    expect(zipBody.data.attachmentName).toBe("81FLMLZT+OL.zip");
+    expect(zipBody.data.storedPath).toMatch(/\.zip$/i);
+
+    // Download the uploaded file from the server
+    const downloadRes = await fetch(`${origin}${zipBody.data.storedPath}`);
+    expect(downloadRes.status).toBe(200);
+
+    const downloadedArrayBuffer = await downloadRes.arrayBuffer();
+    const downloadedBuffer = Buffer.from(downloadedArrayBuffer);
+
+    // Assert that the downloaded file is 100% byte-for-byte identical to the sent file
+    expect(downloadedBuffer.length).toBe(zipPayload.length);
+    expect(Buffer.compare(downloadedBuffer, zipPayload)).toBe(0);
+  });
+
+  it("verifies 100% end-to-end byte-for-byte integrity for uncompressed files (.dwg and .pdf)", async () => {
+    // Generate a CAD/DWG binary payload
+    const dwgPayload = Buffer.concat([
+      DWG_SAMPLE,
+      Buffer.from("HEADER_SECTION_ENTITIES_BLOCKS_DATA"),
+      crypto.randomBytes(2048),
+    ]);
+
+    const { status: dwgStatus, body: dwgBody } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "structural_foundation.dwg",
+      "application/octet-stream",
+      dwgPayload,
+    );
+
+    expect(dwgStatus).toBe(201);
+    expect(dwgBody.data.attachmentName).toBe("structural_foundation.dwg");
+    expect(dwgBody.data.storedPath).toMatch(/\.dwg$/i);
+
+    // Download the uploaded file from the server
+    const downloadRes = await fetch(`${origin}${dwgBody.data.storedPath}`);
+    expect(downloadRes.status).toBe(200);
+
+    const downloadedArrayBuffer = await downloadRes.arrayBuffer();
+    const downloadedBuffer = Buffer.from(downloadedArrayBuffer);
+
+    // Assert that the downloaded file is 100% byte-for-byte identical to the sent file
+    expect(downloadedBuffer.length).toBe(dwgPayload.length);
+    expect(Buffer.compare(downloadedBuffer, dwgPayload)).toBe(0);
   });
 });

@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  createCloudinaryUpload,
   deleteUploadFile,
   getStoredUploadPath,
   getUploadBaseUrl,
@@ -13,6 +14,7 @@ import {
   resolveStoredExtension,
   storedPathToAbsolute,
 } from "../config/upload";
+import cloudinary from "./cloudinary";
 
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -105,5 +107,47 @@ describe("upload config", () => {
 
     deleteUploadFile("/uploads/images/missing.png");
     deleteUploadFile("https://res.cloudinary.com/demo/image.png");
+  });
+
+  it("createCloudinaryUpload generates public_id with correct extensions for compressed and uncompressed files", async () => {
+    const storage = createCloudinaryUpload("documents") as any;
+    expect(typeof storage.params).toBe("function");
+
+    const testFiles = [
+      { mimetype: "application/zip", originalname: "archive.zip", expectedExt: ".zip" },
+      { mimetype: "application/x-rar-compressed", originalname: "archive.rar", expectedExt: ".rar" },
+      { mimetype: "application/x-7z-compressed", originalname: "project.7z", expectedExt: ".7z" },
+      { mimetype: "application/octet-stream", originalname: "model.rvt", expectedExt: ".rvt" },
+      { mimetype: "application/octet-stream", originalname: "drawing.dwg", expectedExt: ".dwg" },
+      { mimetype: "application/pdf", originalname: "spec.pdf", expectedExt: ".pdf" },
+      { mimetype: "image/png", originalname: "photo.png", expectedExt: ".png" },
+    ];
+
+    for (const tf of testFiles) {
+      const res = await storage.params({}, { mimetype: tf.mimetype, originalname: tf.originalname });
+      expect(res.folder).toBe("documents");
+      expect(res.resource_type).toBe("auto");
+      expect(res.public_id).toMatch(new RegExp(`^[0-9a-f]{16}\\${tf.expectedExt}$`));
+    }
+  });
+
+  it("deleteUploadFile handles Cloudinary raw URLs preserving extension and image URLs stripping extension", async () => {
+    const destroySpy = jest.spyOn(cloudinary.uploader, "destroy").mockResolvedValue({ result: "ok" } as any);
+
+    // Raw archive URL
+    await deleteUploadFile("https://res.cloudinary.com/bkv1llhu/raw/upload/v1792344372/documents/abc12345.zip");
+    expect(destroySpy).toHaveBeenCalledWith("documents/abc12345.zip", {
+      resource_type: "raw",
+      invalidate: true,
+    });
+
+    // Image URL - extension should be stripped for Cloudinary public_id
+    await deleteUploadFile("https://res.cloudinary.com/bkv1llhu/image/upload/v1792322447/images/profile_avatar.jpg");
+    expect(destroySpy).toHaveBeenCalledWith("images/profile_avatar", {
+      resource_type: "image",
+      invalidate: true,
+    });
+
+    destroySpy.mockRestore();
   });
 });

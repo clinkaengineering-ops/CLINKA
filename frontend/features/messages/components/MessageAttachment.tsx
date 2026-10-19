@@ -1,3 +1,6 @@
+"use client";
+
+import { useCallback, useState } from "react";
 import type { ChatMessage } from "../types";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
 
@@ -58,6 +61,28 @@ function getAttachmentBadge(name: string, mime?: string | null) {
   return { icon: "📎", label: ext.replace(".", "").toUpperCase() || "FILE" };
 }
 
+/**
+ * Force-download a cross-origin file with the desired filename.
+ *
+ * Browsers ignore the `download` attribute on `<a>` for cross-origin hrefs
+ * (e.g. Cloudinary URLs). We fetch the file as a Blob using the browser fetch
+ * API (Cloudinary sends `Access-Control-Allow-Origin: *`), create a same-origin
+ * object URL, and trigger a download with the original filename.
+ */
+async function downloadWithName(url: string, filename: string): Promise<void> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(blobUrl);
+}
+
 export function MessageAttachment({ message, side }: MessageAttachmentProps) {
   if (!message.attachmentUrl) return null;
 
@@ -85,14 +110,54 @@ export function MessageAttachment({ message, side }: MessageAttachmentProps) {
     );
   }
 
-  const badge = getAttachmentBadge(name, message.attachmentMime);
+  return <FileDownloadLink url={attachmentUrl} name={name} side={side} mime={message.attachmentMime} />;
+}
+
+function FileDownloadLink({
+  url,
+  name,
+  side,
+  mime,
+}: {
+  url: string;
+  name: string;
+  side: "me" | "them";
+  mime?: string | null;
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const badge = getAttachmentBadge(name, mime);
+
+  const handleClick = useCallback(
+    async (e: React.MouseEvent<HTMLAnchorElement>) => {
+      // Only intercept cross-origin downloads where the browser would ignore download attr
+      const isCrossOrigin =
+        typeof window !== "undefined" && url.startsWith("http") && !url.startsWith(window.location.origin);
+
+      if (!isCrossOrigin) return; // Let the browser handle same-origin downloads natively
+
+      e.preventDefault();
+      if (downloading) return;
+
+      setDownloading(true);
+      try {
+        await downloadWithName(url, name);
+      } catch {
+        // If blob download fails (e.g. CORS issue), fall back to opening in new tab
+        window.open(url, "_blank");
+      } finally {
+        setDownloading(false);
+      }
+    },
+    [url, name, downloading],
+  );
 
   return (
     <a
-      href={attachmentUrl}
+      href={url}
       target="_blank"
       rel="noopener noreferrer"
       download={name}
+      onClick={handleClick}
       className={
         side === "me"
           ? "flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-sm hover:bg-white/25 transition mb-1"
@@ -102,7 +167,9 @@ export function MessageAttachment({ message, side }: MessageAttachmentProps) {
       <span aria-hidden className="text-base">
         {badge.icon}
       </span>
-      <span className="truncate max-w-[200px] font-medium">{name}</span>
+      <span className="truncate max-w-[200px] font-medium">
+        {downloading ? "Downloading…" : name}
+      </span>
       <span
         className={
           side === "me"
