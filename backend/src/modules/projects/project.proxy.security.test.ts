@@ -4,6 +4,7 @@ import db from "../../config/db";
 import axios from "axios";
 import generateToken from "../../utils/generateToken";
 import * as uploadConfig from "../../config/upload";
+import cloudinary from "../../config/cloudinary";
 
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -13,6 +14,15 @@ describe("Download Proxy Security Tests (Deliverables & Payment Proofs)", () => 
   const strangerToken = generateToken("stranger-user-id", "CLIENT");
   const engineerToken = generateToken("engineer-user-id", "ENGINEER");
   const adminToken = generateToken("admin-user-id", "ADMIN");
+
+  beforeAll(() => {
+    cloudinary.config({
+      cloud_name: "bkv1llhu",
+      api_key: "792594964666692",
+      api_secret: "mock-secret-key-12345",
+      secure: true,
+    });
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();

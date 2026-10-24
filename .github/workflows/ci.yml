@@ -25,6 +25,9 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clinka_test
       JWT_SECRET: test-dummy-jwt-secret-minimum-32-chars-long!
       NODE_ENV: test
+      CLOUDINARY_CLOUD_NAME: bkv1llhu
+      CLOUDINARY_API_KEY: test-dummy-cloudinary-api-key
+      CLOUDINARY_API_SECRET: test-dummy-cloudinary-api-secret
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
