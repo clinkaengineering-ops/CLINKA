@@ -31,7 +31,11 @@ import { assertUserNotBanned } from "../messages/ban.service";
 import db from "../../config/db";
 import fs from "fs";
 import axios from "axios";
-import { storedPathToAbsolute } from "../../config/upload";
+import {
+  storedPathToAbsolute,
+  isTrustedUpstreamHost,
+  getAuthenticatedCloudinaryDownloadUrl,
+} from "../../config/upload";
 
 export async function markProjectFinishedController(
   req: AuthRequest,
@@ -180,7 +184,7 @@ export async function downloadDeliverableController(
     if (!project) throw new ApiError(404, "Project not found");
 
     const isClient = project.clientId === userId;
-    const isEngineer = project.bids[0]?.engineer.user.id === userId;
+    const isEngineer = project.bids?.[0]?.engineer?.user?.id === userId;
     const isAdmin = req.user!.role === "ADMIN";
 
     if (!isClient && !isEngineer && !isAdmin) {
@@ -195,9 +199,14 @@ export async function downloadDeliverableController(
     }
 
     if (/^https?:\/\//i.test(deliverable.url)) {
-      if (deliverable.url.includes("cloudinary.com") || deliverable.type === "FILE") {
+      if (deliverable.type === "FILE" || isTrustedUpstreamHost(deliverable.url)) {
+        if (!isTrustedUpstreamHost(deliverable.url)) {
+          throw new ApiError(400, "Untrusted or invalid deliverable file URL host");
+        }
+
+        const signedFetchUrl = getAuthenticatedCloudinaryDownloadUrl(deliverable.url);
         try {
-          const remoteStream = await axios.get(deliverable.url, {
+          const remoteStream = await axios.get(signedFetchUrl, {
             responseType: "stream",
             timeout: 20000,
           });
@@ -209,11 +218,12 @@ export async function downloadDeliverableController(
           const filename = deliverable.name || "deliverable";
           res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
           return remoteStream.data.pipe(res);
-        } catch {
-          return res.redirect(deliverable.url);
+        } catch (streamErr: any) {
+          if (streamErr instanceof ApiError) throw streamErr;
+          throw new ApiError(502, "Failed to stream deliverable file from remote storage provider");
         }
       }
-      return res.redirect(deliverable.url);
+      throw new ApiError(400, "Cannot download deliverable: item is an external link, not a downloadable file");
     }
 
     const absolute = storedPathToAbsolute(deliverable.url);

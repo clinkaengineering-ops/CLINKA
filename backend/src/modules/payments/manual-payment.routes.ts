@@ -15,7 +15,13 @@ import {
 import fs from "fs";
 import axios from "axios";
 import db from "../../config/db";
-import { getStoredUploadPath, createUploadMiddleware, storedPathToAbsolute } from "../../config/upload";
+import {
+  getStoredUploadPath,
+  createUploadMiddleware,
+  storedPathToAbsolute,
+  isTrustedUpstreamHost,
+  getAuthenticatedCloudinaryDownloadUrl,
+} from "../../config/upload";
 import { submitManualPaymentSchema } from "./payments.validation";
 import { adminRateLimit } from "../../middlewares/adminRateLimit";
 import { manualSubmitRateLimiter, t2AccountRateLimit, t2Limiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
@@ -161,8 +167,13 @@ router.get(
       }
 
       if (/^https?:\/\//i.test(submission.proofUrl)) {
+        if (!isTrustedUpstreamHost(submission.proofUrl)) {
+          throw new ApiError(400, "Untrusted or invalid payment proof URL host");
+        }
+
+        const signedFetchUrl = getAuthenticatedCloudinaryDownloadUrl(submission.proofUrl);
         try {
-          const remoteStream = await axios.get(submission.proofUrl, {
+          const remoteStream = await axios.get(signedFetchUrl, {
             responseType: "stream",
             timeout: 15000,
           });
@@ -174,8 +185,9 @@ router.get(
           const filename = submission.proofOriginalName || "payment-proof";
           res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
           return remoteStream.data.pipe(res);
-        } catch {
-          return res.redirect(submission.proofUrl);
+        } catch (streamErr: any) {
+          if (streamErr instanceof ApiError) throw streamErr;
+          throw new ApiError(502, "Failed to stream payment proof from remote storage provider");
         }
       }
 

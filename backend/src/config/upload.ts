@@ -4,6 +4,7 @@ import crypto from "crypto";
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "./cloudinary";
+import ApiError from "../utils/ApiError";
 
 export const UPLOAD_CATEGORIES = [
   "images",
@@ -201,9 +202,11 @@ export function createCloudinaryUpload(category: UploadCategory) {
       file.mimetype = normalizeMimeType(file.mimetype);
       const ext = resolveStoredExtension(file.mimetype, file.originalname);
       const uid = crypto.randomBytes(8).toString("hex");
+      const isPrivate = category === "projects" || category === "documents";
       return {
         folder: category,
         resource_type: "auto" as const,
+        type: isPrivate ? ("authenticated" as const) : ("upload" as const),
         public_id: `${uid}${ext}`,
       };
     },
@@ -276,22 +279,223 @@ export function resolvePublicUploadUrl(
   return base ? `${base}${relative}` : relative;
 }
 
+export function isTrustedUpstreamHost(rawUrl: string): boolean {
+  try {
+    if (!rawUrl || typeof rawUrl !== "string") return false;
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return false;
+
+    const parsed = new URL(trimmed);
+    // Enforce HTTPS
+    if (parsed.protocol !== "https:") return false;
+
+    // Reject user credentials in URL
+    if (parsed.username || parsed.password) return false;
+
+    // Reject non-standard ports
+    if (parsed.port && parsed.port !== "443") return false;
+
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Allow only authentic Cloudinary delivery hostnames: res.cloudinary.com or res-1..5.cloudinary.com
+    const isCloudinaryHost = /^res(?:-[1-5])?\.cloudinary\.com$/.test(hostname);
+    if (isCloudinaryHost) {
+      return true;
+    }
+
+    // Review custom upload base URL exception: must be explicitly configured, HTTPS, non-loopback, no credentials
+    const rawUploadBase = process.env.UPLOAD_BASE_URL?.trim();
+    const apiUrl = process.env.API_URL?.trim();
+    if (rawUploadBase && rawUploadBase.startsWith("https://")) {
+      try {
+        const parsedBase = new URL(rawUploadBase);
+        if (
+          parsedBase.protocol === "https:" &&
+          !parsedBase.username &&
+          !parsedBase.password &&
+          (!parsedBase.port || parsedBase.port === "443")
+        ) {
+          const baseHost = parsedBase.hostname.toLowerCase();
+          const isPrivateOrLoopback =
+            baseHost === "localhost" ||
+            baseHost.endsWith(".localhost") ||
+            baseHost === "127.0.0.1" ||
+            baseHost === "::1" ||
+            baseHost.startsWith("169.254.") ||
+            baseHost.startsWith("10.") ||
+            baseHost.startsWith("192.168.") ||
+            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(baseHost);
+
+          let isApiOrigin = false;
+          if (apiUrl) {
+            try {
+              const parsedApi = new URL(apiUrl);
+              if (parsedBase.origin === parsedApi.origin) {
+                isApiOrigin = true;
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          if (!isPrivateOrLoopback && !isApiOrigin && parsed.origin === parsedBase.origin) {
+            return true;
+          }
+        }
+      } catch {
+        // ignore malformed base URL
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export function getAuthenticatedCloudinaryDownloadUrl(storedUrl: string): string {
+  if (!storedUrl || typeof storedUrl !== "string") {
+    throw new ApiError(400, "Missing or invalid storage URL");
+  }
+
+  const trimmed = storedUrl.trim();
+  if (!isTrustedUpstreamHost(trimmed)) {
+    throw new ApiError(400, "Untrusted or invalid upstream storage URL host");
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new ApiError(400, "Malformed storage URL");
+  }
+
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  if (segments.length < 4) {
+    throw new ApiError(400, "Invalid Cloudinary URL structure: insufficient path segments");
+  }
+
+  const cloudNameInUrl = segments[0];
+  const configuredCloudName = cloudinary.config().cloud_name || process.env.CLOUDINARY_CLOUD_NAME;
+  if (!configuredCloudName) {
+    throw new ApiError(500, "Cloudinary cloud name is not configured on the server");
+  }
+  if (cloudNameInUrl !== configuredCloudName) {
+    throw new ApiError(400, "Cloudinary cloud name in URL does not match configured cloud name");
+  }
+
+  const configuredApiKey = cloudinary.config().api_key || process.env.CLOUDINARY_API_KEY;
+  const configuredApiSecret = cloudinary.config().api_secret || process.env.CLOUDINARY_API_SECRET;
+  if (!configuredApiSecret) {
+    throw new ApiError(500, "Cloudinary API credentials are not configured on the server");
+  }
+
+  const rawResourceType = segments[1]?.toLowerCase();
+  if (rawResourceType !== "image" && rawResourceType !== "raw" && rawResourceType !== "video") {
+    throw new ApiError(400, `Unsupported Cloudinary resource type: '${rawResourceType}'`);
+  }
+  const resourceType = rawResourceType as "image" | "raw" | "video";
+
+  const deliveryType = segments[2]?.toLowerCase();
+  if (deliveryType === "upload") {
+    throw new ApiError(
+      400,
+      "Asset has public delivery type ('upload') and cannot be served via authenticated download; historical asset must be migrated to 'authenticated' type",
+    );
+  }
+  if (deliveryType !== "authenticated") {
+    throw new ApiError(400, `Unsupported Cloudinary delivery type: '${deliveryType}'; expected 'authenticated'`);
+  }
+
+  const remainingSegments = segments.slice(3);
+  if (remainingSegments.length === 0) {
+    throw new ApiError(400, "Invalid Cloudinary URL: missing public ID");
+  }
+
+  // Reject unexpected signature segments
+  if (remainingSegments.some((s) => /^s--.*--$/.test(s))) {
+    throw new ApiError(400, "Unexpected signature segment in stored Cloudinary URL");
+  }
+
+  // Locate optional version segment (v12345...)
+  const versionIdx = remainingSegments.findIndex((s) => /^v\d+$/.test(s));
+
+  // If there are segments before the version segment, they are unexpected transformations
+  if (versionIdx > 0) {
+    throw new ApiError(
+      400,
+      `Unexpected transformation segment in Cloudinary URL: '${remainingSegments.slice(0, versionIdx).join("/")}'`,
+    );
+  }
+
+  let version: string | undefined = undefined;
+  let publicIdSegments: string[];
+
+  if (versionIdx === 0) {
+    version = remainingSegments[0].slice(1); // strip leading 'v'
+    publicIdSegments = remainingSegments.slice(1);
+  } else {
+    // No version segment found: check if first segment looks like a transformation
+    const firstSegment = remainingSegments[0];
+    if (firstSegment.includes(",") || /^[a-z]{1,3}_[a-z0-9_-]+/i.test(firstSegment)) {
+      throw new ApiError(400, `Unexpected transformation segment in Cloudinary URL: '${firstSegment}'`);
+    }
+    publicIdSegments = remainingSegments;
+  }
+
+  if (publicIdSegments.length === 0) {
+    throw new ApiError(400, "Invalid Cloudinary URL: missing public ID after version segment");
+  }
+
+  const publicId = publicIdSegments.join("/");
+  if (publicId.includes("..") || publicId.startsWith("/")) {
+    throw new ApiError(400, "Invalid characters in Cloudinary public ID");
+  }
+
+  try {
+    const signedUrl = cloudinary.url(publicId, {
+      cloud_name: configuredCloudName,
+      api_key: configuredApiKey,
+      api_secret: configuredApiSecret,
+      resource_type: resourceType,
+      type: "authenticated",
+      sign_url: true,
+      secure: true,
+      version: version,
+    });
+
+    if (!signedUrl || !signedUrl.includes("/s--")) {
+      throw new ApiError(500, "Cloudinary failed to generate a signed authenticated URL");
+    }
+
+    return signedUrl;
+  } catch (err: any) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(500, `Failed to generate authenticated download URL: ${err?.message || "Unknown error"}`);
+  }
+}
+
+
 export async function deleteUploadFile(storedPath: string | null | undefined): Promise<void> {
   if (!storedPath) return;
 
   try {
     // If it's a Cloudinary URL, extract the public_id and delete it
     if (storedPath.includes("cloudinary.com")) {
-      // URL format: https://res.cloudinary.com/<cloud>/[image|raw|video]/upload/v<version>/<folder>/<public_id>
+      // URL format: https://res.cloudinary.com/<cloud>/[image|raw|video]/[upload|authenticated]/v<version>/<folder>/<public_id>
       const url = new URL(storedPath);
       const segments = url.pathname.split("/");
-      // Find 'upload' segment, everything after version is the public_id
-      const uploadIdx = segments.indexOf("upload");
-      if (uploadIdx >= 0 && uploadIdx + 2 < segments.length) {
+      let typeIdx = segments.indexOf("upload");
+      let deliveryType: "upload" | "authenticated" = "upload";
+      if (typeIdx === -1) {
+        typeIdx = segments.indexOf("authenticated");
+        deliveryType = "authenticated";
+      }
+      if (typeIdx >= 0 && typeIdx + 2 < segments.length) {
         // Detect resource_type from URL path (image, raw, video)
-        const resourceType = (segments[uploadIdx - 1] || "image").toLowerCase();
+        const resourceType = (segments[typeIdx - 1] || "image").toLowerCase();
         // Skip the version segment (v12345...) — public_id is all segments after it
-        let publicId = segments.slice(uploadIdx + 2).join("/");
+        let publicId = segments.slice(typeIdx + 2).join("/");
         if (resourceType === "image") {
           // For images, Cloudinary appends the format extension to the URL, but the public_id does not have it
           const lastDot = publicId.lastIndexOf(".");
@@ -302,6 +506,7 @@ export async function deleteUploadFile(storedPath: string | null | undefined): P
         if (publicId) {
           await cloudinary.uploader.destroy(publicId, {
             resource_type: resourceType as "image" | "raw" | "video",
+            type: deliveryType,
             invalidate: true,
           });
         }
