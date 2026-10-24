@@ -16,6 +16,15 @@ const app = express();
 ensureUploadRoot();
 const uploadDir = getUploadRoot();
 
+// Explicitly forbid unauthenticated direct access to sensitive private categories
+app.use("/uploads/documents", (_req, res) => {
+  res.status(403).json({ success: false, message: "Direct access to documents is forbidden. Use authenticated endpoints." });
+});
+app.use("/uploads/projects", (_req, res) => {
+  res.status(403).json({ success: false, message: "Direct access to project deliverables is forbidden. Use authenticated endpoints." });
+});
+
+// Statically serve public assets only (avatars, portfolio images)
 app.use("/uploads", express.static(uploadDir, {
   setHeaders: (res, filePath) => {
     const origin = res.req.headers.origin;
@@ -24,13 +33,7 @@ app.use("/uploads", express.static(uploadDir, {
       res.setHeader("Vary", "Origin");
     }
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-
-    const normalized = filePath.replace(/\\/g, "/");
-    if (normalized.includes("/documents/")) {
-      res.setHeader("Cache-Control", "private, no-store");
-      return;
-    }
-    // Unique filenames can be cached immutably behind a CDN.
+    // Public media can be cached immutably
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   },
 }));

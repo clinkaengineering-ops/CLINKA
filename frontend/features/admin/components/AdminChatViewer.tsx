@@ -35,6 +35,7 @@ function toChatMessage(msg: AdminChatMessage): ChatMessage {
     attachmentUrl: msg.attachmentUrl,
     attachmentName: msg.attachmentName,
     attachmentMime: msg.attachmentMime,
+    attachmentDuration: msg.attachmentDuration,
     createdAt: msg.createdAt,
     sender: msg.sender,
   };
@@ -191,7 +192,7 @@ export function AdminChatViewer() {
                       >
                         <MessageAttachment message={chat} side={isClient ? "them" : "me"} />
                         {msg.content.trim() ? (
-                          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                          <p dir="auto" className="whitespace-pre-wrap break-words">{msg.content}</p>
                         ) : null}
                       </MessageBubble>
                     );

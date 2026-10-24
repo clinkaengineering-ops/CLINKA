@@ -1,11 +1,16 @@
 const mockPrisma: any = {
   user: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
-  project: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
-  bid: { findMany: jest.fn(), create: jest.fn() },
-  payment: { findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
-  engineerProfile: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn() },
+  project: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+  projectDeliverable: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), delete: jest.fn() },
+  portfolioProject: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+  bid: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+  payment: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+  engineerProfile: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
   wallet: { findUnique: jest.fn(), findUniqueOrThrow: jest.fn(), update: jest.fn() },
-  dispute: { findMany: jest.fn(), create: jest.fn() },
+  dispute: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+  conversation: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), upsert: jest.fn() },
+  message: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), count: jest.fn() },
+  ban: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
   notification: { create: jest.fn() },
   walletTransaction: { findFirst: jest.fn() },
   withdrawalRequest: { findMany: jest.fn() },
@@ -16,3 +21,4 @@ const mockPrisma: any = {
 };
 
 export default mockPrisma;
+

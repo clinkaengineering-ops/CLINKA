@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, authorize } from "../../middlewares/auth.middleware";
+import { authenticate, authorize, rejectIfBanned } from "../../middlewares/auth.middleware";
 import { t2Limiters } from "../../middlewares/rateLimit";
 import { 
   openDisputeController, 
@@ -12,8 +12,8 @@ import { adminRateLimit } from "../../middlewares/adminRateLimit";
 
 const router = Router();
 
-router.post("/open", authenticate, ...t2Limiters, idempotency, openDisputeController);
-router.post("/escalate", authenticate, ...t2Limiters, idempotency, escalateDisputeController);
+router.post("/open", authenticate, authorize("CLIENT"), rejectIfBanned("CLIENT"), ...t2Limiters, idempotency, openDisputeController);
+router.post("/escalate", authenticate, rejectIfBanned(), ...t2Limiters, idempotency, escalateDisputeController);
 
 // Admin only routes
 router.post("/resolve", authenticate, authorize("ADMIN"), adminRateLimit, ...t2Limiters, idempotency, resolveDisputeController);

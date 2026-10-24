@@ -15,6 +15,8 @@ import notificationsRouter from "../modules/notifications/notifications.routes";
 import taxonomyRouter from "../modules/taxonomy/taxonomy.routes";
 import disputesRouter from "../modules/disputes/disputes.routes";
 
+import { authenticate, authorize } from "../middlewares/auth.middleware";
+
 export default function registerRoutes(app: Application) {
   app.use("/api/public", publicRouter);
   app.use("/api/notifications", notificationsRouter);
@@ -32,34 +34,31 @@ export default function registerRoutes(app: Application) {
   app.use("/api/taxonomy", taxonomyRouter);
   app.use("/api/disputes", disputesRouter);
 
-  // Debug endpoints
-  app.get("/api/debug/email", async (req, res) => {
-    if (process.env.NODE_ENV === "production" && req.query.admin !== "true") {
-      return res.status(403).json({ error: "Forbidden in production" });
-    }
+  // Debug endpoints — disabled in production, restricted to authenticated admins in dev
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/debug/email", authenticate, authorize("ADMIN"), async (req, res) => {
+      try {
+        const transporter = (await import("../config/mailer")).default;
+        const { getEmailFrom, notificationEmailHtml } = await import("../utils/emailTemplate");
+        const to = req.query.to as string || "test@example.com";
+        
+        const result = await transporter.sendMail({
+          from: getEmailFrom(),
+          to,
+          subject: "CLINKA Test Email",
+          html: notificationEmailHtml({
+            title: "Test Email from CLINKA Debug",
+            body: "If you received this, the email configuration is working correctly.",
+          }),
+        });
 
-    try {
-      const transporter = (await import("../config/mailer")).default;
-      const { getEmailFrom, notificationEmailHtml } = await import("../utils/emailTemplate");
-      const to = req.query.to as string || "test@example.com";
-      
-      const result = await transporter.sendMail({
-        from: getEmailFrom(),
-        to,
-        subject: "CLINKA Test Email",
-        html: notificationEmailHtml({
-          title: "Test Email from CLINKA Debug",
-          body: "If you received this, the email configuration is working correctly.",
-        }),
-      });
-
-      res.json({ success: true, messageId: result.messageId, accepted: result.accepted });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-    }
-  });
+        res.json({ success: true, messageId: result.messageId, accepted: result.accepted });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    });
+  }
 }

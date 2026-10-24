@@ -239,6 +239,20 @@ export function ManualPaymentModal({
       if (note) formData.append("note", note);
       formData.append("proof", file);
 
+      // Append destination account ID if available
+      const accountId =
+        method === "bank_transfer"
+          ? selectedBank?.id
+          : method === "instapay"
+          ? selectedInstapay?.id
+          : method === "ewallet"
+          ? selectedWallet?.id
+          : undefined;
+
+      if (accountId) {
+        formData.append("destinationAccountId", accountId);
+      }
+
       // Append destination snapshot
       const snapshot = buildSnapshot();
       for (const [key, value] of Object.entries(snapshot)) {

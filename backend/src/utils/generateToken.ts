@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-function generateToken(userId: string, role: string) {
+function generateToken(userId: string, role: string, expiresIn?: string | number) {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
@@ -11,7 +11,7 @@ function generateToken(userId: string, role: string) {
     { userId, role },
     secret,
     {
-      expiresIn: (process.env.JWT_EXPIRES_IN as any) || "30d",
+      expiresIn: (expiresIn || process.env.JWT_EXPIRES_IN || "30d") as any,
     }
   );
 }

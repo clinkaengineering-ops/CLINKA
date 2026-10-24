@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import type { ChatMessage } from "../types";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
+import { VoiceMessagePlayer } from "./VoiceMessagePlayer";
 
 interface MessageAttachmentProps {
   message: ChatMessage;
@@ -110,8 +111,28 @@ export function MessageAttachment({ message, side }: MessageAttachmentProps) {
     );
   }
 
+  const isAudio =
+    message.attachmentMime?.toLowerCase().startsWith("audio/") ||
+    /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(name) ||
+    name.startsWith("voice-message") ||
+    name.startsWith("voice_note");
+
+  if (isAudio) {
+    return (
+      <VoiceMessagePlayer
+        message={message}
+        url={attachmentUrl}
+        side={side}
+        name={name}
+        storedDuration={message.attachmentDuration}
+      />
+    );
+  }
+
   return <FileDownloadLink url={attachmentUrl} name={name} side={side} mime={message.attachmentMime} />;
 }
+
+export { VoiceMessagePlayer };
 
 function FileDownloadLink({
   url,

@@ -41,6 +41,8 @@ import {
 } from "./google.service";
 import { isGoogleAuthEnabled } from "../../config/google";
 import { logSystemEvent } from "../../utils/auditLogger";
+import { revokeToken } from "../../utils/tokenRevocation";
+import { isAllowedOrigin } from "../../config/cors";
 
 
 export async function checkRegistrationEmailController(
@@ -245,6 +247,14 @@ export async function logoutController(
   next: NextFunction,
 ) {
   try {
+    const cookieToken = req.cookies?.token;
+    const headerToken = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7).trim()
+      : undefined;
+    const token = cookieToken || headerToken;
+    if (token) {
+      await revokeToken(token);
+    }
     res.clearCookie("token", authCookieOptions(req.headers.origin));
     res.status(200).json(ApiResponse(200, "Logged out successfully"));
   } catch (error) {
@@ -331,16 +341,25 @@ export async function googleAuthStartController(
     if (!isGoogleAuthEnabled()) {
       throw new ApiError(503, "Google sign-in is not configured");
     }
-    const next =
+    let nextPath =
       typeof req.query.next === "string" ? req.query.next : undefined;
+    if (nextPath && (!nextPath.startsWith("/") || nextPath.startsWith("//") || nextPath.startsWith("/\\"))) {
+      nextPath = undefined;
+    }
     const role =
       req.query.role === "ENGINEER" ? ("ENGINEER" as const) : req.query.role === "CLIENT" ? ("CLIENT" as const) : undefined;
     const apiOrigin =
       typeof req.query.api_origin === "string" ? req.query.api_origin : undefined;
+    if (apiOrigin && !isAllowedOrigin(apiOrigin)) {
+      throw new ApiError(400, "Invalid api origin");
+    }
     const clientOrigin =
       typeof req.query.client_origin === "string"
         ? req.query.client_origin
         : undefined;
+    if (clientOrigin && !isAllowedOrigin(clientOrigin)) {
+      throw new ApiError(400, "Invalid client origin");
+    }
     const specialty =
       req.query.specialty === "CIVIL" || req.query.specialty === "ARCHITECTURAL"
         ? req.query.specialty
@@ -349,7 +368,7 @@ export async function googleAuthStartController(
     const nationality =
       typeof req.query.nationality === "string" ? req.query.nationality : undefined;
     const url = getGoogleAuthRedirectUrl({
-      next,
+      next: nextPath,
       role,
       apiOrigin,
       clientOrigin,
@@ -379,10 +398,11 @@ export async function googleAuthCallbackController(
     if (result.token) {
       // Google redirects here without an Origin header — use the frontend origin
       // stored in OAuth state so cross-site cookies work (localhost ports + dev tunnels).
+      const safeOrigin = result.clientOrigin && isAllowedOrigin(result.clientOrigin) ? result.clientOrigin : undefined;
       res.cookie(
         "token",
         result.token,
-        authCookieOptions(result.clientOrigin ?? req.headers.origin),
+        authCookieOptions(safeOrigin ?? req.headers.origin),
       );
     }
 

@@ -49,10 +49,31 @@ export const sendMessageWithAttachment = (
   conversationId: number,
   file: File,
   content?: string,
+  attachmentDuration?: number | null,
 ): Promise<ChatMessage> => {
   const form = new FormData();
   form.append("file", file);
   if (content?.trim()) form.append("content", content.trim());
+
+  let durationToSend = attachmentDuration;
+  if (durationToSend === undefined || durationToSend === null) {
+    const match = file.name.match(/-dur(\d+)/i);
+    if (match) {
+      durationToSend = Number(match[1]);
+    }
+  }
+
+  const isAudio =
+    file.type?.toLowerCase().startsWith("audio/") ||
+    /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(file.name);
+
+  if (isAudio) {
+    const dur = Math.max(1, Math.min(300, Math.round(durationToSend || 1)));
+    form.append("attachmentDuration", String(dur));
+  } else if (typeof durationToSend === "number" && durationToSend > 0) {
+    form.append("attachmentDuration", String(Math.round(durationToSend)));
+  }
+
   return unwrap(
     api.post<ApiResponse<ChatMessage>>(
       `/messages/conversations/${conversationId}`,

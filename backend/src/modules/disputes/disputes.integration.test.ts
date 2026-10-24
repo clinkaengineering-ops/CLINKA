@@ -312,6 +312,60 @@ describe("Dispute Cron Jobs", () => {
     });
     projectIdApprove = p1.id;
 
+    // Project for auto-approve with funded escrow & hold elapsed (7 days)
+    const past8Days = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+    const pFundedElapsed = await db.project.create({
+      data: {
+        clientId: client.id,
+        title: "Test Auto Approve Funded Hold Elapsed",
+        description: "Testing...",
+        budget: 1000,
+        serviceType: "DESIGN",
+        status: "SUBMITTED_FOR_REVIEW",
+        deliveredAt: past8Days,
+        disputeWindowClosesAt: past8Days
+      }
+    });
+    const payElapsed = await db.payment.create({
+      data: {
+        projectId: pFundedElapsed.id,
+        clientId: client.id,
+        engineerId: profile.id,
+        amountUsd: 1000,
+        amountEgp: 50000,
+        exchangeRate: 50,
+        commission: 100,
+        status: "FUNDED"
+      }
+    });
+
+    // Project for auto-approve with funded escrow & hold pending (6.2 days ago)
+    const past6Days = new Date(now.getTime() - 6.2 * 24 * 60 * 60 * 1000);
+    const pFundedPending = await db.project.create({
+      data: {
+        clientId: client.id,
+        title: "Test Auto Approve Funded Hold Pending",
+        description: "Testing...",
+        budget: 500,
+        serviceType: "DESIGN",
+        status: "SUBMITTED_FOR_REVIEW",
+        deliveredAt: past6Days,
+        disputeWindowClosesAt: new Date(past6Days.getTime() + 6 * 24 * 60 * 60 * 1000)
+      }
+    });
+    const payPending = await db.payment.create({
+      data: {
+        projectId: pFundedPending.id,
+        clientId: client.id,
+        engineerId: profile.id,
+        amountUsd: 500,
+        amountEgp: 25000,
+        exchangeRate: 50,
+        commission: 50,
+        status: "FUNDED"
+      }
+    });
+
     // Project and Dispute for auto-escalate (dispute opened 4 days ago)
     const p2 = await db.project.create({
       data: {
@@ -337,12 +391,28 @@ describe("Dispute Cron Jobs", () => {
       }
     });
     disputeIdEscalate = d.id;
+
+    (globalThis as any).__testCronProjects = {
+      pFundedElapsedId: pFundedElapsed.id,
+      payElapsedId: payElapsed.id,
+      pFundedPendingId: pFundedPending.id,
+      payPendingId: payPending.id
+    };
   });
 
   after(async () => {
-    await db.systemAuditLog.deleteMany({ where: { targetId: { in: [projectIdApprove.toString(), disputeIdEscalate.toString()] } } });
+    const extra = (globalThis as any).__testCronProjects || {};
+    const allProjectIds = [projectIdApprove, projectIdEscalate, extra.pFundedElapsedId, extra.pFundedPendingId].filter(Boolean);
+    const allPaymentIds = [extra.payElapsedId, extra.payPendingId].filter(Boolean);
+
+    await db.systemAuditLog.deleteMany({ where: { targetId: { in: [...allProjectIds.map(String), disputeIdEscalate.toString()] } } });
+    await db.notification.deleteMany({ where: { userId: { in: [clientId, engineerId] } } });
+    await db.walletTransaction.deleteMany({ where: { wallet: { userId: engineerId } } });
+    await db.wallet.deleteMany({ where: { userId: engineerId } });
+    await db.paymentLedgerEntry.deleteMany({ where: { paymentId: { in: allPaymentIds } } });
+    await db.payment.deleteMany({ where: { id: { in: allPaymentIds } } });
     await db.dispute.deleteMany({ where: { id: disputeIdEscalate } });
-    await db.project.deleteMany({ where: { id: { in: [projectIdApprove, projectIdEscalate] } } });
+    await db.project.deleteMany({ where: { id: { in: allProjectIds } } });
     await db.engineerProfile.deleteMany({ where: { userId: engineerId } });
     await db.user.deleteMany({ where: { id: { in: [clientId, engineerId] } } });
   });
@@ -375,5 +445,52 @@ describe("Dispute Cron Jobs", () => {
     assert.ok(log);
     assert.equal(log.actorRole, "SYSTEM");
     assert.equal(log.actorId, null);
+  });
+
+  it("3. Should auto-approve funded project with matured hold, releasing escrow into available balance", async () => {
+    const extra = (globalThis as any).__testCronProjects;
+    const p = await db.project.findUniqueOrThrow({ where: { id: extra.pFundedElapsedId } });
+    assert.equal(p.status, "COMPLETED");
+
+    const payment = await db.payment.findUniqueOrThrow({ where: { id: extra.payElapsedId } });
+    assert.equal(payment.status, "RELEASED");
+
+    const ledgerEntries = await db.paymentLedgerEntry.findMany({ where: { paymentId: extra.payElapsedId } });
+    assert.equal(ledgerEntries.length, 2);
+    const releasedEntry = ledgerEntries.find((e) => e.type === "RELEASED");
+    const commEntry = ledgerEntries.find((e) => e.type === "PLATFORM_COMMISSION");
+    assert.ok(releasedEntry);
+    assert.ok(commEntry);
+    assert.equal(releasedEntry.amount.toNumber(), 900);
+    assert.equal(commEntry.amount.toNumber(), 100);
+
+    const wt = await db.walletTransaction.findFirst({ where: { relatedPaymentId: extra.payElapsedId } });
+    assert.ok(wt);
+    assert.equal(wt.type, "RELEASED");
+    assert.equal(wt.status, "AVAILABLE");
+    assert.equal(wt.amount.toNumber(), 900);
+
+    const notifications = await db.notification.findMany({ where: { userId: engineerId } });
+    assert.ok(notifications.some((n) => n.type === "WORK_APPROVED"));
+    assert.ok(notifications.some((n) => n.type === "FUNDS_RELEASED"));
+  });
+
+  it("4. Should auto-approve funded project with unmatured hold, releasing escrow into pending balance", async () => {
+    const extra = (globalThis as any).__testCronProjects;
+    const p = await db.project.findUniqueOrThrow({ where: { id: extra.pFundedPendingId } });
+    assert.equal(p.status, "COMPLETED");
+
+    const payment = await db.payment.findUniqueOrThrow({ where: { id: extra.payPendingId } });
+    assert.equal(payment.status, "RELEASED");
+
+    const wt = await db.walletTransaction.findFirst({ where: { relatedPaymentId: extra.payPendingId } });
+    assert.ok(wt);
+    assert.equal(wt.type, "RELEASED");
+    assert.equal(wt.status, "PENDING");
+    assert.equal(wt.amount.toNumber(), 450);
+
+    const wallet = await db.wallet.findUniqueOrThrow({ where: { userId: engineerId } });
+    assert.equal(wallet.availableBalance.toNumber(), 900);
+    assert.equal(wallet.pendingBalance.toNumber(), 450);
   });
 });

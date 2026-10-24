@@ -149,6 +149,7 @@ export interface AdminChatMessage {
   attachmentUrl?: string | null;
   attachmentName?: string | null;
   attachmentMime?: string | null;
+  attachmentDuration?: number | null;
   createdAt: string;
   sender: AdminMessageSender;
 }

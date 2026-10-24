@@ -1,8 +1,11 @@
 /** VS Code / GitHub dev tunnel frontends: {id}-3000.uks1.devtunnels.ms */
 const DEV_TUNNEL_FRONTEND =
-  /^https:\/\/[\w-]+-3000\.[\w.-]*devtunnels\.ms$/;
+  /^https:\/\/[\w-]+-3000\.[a-z0-9-]+\.devtunnels\.ms$/i;
 
 export function isDevTunnelFrontendOrigin(origin: string): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
   return DEV_TUNNEL_FRONTEND.test(origin);
 }
 

@@ -11,6 +11,7 @@ import {
 
 import { createNotification } from "../../utils/notifications";
 import { assertUserNotBanned } from "../messages/ban.service";
+import { deleteUploadFiles } from "../../config/upload";
 
 export { markProjectFinished } from "./project.workflow.service";
 
@@ -137,7 +138,11 @@ export async function getMyOpenProjects(clientId: string) {
   return projects;
 }
 
-export async function getProjectById(projectId: string) {
+export async function getProjectById(
+  projectId: string,
+  requestingUserId?: string,
+  requestingUserRole?: string,
+) {
   const project = await db.project.findUnique({
     where: { id: projectId },
     include: {
@@ -181,7 +186,36 @@ export async function getProjectById(projectId: string) {
     project.status,
   );
 
-  return { ...project, permissions };
+  const isClient = Boolean(requestingUserId && project.clientId === requestingUserId);
+  const isAcceptedEngineer = Boolean(
+    requestingUserId &&
+      project.bids?.some(
+        (b) => b.status === "ACCEPTED" && b.engineer?.user?.id === requestingUserId,
+      ),
+  );
+  const isAdmin = requestingUserRole === "ADMIN";
+  const isAuthorizedParticipant = isClient || isAcceptedEngineer || isAdmin;
+
+  // Filter sensitive fields for unauthorized or unauthenticated viewers
+  const sanitizedPayment = isAuthorizedParticipant ? project.payment : null;
+  const sanitizedSubmissions = isAuthorizedParticipant ? project.submissions : [];
+
+  let filteredBids = project.bids;
+  if (!isClient && !isAdmin) {
+    filteredBids = project.bids.filter(
+      (b) =>
+        b.status === "ACCEPTED" ||
+        (requestingUserId && b.engineer?.user?.id === requestingUserId),
+    );
+  }
+
+  return {
+    ...project,
+    bids: filteredBids,
+    payment: sanitizedPayment,
+    submissions: sanitizedSubmissions,
+    permissions,
+  };
 }
 
 export async function updateProject(
@@ -189,6 +223,8 @@ export async function updateProject(
   projectId: string,
   data: UpdateProjectInput,
 ) {
+  await assertUserNotBanned(clientId, "update project");
+
   return db.$transaction(async (tx) => {
     // 1. AUTHORIZE: Fetch project, verify ownership
     const project = await tx.project.findUnique({ where: { id: projectId } });
@@ -255,6 +291,8 @@ export async function updateProject(
 }
 
 export async function deleteProject(clientId: string, projectId: string) {
+  await assertUserNotBanned(clientId, "delete project");
+
   const project = await db.project.findUnique({ where: { id: projectId } });
   if (!project) throw new ApiError(404, "Project not found");
 
@@ -266,7 +304,18 @@ export async function deleteProject(clientId: string, projectId: string) {
     throw new ApiError(400, "Cannot delete a project that is no longer open");
   }
 
+  // Find any submitted deliverables before cascade deletion
+  const deliverables = await db.projectDeliverable.findMany({
+    where: { submission: { projectId } },
+    select: { url: true },
+  });
+
   await db.project.delete({ where: { id: projectId } });
+
+  if (deliverables.length > 0) {
+    const urls = deliverables.map((d) => d.url).filter(Boolean);
+    await deleteUploadFiles(urls);
+  }
 }
 
 /** Projects where the engineer has an accepted bid (active contracts). */

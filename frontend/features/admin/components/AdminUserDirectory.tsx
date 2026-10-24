@@ -212,12 +212,16 @@ export function AdminUserDirectory() {
                   variant="danger" 
                   size="sm" 
                   onClick={() => {
+                    if (!user.profile?.id) {
+                      alert("Engineer profile not found");
+                      return;
+                    }
                     const amount = prompt("Enter amount to freeze (USD):");
                     if (!amount || isNaN(Number(amount))) return;
                     const reason = prompt("Enter reason for freezing balance:");
                     if (!reason) return;
                     import("../api/admin.api").then((api) => {
-                      api.manualFreeze(user.id, Number(amount), reason).then(() => {
+                      api.manualFreeze(user.profile.id, Number(amount), reason).then(() => {
                         alert("Balance frozen successfully");
                       }).catch((err) => {
                         alert(err.response?.data?.message ?? err.message ?? "Failed to freeze balance");

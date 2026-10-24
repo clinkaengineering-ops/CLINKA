@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import ApiError from "../../utils/ApiError";
 import {
@@ -8,6 +9,7 @@ import {
 import db from "../../config/db";
 import { getPublicClientUrl } from "../../config/clientUrl";
 import generateToken from "../../utils/generateToken";
+import { revokeAllUserSessions } from "../../utils/tokenRevocation";
 import { sendVerificationEmail } from "../../utils/sendVerificationEmail";
 import jwt from "jsonwebtoken";
 import transporter from "../../config/mailer";
@@ -35,7 +37,7 @@ async function deleteEngineerPortfolioFiles(engineerId: number) {
     include: { files: true },
   });
 
-  deleteUploadFiles(
+  await deleteUploadFiles(
     items.flatMap((item) => [
       item.coverImageUrl,
       ...item.files.map((file) => file.fileUrl),
@@ -426,8 +428,8 @@ export async function login(data: loginInput) {
   }
   // -------------------------------------------------
 
-  // generate 6 digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // generate 6 digit OTP using cryptographically secure PRNG
+  const otp = crypto.randomInt(100000, 1000000).toString();
 
   await cacheSet(`otp:${user.id}`, otp, 600);
   console.log(`OTP cached for user ${user.id} (10 min TTL)`);
@@ -453,12 +455,25 @@ export async function login(data: loginInput) {
 
 // Step 2 — verify OTP, set cookie
 export async function verifyOtp(userId: string, otp: string) {
+  const attemptsKey = `otp_attempts:${userId}`;
   const storedOtp = await cacheGet(`otp:${userId}`);
 
   if (!storedOtp) throw new ApiError(400, "OTP expired or not found");
-  if (storedOtp !== otp) throw new ApiError(400, "Invalid OTP");
+
+  if (storedOtp !== otp) {
+    const rawAttempts = await cacheGet(attemptsKey);
+    const attempts = (Number(rawAttempts) || 0) + 1;
+    if (attempts >= 5) {
+      await cacheDel(`otp:${userId}`);
+      await cacheDel(attemptsKey);
+      throw new ApiError(400, "Too many failed attempts. Please request a new OTP.");
+    }
+    await cacheSet(attemptsKey, String(attempts), 600);
+    throw new ApiError(400, "Invalid OTP");
+  }
 
   await cacheDel(`otp:${userId}`);
+  await cacheDel(attemptsKey);
 
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw new ApiError(404, "User not found");
@@ -547,6 +562,7 @@ export async function resetPassword(token: string, newPassword: string) {
     where: { id: payload.userId },
     data: { password: hashed },
   });
+  await revokeAllUserSessions(payload.userId);
 }
 
 export async function resendVerificationEmail(userId: string, email: string) {
@@ -567,7 +583,7 @@ export async function requestEmailChange(userId: string, newEmail: string) {
   const taken = await db.user.findUnique({ where: { email: newEmail } });
   if (taken) throw new ApiError(400, "Email already in use");
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
 
   await cacheSet(
     `email-change:${userId}`,
@@ -591,6 +607,7 @@ export async function requestEmailChange(userId: string, newEmail: string) {
 }
 
 export async function confirmEmailChange(userId: string, otp: string) {
+  const attemptsKey = `email_change_attempts:${userId}`;
   const raw = await cacheGet(`email-change:${userId}`);
   if (!raw) throw new ApiError(400, "OTP expired or not found");
 
@@ -598,9 +615,21 @@ export async function confirmEmailChange(userId: string, otp: string) {
     newEmail: string;
     otp: string;
   };
-  if (storedOtp !== otp) throw new ApiError(400, "Invalid OTP");
+
+  if (storedOtp !== otp) {
+    const rawAttempts = await cacheGet(attemptsKey);
+    const attempts = (Number(rawAttempts) || 0) + 1;
+    if (attempts >= 5) {
+      await cacheDel(`email-change:${userId}`);
+      await cacheDel(attemptsKey);
+      throw new ApiError(400, "Too many failed attempts. Please request a new verification code.");
+    }
+    await cacheSet(attemptsKey, String(attempts), 600);
+    throw new ApiError(400, "Invalid OTP");
+  }
 
   await cacheDel(`email-change:${userId}`);
+  await cacheDel(attemptsKey);
 
   const updated = await db.user.update({
     where: { id: userId },
@@ -626,4 +655,5 @@ export async function changePassword(
     where: { id: userId },
     data: { password: hashed },
   });
+  await revokeAllUserSessions(userId);
 }

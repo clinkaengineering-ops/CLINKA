@@ -14,6 +14,7 @@ import {
   updateProjectController,
   updateProjectProgressController,
   getMyOpenProjectsController,
+  downloadDeliverableController,
 } from "./project.controller";
 import {
   inviteEngineerController,
@@ -30,11 +31,12 @@ import {
   rejectIfBanned,
 } from "../../middlewares/auth.middleware";
 import deliverableUpload from "../../middlewares/deliverableUpload.middleware";
+import { idempotency } from "../../middlewares/idempotency";
 import { t2Limiters, t3Limiters, t4AccountRateLimit, t5PublicListingLimiter } from "../../middlewares/rateLimit";
 
 const router = Router();
 
-router.post("/", authenticate, ...t3Limiters, createProjectController);
+router.post("/", authenticate, authorize("CLIENT"), rejectIfBanned("CLIENT"), ...t3Limiters, createProjectController);
 router.get("/", optionalAuthenticate, t5PublicListingLimiter, getProjectsController);
 router.get("/my", authenticate, t4AccountRateLimit, getMyProjectsController);
 router.get("/my/open", authenticate, authorize("CLIENT"), t4AccountRateLimit, getMyOpenProjectsController);
@@ -52,10 +54,11 @@ router.get(
 );
 router.get("/:id", optionalAuthenticate, t5PublicListingLimiter, getProjectByIdController);
 router.get("/:id/submissions", authenticate, t4AccountRateLimit, getProjectSubmissionsController);
+router.get("/:id/deliverables/:deliverableId/download", authenticate, t4AccountRateLimit, downloadDeliverableController);
 router.get("/:id/invitations", authenticate, authorize("CLIENT"), t4AccountRateLimit, getProjectInvitationsController);
-router.post("/:id/invite", authenticate, authorize("CLIENT"), ...t3Limiters, inviteEngineerController);
-router.put("/:id", authenticate, ...t3Limiters, updateProjectController);
-router.delete("/:id", authenticate, ...t3Limiters, deleteProjectController);
+router.post("/:id/invite", authenticate, authorize("CLIENT"), rejectIfBanned("CLIENT"), ...t3Limiters, inviteEngineerController);
+router.put("/:id", authenticate, authorize("CLIENT"), rejectIfBanned("CLIENT"), ...t3Limiters, updateProjectController);
+router.delete("/:id", authenticate, authorize("CLIENT"), rejectIfBanned("CLIENT"), ...t3Limiters, deleteProjectController);
 
 router.patch(
   "/:id/progress",
@@ -80,6 +83,7 @@ router.post(
   "/:id/request-revision",
   authenticate,
   authorize("CLIENT"),
+  rejectIfBanned("CLIENT"),
   ...t3Limiters,
   requestProjectRevisionController,
 );
@@ -88,6 +92,8 @@ router.post(
   "/:id/approve",
   authenticate,
   authorize("CLIENT"),
+  rejectIfBanned("CLIENT"),
+  idempotency,
   ...t2Limiters,
   approveProjectWorkController,
 );

@@ -6,14 +6,33 @@ import { scanMessageContent } from "./content.scanner";
 import { assertUserNotBanned, banUserFor30Days } from "./ban.service";
 import { BanReason } from "../../generated/prisma/enums";
 
-function formatLastMessagePreview(message: {
+function formatDuration(seconds?: number | null): string | null {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) {
+    return null;
+  }
+  const totalSeconds = Math.round(seconds);
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
+export function formatLastMessagePreview(message: {
   content: string;
   attachmentUrl: string | null;
   attachmentName: string | null;
+  attachmentMime?: string | null;
+  attachmentDuration?: number | null;
 }) {
   const text = message.content.trim();
   if (text) return text;
   if (message.attachmentUrl) {
+    const mime = message.attachmentMime?.trim().toLowerCase();
+    if (mime?.startsWith("audio/")) {
+      const durationStr = formatDuration(
+        message.attachmentDuration ?? (message as any).duration,
+      );
+      return durationStr ? `🎤 Voice message (${durationStr})` : "🎤 Voice message";
+    }
     return message.attachmentName
       ? `📎 ${message.attachmentName}`
       : "📎 Attachment";
@@ -52,18 +71,30 @@ export async function getMyConversations(userId: string) {
       engineer: { select: { id: true, name: true, avatarUrl: true } },
       messages: {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: 50,
+        take: 1,
       },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  return conversations.map((conv) => {
+  const unreadCounts = await Promise.all(
+    conversations.map((conv) => {
+      const isClient = conv.clientId === userId;
+      const lastRead = isClient ? conv.clientLastReadAt : conv.engineerLastReadAt;
+      return db.message.count({
+        where: {
+          conversationId: conv.id,
+          senderId: { not: userId },
+          ...(lastRead ? { createdAt: { gt: lastRead } } : {}),
+        },
+      });
+    }),
+  );
+
+  return conversations.map((conv, idx) => {
     const isClient = conv.clientId === userId;
     const other = isClient ? conv.engineer : conv.client;
     const lastMessage = conv.messages[0] ?? null;
-
-    const unread = unreadCountForConv(conv, userId);
 
     return {
       id: conv.id,
@@ -75,7 +106,7 @@ export async function getMyConversations(userId: string) {
       participantAvatar: other.avatarUrl,
       lastMessage: lastMessage ? formatLastMessagePreview(lastMessage) : null,
       lastMessageAt: lastMessage?.createdAt ?? conv.createdAt,
-      unread,
+      unread: unreadCounts[idx] ?? 0,
     };
   });
 }
@@ -85,13 +116,33 @@ export async function getUnreadMessagesCount(userId: string) {
     where: {
       OR: [{ clientId: userId }, { engineerId: userId }],
     },
-    include: {
-      messages: { orderBy: { createdAt: "desc" }, take: 50 },
+    select: {
+      id: true,
+      clientId: true,
+      engineerId: true,
+      clientLastReadAt: true,
+      engineerLastReadAt: true,
     },
   });
 
-  return conversations.reduce(
-    (sum, conv) => sum + unreadCountForConv(conv, userId),
+  if (conversations.length === 0) return 0;
+
+  const counts = await Promise.all(
+    conversations.map((conv) => {
+      const isClient = conv.clientId === userId;
+      const lastRead = isClient ? conv.clientLastReadAt : conv.engineerLastReadAt;
+      return db.message.count({
+        where: {
+          conversationId: conv.id,
+          senderId: { not: userId },
+          ...(lastRead ? { createdAt: { gt: lastRead } } : {}),
+        },
+      });
+    }),
+  );
+
+  return counts.reduce(
+    (sum, count) => sum + count,
     0,
   );
 }
@@ -174,6 +225,15 @@ export async function sendMessage(
     throw new ApiError(400, "Message must include text or a file");
   }
 
+  const isAudio = Boolean(
+    data.attachmentMime &&
+      data.attachmentMime.trim().toLowerCase().startsWith("audio/"),
+  );
+
+  if (isAudio && !data.attachmentDuration) {
+    throw new ApiError(400, "Duration is required for audio attachments");
+  }
+
   const conv = await db.conversation.findUnique({
     where: { id: Number(conversationId) },
   });
@@ -202,6 +262,8 @@ export async function sendMessage(
     }
   }
 
+  const attachmentDuration = isAudio ? (data.attachmentDuration ?? null) : null;
+
   const message = await db.message.create({
     data: {
       conversationId,
@@ -211,6 +273,7 @@ export async function sendMessage(
         attachmentUrl: data.attachmentUrl,
         attachmentName: data.attachmentName,
         attachmentMime: data.attachmentMime,
+        attachmentDuration,
       }),
     },
     include: {

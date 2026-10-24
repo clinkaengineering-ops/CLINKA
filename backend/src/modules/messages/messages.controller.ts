@@ -11,7 +11,12 @@ import {
 import { sendMessageSchema } from "./messages.validation";
 import ApiResponse from "../../utils/ApiResponse";
 import ApiError from "../../utils/ApiError";
-import { getStoredUploadPath } from "../../config/upload";
+import {
+  getStoredUploadPath,
+  normalizeMimeType,
+  deleteUploadFile,
+} from "../../config/upload";
+import { CHAT_MAX_VOICE_FILE_SIZE } from "../../middlewares/chatUpload.middleware";
 import { broadcastNewMessage } from "../../socket";
 
 export async function getMyConversationsController(
@@ -57,13 +62,33 @@ export async function sendMessageController(
       throw new ApiError(400, "The selected file is empty (0 bytes). Please select a valid file.");
     }
 
+    const normalizedMime = file ? normalizeMimeType(file.mimetype) : "";
+    const isAudio = Boolean(
+      normalizedMime && normalizedMime.startsWith("audio/"),
+    );
+
+    if (file && isAudio && file.size > CHAT_MAX_VOICE_FILE_SIZE) {
+      if (file.path) {
+        void deleteUploadFile(file.path);
+      }
+      throw new ApiError(
+        400,
+        "Audio file is too large. Maximum allowed size for voice messages is 5 MB.",
+      );
+    }
+
+    if (isAudio && !validatedData.attachmentDuration) {
+      throw new ApiError(400, "Duration is required for audio attachments");
+    }
+
     const payload = {
       ...validatedData,
       ...(file && {
         attachmentUrl: getStoredUploadPath(file, "documents"),
         attachmentName: file.originalname,
-        attachmentMime: file.mimetype,
+        attachmentMime: normalizedMime,
       }),
+      attachmentDuration: isAudio ? validatedData.attachmentDuration : null,
     };
 
     if (!payload.content?.trim() && !payload.attachmentUrl) {

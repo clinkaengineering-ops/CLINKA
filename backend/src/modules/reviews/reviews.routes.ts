@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   authenticate,
   authorize,
+  rejectIfBanned,
 } from "../../middlewares/auth.middleware";
 import {
   canReviewProjectController,
@@ -43,6 +44,7 @@ router.post(
   "/projects/:projectId",
   authenticate,
   authorize("CLIENT"),
+  rejectIfBanned("CLIENT"),
   ...t3Limiters,
   createReviewController,
 );

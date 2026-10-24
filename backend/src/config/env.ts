@@ -9,12 +9,16 @@ const REQUIRED_IN_PRODUCTION = [
   "RESEND_API_KEY",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
+  "UPLOAD_BASE_URL",
+  "UPLOAD_DIR",
+] as const;
+
+// Paymob credentials required only when Paymob incoming gateway is explicitly active
+const PAYMOB_REQUIRED_IN_PRODUCTION = [
   "PAYMOB_SECRET_KEY",
   "PAYMOB_PUBLIC_KEY",
   "PAYMOB_HMAC_SECRET",
   "PAYMOB_INTEGRATION_IDS",
-  "UPLOAD_BASE_URL",
-  "UPLOAD_DIR",
 ] as const;
 
 export function applyProductionUploadDefaults(): void {
@@ -39,5 +43,14 @@ export function validateProductionEnv(): void {
     throw new Error(
       `Missing required production environment variables: ${missing.join(", ")}`,
     );
+  }
+
+  if (process.env.PAYMOB_ENABLED === "true") {
+    const missingPaymob = PAYMOB_REQUIRED_IN_PRODUCTION.filter((key) => !process.env[key]?.trim());
+    if (missingPaymob.length > 0) {
+      throw new Error(
+        `Missing required Paymob environment variables: ${missingPaymob.join(", ")}`,
+      );
+    }
   }
 }

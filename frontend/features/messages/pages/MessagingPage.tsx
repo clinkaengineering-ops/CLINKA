@@ -9,6 +9,7 @@ import {
   IconPaperclip,
   IconSend,
   IconMore,
+  IconMic,
 } from "@/components/Icons";
 import { cn } from "@/utils/cn";
 import { useI18n } from "@/i18n";
@@ -31,6 +32,7 @@ import {
 import { DateSeparator } from "../components/DateSeparator";
 import { MessageBubble } from "../components/MessageBubble";
 import { MessageAttachment } from "../components/MessageAttachment";
+import { VoiceMessageRecorder } from "../components/VoiceMessageRecorder";
 import { ProjectContextPanel } from "../components/ProjectContextPanel";
 import { MessagesPolicyModal } from "../components/MessagesPolicyModal";
 import {
@@ -100,6 +102,16 @@ const ACCEPTED_FILE_EXTENSIONS = new Set([
   ".png",
   ".gif",
   ".webp",
+  // Audio / Voice messages
+  ".webm",
+  ".weba",
+  ".m4a",
+  ".mp4",
+  ".ogg",
+  ".opus",
+  ".mp3",
+  ".wav",
+  ".aac",
   // Documents & Office / Spreadsheets
   ".pdf",
   ".xlsx",
@@ -208,15 +220,58 @@ const ACCEPTED_FILE_TYPES = [
   ".doc",
   ".csv",
   ".txt",
+  // Audio / Voice messages
+  "audio/*",
+  ".webm",
+  ".weba",
+  ".m4a",
+  ".ogg",
+  ".opus",
+  ".mp3",
+  ".wav",
+  ".aac",
 ].join(",");
 
 function messagePreview(msg: ChatMessage): string {
   const text = msg.content.trim();
   if (text) return text;
   if (msg.attachmentUrl) {
+    const isVoice =
+      msg.attachmentMime?.toLowerCase().startsWith("audio/") ||
+      /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(msg.attachmentName ?? "") ||
+      (msg.attachmentName?.startsWith("voice-message") ?? false);
+
+    if (isVoice) {
+      return "🎤 Voice message";
+    }
     return msg.attachmentName ? `📎 ${msg.attachmentName}` : "📎 Attachment";
   }
   return "";
+}
+
+function getAudioFileDuration(file: File): Promise<number | undefined> {
+  return new Promise((resolve) => {
+    try {
+      if (typeof window === "undefined" || typeof Audio === "undefined") {
+        return resolve(undefined);
+      }
+      const audio = new Audio();
+      audio.preload = "metadata";
+      const url = URL.createObjectURL(file);
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        const dur = Math.round(audio.duration);
+        resolve(dur > 0 && Number.isFinite(dur) ? Math.min(300, Math.max(1, dur)) : undefined);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(undefined);
+      };
+      audio.src = url;
+    } catch {
+      resolve(undefined);
+    }
+  });
 }
 
 function dayLabel(iso: string, todayLabel: string): string {
@@ -266,6 +321,7 @@ export function MessagingPage() {
   const [banAlert, setBanAlert] = useState<string | null>(null);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -339,15 +395,19 @@ export function MessagingPage() {
       setMessages((prev) => mergeMessages(prev, [msg]));
     }
     setConversations((prev) =>
-      prev.map((c) =>
-        c.id === msg.conversationId
-          ? {
-              ...c,
-              lastMessage: messagePreview(msg) || c.lastMessage,
-              lastMessageAt: msg.createdAt,
-            }
-          : c,
-      ),
+      prev.map((c) => {
+        if (c.id !== msg.conversationId) return c;
+        const incomingTime = msg.createdAt ? new Date(msg.createdAt).getTime() : 0;
+        const currentTime = c.lastMessageAt ? new Date(c.lastMessageAt).getTime() : 0;
+        if (currentTime && incomingTime < currentTime) {
+          return c;
+        }
+        return {
+          ...c,
+          lastMessage: messagePreview(msg) || c.lastMessage,
+          lastMessageAt: msg.createdAt,
+        };
+      }),
     );
   }, []);
 
@@ -550,6 +610,7 @@ export function MessagingPage() {
     setActiveId(group.conversations[0].id);
     setDraft("");
     setSendError(null);
+    setIsRecordingVoice(false);
     setMobileView("chat");
   };
 
@@ -557,6 +618,7 @@ export function MessagingPage() {
     setActiveId(conversationId);
     setDraft("");
     setSendError(null);
+    setIsRecordingVoice(false);
   };
 
   const handleDraftChange = (value: string) => {
@@ -600,11 +662,12 @@ export function MessagingPage() {
 
     // Scenario 4: Unsupported format
     const isImage = file.type.startsWith("image/");
+    const isAudio = file.type.startsWith("audio/");
     const isAllowedExt = ext ? ACCEPTED_FILE_EXTENSIONS.has(ext) : false;
 
-    if (!isAllowedExt && !isImage) {
+    if (!isAllowedExt && !isImage && !isAudio) {
       setSendError(
-        `Unsupported file format (${ext || "unknown"}). Allowed formats: Images, PDF, Office documents, Archives (.zip, .rar, .7z, etc.), and Engineering/CAD/BIM files (.dwg, .rvt, .ifc, etc.).`,
+        `Unsupported file format (${ext || "unknown"}). Allowed formats: Images, Audio, PDF, Office documents, Archives (.zip, .rar, .7z, etc.), and Engineering/CAD/BIM files (.dwg, .rvt, .ifc, etc.).`,
       );
       return;
     }
@@ -642,10 +705,20 @@ export function MessagingPage() {
 
     try {
       if (fileToSend) {
+        let duration: number | undefined;
+        const isAudioFile =
+          fileToSend.type.startsWith("audio/") ||
+          /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(fileToSend.name);
+        if (isAudioFile) {
+          const detectedDur = await getAudioFileDuration(fileToSend);
+          duration = detectedDur ?? 1;
+        }
+
         const msg = await sendMessageWithAttachment(
           activeId,
           fileToSend,
           content || undefined,
+          duration,
         );
         handleNewSocketMessage(msg);
       } else {
@@ -666,6 +739,28 @@ export function MessagingPage() {
       }
       setDraft(content);
       if (fileToSend) setPendingFile(fileToSend);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSendVoiceMessage = async (file: File, duration?: number) => {
+    if (activeId == null || !user) return;
+    setSending(true);
+    setSendError(null);
+    emitTypingStop();
+
+    try {
+      const msg = await sendMessageWithAttachment(activeId, file, undefined, duration);
+      handleNewSocketMessage(msg);
+      setIsRecordingVoice(false);
+    } catch (e: unknown) {
+      const { message } = parseApiValidation(e);
+      if (message.toLowerCase().includes("suspended")) {
+        setBanAlert(message);
+      } else {
+        setSendError(message);
+      }
     } finally {
       setSending(false);
     }
@@ -894,39 +989,66 @@ export function MessagingPage() {
                     className="hidden"
                     onChange={handleFileSelect}
                   />
-                  <div className="flex items-end gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 focus-within:ring-2 focus-within:ring-electric-500/30">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                  {isRecordingVoice ? (
+                    <VoiceMessageRecorder
+                      onSend={handleSendVoiceMessage}
+                      onCancel={() => setIsRecordingVoice(false)}
+                      onError={(err) => setSendError(err)}
                       disabled={sending}
-                      title="Attach file (Images, PDF, CAD, BIM, Archives, max 50 MB)"
-                      className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 disabled:opacity-50"
-                    >
-                      <IconPaperclip width={16} height={16} />
-                    </button>
-                    <textarea
-                      rows={1}
-                      dir="auto"
-                      placeholder={t("msg.write")}
-                      value={draft}
-                      onChange={(e) => handleDraftChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
-                      }}
-                      className="flex-1 bg-transparent text-sm focus:outline-none resize-none py-2 max-h-32"
                     />
-                    <button
-                      type="button"
-                      onClick={handleSend}
-                      disabled={sending || (!draft.trim() && !pendingFile)}
-                      className="h-9 w-9 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-50 text-white flex items-center justify-center shadow-md shadow-electric-500/30"
-                    >
-                      <IconSend width={16} height={16} />
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="flex items-end gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 focus-within:ring-2 focus-within:ring-electric-500/30">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={sending}
+                        title="Attach file (Images, Audio, PDF, CAD, BIM, Archives, max 50 MB)"
+                        className="h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 disabled:opacity-50"
+                      >
+                        <IconPaperclip width={16} height={16} />
+                      </button>
+                      <textarea
+                        rows={1}
+                        dir="auto"
+                        placeholder={t("msg.write")}
+                        value={draft}
+                        onChange={(e) => handleDraftChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
+                        className="flex-1 bg-transparent text-sm focus:outline-none resize-none py-2 max-h-32"
+                      />
+                      {!draft.trim() && !pendingFile ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSendError(null);
+                            setIsRecordingVoice(true);
+                          }}
+                          disabled={sending}
+                          title="Record voice message"
+                          aria-label="Record voice message"
+                          className="h-9 w-9 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-50 text-white flex items-center justify-center shadow-md shadow-electric-500/30 transition-transform active:scale-95"
+                        >
+                          <IconMic width={18} height={18} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSend}
+                          disabled={sending || (!draft.trim() && !pendingFile)}
+                          title="Send message"
+                          aria-label="Send message"
+                          className="h-9 w-9 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-50 text-white flex items-center justify-center shadow-md shadow-electric-500/30 transition-transform active:scale-95"
+                        >
+                          <IconSend width={16} height={16} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

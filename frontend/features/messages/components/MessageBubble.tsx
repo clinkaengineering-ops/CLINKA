@@ -6,9 +6,16 @@ interface MessageBubbleProps {
   name?: string;
   time: string;
   children: React.ReactNode;
+  dir?: "auto" | "ltr" | "rtl";
 }
 
-export function MessageBubble({ side, name, time, children }: MessageBubbleProps) {
+export function MessageBubble({
+  side,
+  name,
+  time,
+  children,
+  dir = "auto",
+}: MessageBubbleProps) {
   return (
     <div
       className={cn(
@@ -19,6 +26,7 @@ export function MessageBubble({ side, name, time, children }: MessageBubbleProps
       {side === "them" && <Avatar name={name ?? "U"} size={28} />}
       <div>
         <div
+          dir={dir}
           className={cn(
             "rounded-2xl px-4 py-2.5 text-sm shadow-sm",
             side === "me"

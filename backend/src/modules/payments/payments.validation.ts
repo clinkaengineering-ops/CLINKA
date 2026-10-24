@@ -249,6 +249,7 @@ export const submitManualPaymentSchema = z.object({
   receivingWalletProvider: z.string().optional(),
   receivingWalletNumber: z.string().optional(),
   receivingInstapayAccount: z.string().optional(),
+  destinationAccountId: z.string().optional(),
 });
 
 export type SubmitManualPaymentInput = z.infer<typeof submitManualPaymentSchema>;

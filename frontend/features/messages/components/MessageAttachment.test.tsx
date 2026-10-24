@@ -135,4 +135,188 @@ describe("MessageAttachment", () => {
     globalThis.fetch = originalFetch;
     clickSpy.mockRestore();
   });
+
+  describe("voice message audio player", () => {
+    beforeEach(() => {
+      // Mock HTMLMediaElement methods in jsdom
+      window.HTMLMediaElement.prototype.play = vi.fn().mockImplementation(function (this: HTMLMediaElement) {
+        this.dispatchEvent(new Event("play"));
+        return Promise.resolve();
+      });
+      window.HTMLMediaElement.prototype.pause = vi.fn().mockImplementation(function (this: HTMLMediaElement) {
+        this.dispatchEvent(new Event("pause"));
+      });
+    });
+
+    it("renders voice player with preload='metadata' when attachmentMime starts with audio/", () => {
+      const msg: ChatMessage = {
+        ...baseMessage,
+        attachmentUrl: "/uploads/documents/voice.webm",
+        attachmentName: "voice.webm",
+        attachmentMime: "audio/webm",
+        attachmentDuration: 42,
+      };
+
+      const { container } = render(<MessageAttachment message={msg} side="me" />);
+      const player = screen.getByTestId("voice-message-player");
+      expect(player).toBeInTheDocument();
+
+      const audio = container.querySelector("audio");
+      expect(audio).toBeInTheDocument();
+      expect(audio).toHaveAttribute("preload", "metadata");
+      expect(audio).toHaveAttribute("src", expect.stringContaining("voice.webm"));
+    });
+
+    it("uses stored attachmentDuration for the total time and progress bar max", () => {
+      const msg: ChatMessage = {
+        ...baseMessage,
+        attachmentUrl: "/uploads/documents/voice.ogg",
+        attachmentName: "voice.ogg",
+        attachmentMime: "audio/ogg",
+        attachmentDuration: 75, // 1 min 15 sec
+      };
+
+      render(<MessageAttachment message={msg} side="them" />);
+      expect(screen.getByText("1:15")).toBeInTheDocument();
+      expect(screen.getByText("0:00")).toBeInTheDocument();
+
+      const slider = screen.getByRole("slider", { name: "Seek voice message" }) as HTMLInputElement;
+      expect(slider.max).toBe("75");
+      expect(slider.min).toBe("0");
+    });
+
+    it("allows seeking via range input and updates currentTime", () => {
+      const msg: ChatMessage = {
+        ...baseMessage,
+        attachmentUrl: "/uploads/documents/voice.mp3",
+        attachmentName: "voice.mp3",
+        attachmentMime: "audio/mpeg",
+        attachmentDuration: 60,
+      };
+
+      const { container } = render(<MessageAttachment message={msg} side="me" />);
+      const slider = screen.getByRole("slider", { name: "Seek voice message" }) as HTMLInputElement;
+      const audio = container.querySelector("audio") as HTMLAudioElement;
+
+      fireEvent.change(slider, { target: { value: "25" } });
+      expect(slider.value).toBe("25");
+      expect(audio.currentTime).toBe(25);
+      expect(screen.getByText("0:25")).toBeInTheDocument();
+    });
+
+    it("toggles play/pause when the action button is clicked", async () => {
+      const msg: ChatMessage = {
+        ...baseMessage,
+        attachmentUrl: "/uploads/documents/voice.webm",
+        attachmentName: "voice.webm",
+        attachmentMime: "audio/webm",
+        attachmentDuration: 30,
+      };
+
+      const { container } = render(<MessageAttachment message={msg} side="them" />);
+      const button = screen.getByRole("button", { name: "Play voice message" });
+      const audio = container.querySelector("audio") as HTMLAudioElement;
+
+      // Click play
+      await act(async () => {
+        fireEvent.click(button);
+      });
+      expect(audio.play).toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Pause voice message" })).toBeInTheDocument();
+
+      // Click pause
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Pause voice message" }));
+      });
+      expect(audio.pause).toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Play voice message" })).toBeInTheDocument();
+    });
+
+    it("ensures only one voice note plays at a time: starting one pauses any other", async () => {
+      const msg1: ChatMessage = {
+        ...baseMessage,
+        id: 101,
+        attachmentUrl: "/uploads/documents/voice1.webm",
+        attachmentName: "voice1.webm",
+        attachmentMime: "audio/webm",
+        attachmentDuration: 20,
+      };
+
+      const msg2: ChatMessage = {
+        ...baseMessage,
+        id: 102,
+        attachmentUrl: "/uploads/documents/voice2.webm",
+        attachmentName: "voice2.webm",
+        attachmentMime: "audio/webm",
+        attachmentDuration: 40,
+      };
+
+      const { container: container1 } = render(<MessageAttachment message={msg1} side="me" />);
+      const { container: container2 } = render(<MessageAttachment message={msg2} side="them" />);
+
+      const playButtons = screen.getAllByRole("button", { name: "Play voice message" });
+      const audio1 = container1.querySelector("audio") as HTMLAudioElement;
+      const audio2 = container2.querySelector("audio") as HTMLAudioElement;
+
+      // Start playing voice note 1
+      await act(async () => {
+        fireEvent.click(playButtons[0]);
+      });
+      expect(audio1.play).toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Pause voice message" })).toBeInTheDocument();
+
+      // Start playing voice note 2
+      await act(async () => {
+        fireEvent.click(playButtons[1]);
+      });
+      expect(audio2.play).toHaveBeenCalled();
+
+      // Note 1 must be paused when Note 2 starts
+      expect(audio1.pause).toHaveBeenCalled();
+    });
+
+    it("cleans up audio on unmount by pausing playback", () => {
+      const msg: ChatMessage = {
+        ...baseMessage,
+        attachmentUrl: "/uploads/documents/voice.webm",
+        attachmentName: "voice.webm",
+        attachmentMime: "audio/webm",
+        attachmentDuration: 15,
+      };
+
+      const { container, unmount } = render(<MessageAttachment message={msg} side="me" />);
+      const audio = container.querySelector("audio") as HTMLAudioElement;
+
+      unmount();
+      expect(audio.pause).toHaveBeenCalled();
+    });
+
+    it("supports light/dark themes and RTL layout classes", () => {
+      const msg: ChatMessage = {
+        ...baseMessage,
+        attachmentUrl: "/uploads/documents/voice.webm",
+        attachmentName: "voice.webm",
+        attachmentMime: "audio/webm",
+        attachmentDuration: 15,
+      };
+
+      // Test "them" side
+      const { container: containerThem } = render(
+        <MessageAttachment message={msg} side="them" />,
+      );
+      const themBtn = containerThem.querySelector("button");
+      expect(themBtn?.className).toContain("bg-electric-500");
+      expect(themBtn?.className).toContain("dark:bg-electric-600");
+      const themSlider = containerThem.querySelector('input[type="range"]');
+      expect(themSlider?.className).toContain("dark:bg-slate-700");
+
+      // Test "me" side
+      const { container: containerMe } = render(
+        <MessageAttachment message={msg} side="me" />,
+      );
+      const meBtn = containerMe.querySelector("button");
+      expect(meBtn?.className).toContain("bg-white");
+      expect(meBtn?.className).toContain("text-electric-600");
+    });
+  });
 });

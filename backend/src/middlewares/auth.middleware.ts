@@ -6,8 +6,10 @@ import {
   isUserBanned,
 } from "../modules/messages/ban.service";
 
+import { isTokenRevoked, isUserSessionRevoked } from "../utils/tokenRevocation";
+
 export interface AuthRequest extends Request {
-  user?: { userId: string; role: string };
+  user?: { userId: string; role: string; iat?: number };
 }
 
 function extractToken(req: Request): string | undefined {
@@ -19,16 +21,33 @@ function extractToken(req: Request): string | undefined {
   return undefined;
 }
 
-export function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const token = extractToken(req);
     if (!token) throw new ApiError(401, "Not authenticated");
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string; role: string };
+    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
+      userId: string;
+      role: string;
+      iat?: number;
+    };
+
+    if (await isTokenRevoked(token)) {
+      throw new ApiError(401, "Token has been revoked");
+    }
+
+    if (payload.userId && payload.iat && await isUserSessionRevoked(payload.userId, payload.iat)) {
+      throw new ApiError(401, "Session expired due to password change");
+    }
+
     req.user = payload;
 
     next();
   } catch (error) {
+    if (error instanceof ApiError) {
+      next(error);
+      return;
+    }
     next(new ApiError(401, "Invalid or expired token"));
   }
 }
@@ -43,7 +62,7 @@ export function authorize(...roles: string[]) {
 }
 
 /** Sets req.user when a valid token is present; does not fail when absent. */
-export function optionalAuthenticate(
+export async function optionalAuthenticate(
   req: AuthRequest,
   res: Response,
   next: NextFunction,
@@ -57,7 +76,19 @@ export function optionalAuthenticate(
     const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
       userId: string;
       role: string;
+      iat?: number;
     };
+
+    if (await isTokenRevoked(token)) {
+      next();
+      return;
+    }
+
+    if (payload.userId && payload.iat && await isUserSessionRevoked(payload.userId, payload.iat)) {
+      next();
+      return;
+    }
+
     req.user = payload;
     next();
   } catch {

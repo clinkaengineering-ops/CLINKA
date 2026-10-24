@@ -25,8 +25,13 @@ import {
   updateProjectProgress,
 } from "./project.workflow.service";
 import ApiResponse from "../../utils/ApiResponse";
+import ApiError from "../../utils/ApiError";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import { assertUserNotBanned } from "../messages/ban.service";
+import db from "../../config/db";
+import fs from "fs";
+import axios from "axios";
+import { storedPathToAbsolute } from "../../config/upload";
 
 export async function markProjectFinishedController(
   req: AuthRequest,
@@ -152,6 +157,78 @@ export async function getProjectSubmissionsController(
   }
 }
 
+export async function downloadDeliverableController(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const projectId = req.params.id as string;
+    const deliverableId = Number(req.params.deliverableId);
+    const userId = req.user!.userId;
+
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      include: {
+        bids: {
+          where: { status: "ACCEPTED" },
+          take: 1,
+          include: { engineer: { include: { user: { select: { id: true } } } } },
+        },
+      },
+    });
+    if (!project) throw new ApiError(404, "Project not found");
+
+    const isClient = project.clientId === userId;
+    const isEngineer = project.bids[0]?.engineer.user.id === userId;
+    const isAdmin = req.user!.role === "ADMIN";
+
+    if (!isClient && !isEngineer && !isAdmin) {
+      throw new ApiError(403, "You do not have access to this deliverable");
+    }
+
+    const deliverable = await db.projectDeliverable.findFirst({
+      where: { id: deliverableId, submission: { projectId } },
+    });
+    if (!deliverable) {
+      throw new ApiError(404, "Deliverable not found");
+    }
+
+    if (/^https?:\/\//i.test(deliverable.url)) {
+      if (deliverable.url.includes("cloudinary.com") || deliverable.type === "FILE") {
+        try {
+          const remoteStream = await axios.get(deliverable.url, {
+            responseType: "stream",
+            timeout: 20000,
+          });
+          res.setHeader("Cache-Control", "private, no-store");
+          res.setHeader("X-Content-Type-Options", "nosniff");
+          if (remoteStream.headers["content-type"]) {
+            res.setHeader("Content-Type", String(remoteStream.headers["content-type"]));
+          }
+          const filename = deliverable.name || "deliverable";
+          res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+          return remoteStream.data.pipe(res);
+        } catch {
+          return res.redirect(deliverable.url);
+        }
+      }
+      return res.redirect(deliverable.url);
+    }
+
+    const absolute = storedPathToAbsolute(deliverable.url);
+    if (!absolute || !fs.existsSync(absolute)) {
+      throw new ApiError(404, "Deliverable file not found on disk");
+    }
+
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.download(absolute, deliverable.name || "deliverable");
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function createProjectController(
   req: AuthRequest,
   res: Response,
@@ -203,7 +280,11 @@ export async function getProjectByIdController(
       await assertUserNotBanned(req.user.userId, "view project details");
     }
 
-    const project = await getProjectById((req.params.id as string));
+    const project = await getProjectById(
+      (req.params.id as string),
+      req.user?.userId,
+      req.user?.role,
+    );
     res
       .status(200)
       .json(ApiResponse(200, "Project fetched successfully", project));

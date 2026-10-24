@@ -32,7 +32,7 @@ import {
 
 const router = Router();
 
-router.get("/register/status", checkRegistrationEmailController);
+router.get("/register/status", ...t1RegisterLimiters, checkRegistrationEmailController);
 router.post("/register/client", ...t1RegisterLimiters, registerClientController);
 router.post(
   "/register/engineer",

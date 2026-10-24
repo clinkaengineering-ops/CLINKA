@@ -1,6 +1,8 @@
 import { createUploadMiddleware } from "../config/upload";
 
 export const CHAT_MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+export const CHAT_MAX_VOICE_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+export const CHAT_MAX_AUDIO_FILE_SIZE = CHAT_MAX_VOICE_FILE_SIZE;
 
 export const CHAT_ALLOWED_EXTENSIONS = new Set<string>([
   // Images
@@ -9,6 +11,16 @@ export const CHAT_ALLOWED_EXTENSIONS = new Set<string>([
   ".png",
   ".gif",
   ".webp",
+  // Audio / Voice messages
+  ".webm",
+  ".weba",
+  ".m4a",
+  ".mp4",
+  ".ogg",
+  ".opus",
+  ".mp3",
+  ".wav",
+  ".aac",
   // Documents & Office / Spreadsheets
   ".pdf",
   ".xlsx",
@@ -70,6 +82,15 @@ export const CHAT_MIME_TYPES = new Set<string>([
   "image/png",
   "image/gif",
   "image/webp",
+  // Audio / Voice messages
+  "audio/webm",
+  "audio/mp4",
+  "audio/ogg",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/aac",
+  "audio/x-m4a",
   // PDF, Office, and text docs
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

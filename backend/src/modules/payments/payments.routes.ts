@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   authenticate,
   authorize,
+  rejectIfBanned,
 } from "../../middlewares/auth.middleware";
 import { idempotency } from "../../middlewares/idempotency";
 import { payoutRateLimit } from "../../middlewares/payoutRateLimit";
@@ -66,6 +67,7 @@ router.post(
   "/engineer/withdrawals",
   authenticate,
   authorize("ENGINEER"),
+  rejectIfBanned("ENGINEER"),
   payoutRateLimit,
   ...t2Limiters,
   idempotency,

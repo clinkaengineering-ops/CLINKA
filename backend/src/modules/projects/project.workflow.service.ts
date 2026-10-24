@@ -355,22 +355,37 @@ export async function approveProjectWork(clientId: string, projectId: string) {
   const isMatured = new Date() >= holdReleaseDate;
 
   const updated = await db.$transaction(async (tx) => {
-    const released = await tx.payment.update({
-      where: { id: project.payment!.id },
-      data: { status: "RELEASED" },
-    });
-    await tx.project.update({
-      where: { id: projectId },
-      data: { status: "COMPLETED" },
-    });
+    // 1. Lock payment row to serialize concurrent release operations
+    if (typeof tx.$executeRaw === "function") {
+      await tx.$executeRaw`SELECT id FROM "Payment" WHERE id = ${project.payment!.id} FOR UPDATE`;
+    }
 
     const wallet = await ensureWallet(tx, engineerProfile.userId);
 
     if (activeDispute) {
-      // Funds were moved into heldByDispute when the dispute was opened.
-      // Decrement heldByDispute and credit pendingBalance (or availableBalance if hold already elapsed).
-      await tx.wallet.update({
-        where: { id: wallet.id },
+      // Database-atomic claim: claim the active dispute
+      const disputeClaim = await tx.dispute.updateMany({
+        where: {
+          id: activeDispute.id,
+          status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] },
+        },
+        data: {
+          status: "RESOLVED_ENGINEER",
+          resolvedAt: new Date(),
+          resolutionNote: "Client explicitly approved the work.",
+        },
+      });
+
+      if (disputeClaim.count === 0) {
+        throw new ApiError(409, "Conflict: dispute was already resolved concurrently");
+      }
+
+      // Decrement heldByDispute only if sufficient held funds exist (prevents negative balance)
+      const walletUpdate = await tx.wallet.updateMany({
+        where: {
+          id: wallet.id,
+          heldByDispute: { gte: netAmount },
+        },
         data: {
           heldByDispute: { decrement: netAmount },
           ...(isMatured
@@ -379,14 +394,9 @@ export async function approveProjectWork(clientId: string, projectId: string) {
         },
       });
 
-      await tx.dispute.update({
-        where: { id: activeDispute.id },
-        data: { 
-          status: "RESOLVED_ENGINEER", 
-          resolvedAt: new Date(), 
-          resolutionNote: "Client explicitly approved the work."
-        }
-      });
+      if (walletUpdate.count === 0) {
+        throw new ApiError(409, "Conflict: insufficient heldByDispute balance to release");
+      }
 
       const existingTx = await tx.walletTransaction.findFirst({
         where: { relatedPaymentId: project.payment!.id },
@@ -414,38 +424,70 @@ export async function approveProjectWork(clientId: string, projectId: string) {
         });
       }
     } else {
-      await recordPaymentLedger(tx, project.payment!.id, [
-        {
-          type: "RELEASED",
-          amount: netAmount,
-          note: "Client approved work — engineer earnings released",
-        },
-        {
-          type: "PLATFORM_COMMISSION",
-          amount: project.payment!.commission,
-          note: "Platform commission retained",
-        },
-      ]);
+      // Database-atomic claim: transition payment from FUNDED to RELEASED
+      const paymentClaim = await tx.payment.updateMany({
+        where: { id: project.payment!.id, status: "FUNDED" },
+        data: { status: "RELEASED" },
+      });
+
+      if (paymentClaim.count === 0) {
+        throw new ApiError(409, "Conflict: payment was already released or modified concurrently");
+      }
+
+      // Check for existing ledger entry to guarantee uniqueness
+      const existingLedger = await tx.paymentLedgerEntry.findFirst({
+        where: { paymentId: project.payment!.id, type: "RELEASED" },
+        select: { id: true },
+      });
+
+      if (!existingLedger) {
+        await recordPaymentLedger(tx, project.payment!.id, [
+          {
+            type: "RELEASED",
+            amount: netAmount,
+            note: "Client approved work — engineer earnings released",
+          },
+          {
+            type: "PLATFORM_COMMISSION",
+            amount: project.payment!.commission,
+            note: "Platform commission retained",
+          },
+        ]);
+      }
 
       await tx.wallet.update({
         where: { id: wallet.id },
-        data: { pendingBalance: { increment: netAmount } },
+        data: isMatured
+          ? { availableBalance: { increment: netAmount } }
+          : { pendingBalance: { increment: netAmount } },
       });
 
-      await tx.walletTransaction.create({
-        data: {
-          walletId: wallet.id,
-          amount: netAmount,
-          type: "RELEASED",
-          status: "PENDING",
-          description: `Payment for "${projectTitle}". Available 7 days after delivery.`,
-          availableAt: holdReleaseDate,
-          relatedPaymentId: project.payment!.id,
-        },
+      const existingTx = await tx.walletTransaction.findFirst({
+        where: { relatedPaymentId: project.payment!.id, type: "RELEASED" },
+        select: { id: true },
       });
+
+      if (!existingTx) {
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            amount: netAmount,
+            type: "RELEASED",
+            status: isMatured ? "AVAILABLE" : "PENDING",
+            description: `Payment for "${projectTitle}". Available 7 days after delivery.`,
+            availableAt: holdReleaseDate,
+            relatedPaymentId: project.payment!.id,
+          },
+        });
+      }
     }
 
-    return released;
+    await tx.project.update({
+      where: { id: projectId },
+      data: { status: "COMPLETED" },
+    });
+
+    return { ...project.payment!, status: "RELEASED" as const };
   });
 
   await createNotification(
@@ -460,14 +502,18 @@ export async function approveProjectWork(clientId: string, projectId: string) {
     engineerProfile.userId,
     "WORK_APPROVED",
     "Work approved",
-    `The client approved your work on "${projectTitle}". Earnings are now pending in your wallet.`,
+    `The client approved your work on "${projectTitle}". Earnings are now ${
+      isMatured ? "available" : "pending"
+    } in your wallet.`,
     `/balance`,
   );
   await createNotification(
     engineerProfile.userId,
     "FUNDS_RELEASED",
-    "Payment queued to wallet",
-    `Payment for "${projectTitle}" will become available after the 7-day holding period.`,
+    isMatured ? "Funds released" : "Payment queued to wallet",
+    isMatured
+      ? `Payment for "${projectTitle}" has been released to your available balance.`
+      : `Payment for "${projectTitle}" will become available after the 7-day holding period.`,
     `/balance`,
   );
 

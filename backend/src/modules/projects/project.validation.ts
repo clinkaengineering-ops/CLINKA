@@ -31,7 +31,14 @@ export const submitWorkSchema = z.object({
   links: z
     .array(
       z.object({
-        url: z.string().url().max(2000),
+        url: z
+          .string()
+          .url()
+          .max(2000)
+          .refine(
+            (val) => /^https?:\/\//i.test(val),
+            "Deliverable link must start with http:// or https://",
+          ),
         name: z.string().max(200).optional(),
       }),
     )

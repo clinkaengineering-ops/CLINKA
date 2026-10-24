@@ -1,5 +1,8 @@
 import db from "../config/db";
 import { logSystemEvent } from "../utils/auditLogger";
+import { netEngineerAmount, recordPaymentLedger } from "../utils/paymentLedger";
+import { ensureWallet, walletHoldReleaseDate } from "../utils/wallet";
+import { createNotification } from "../utils/notifications";
 
 /**
  * Auto-approve projects whose 6-day dispute window has closed with no client action.
@@ -14,16 +17,179 @@ export async function autoApproveProjects() {
       status: "SUBMITTED_FOR_REVIEW",
       disputeWindowClosesAt: { lt: now },
       deliveredAt: { not: null }
+    },
+    include: {
+      payment: true,
+      disputes: {
+        where: {
+          status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] }
+        }
+      }
     }
   });
 
   for (const project of projects) {
     try {
+      const payment = project.payment;
+      const activeDispute = project.disputes?.[0];
+      const projectTitle = project.title;
+
+      let engineerUserId: string | null = null;
+      if (payment) {
+        const engineerProfile = await db.engineerProfile.findUnique({
+          where: { id: payment.engineerId },
+          select: { userId: true }
+        });
+        if (engineerProfile) {
+          engineerUserId = engineerProfile.userId;
+        }
+      }
+
+      const holdReleaseDate = walletHoldReleaseDate(project.deliveredAt ?? now);
+      const isMatured = now >= holdReleaseDate;
+
       await db.$transaction(async (tx) => {
-        // Just update project status
+        if (payment && typeof tx.$executeRaw === "function") {
+          await tx.$executeRaw`SELECT id FROM "Payment" WHERE id = ${payment.id} FOR UPDATE`;
+        }
+
+        if (payment) {
+          const isFunded = payment.status === "FUNDED";
+          const isHeldByDispute = activeDispute && payment.status === "RELEASED";
+
+          if (isFunded || isHeldByDispute) {
+            const netAmount = netEngineerAmount(
+              payment.amountUsd,
+              payment.commission
+            );
+
+            if (activeDispute) {
+              const disputeClaim = await tx.dispute.updateMany({
+                where: {
+                  id: activeDispute.id,
+                  status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] },
+                },
+                data: {
+                  status: "RESOLVED_ENGINEER",
+                  resolvedAt: now,
+                  resolutionNote: "Auto-approved: dispute window closed with no client action.",
+                },
+              });
+
+              if (disputeClaim.count === 0) {
+                return;
+              }
+
+              if (engineerUserId) {
+                const wallet = await ensureWallet(tx, engineerUserId);
+
+                const walletUpdate = await tx.wallet.updateMany({
+                  where: {
+                    id: wallet.id,
+                    heldByDispute: { gte: netAmount },
+                  },
+                  data: {
+                    heldByDispute: { decrement: netAmount },
+                    ...(isMatured
+                      ? { availableBalance: { increment: netAmount } }
+                      : { pendingBalance: { increment: netAmount } }),
+                  },
+                });
+
+                if (walletUpdate.count === 0) return;
+
+                const existingTx = await tx.walletTransaction.findFirst({
+                  where: { relatedPaymentId: payment.id },
+                });
+                if (existingTx) {
+                  await tx.walletTransaction.update({
+                    where: { id: existingTx.id },
+                    data: {
+                      status: isMatured ? "AVAILABLE" : "PENDING",
+                      availableAt: holdReleaseDate,
+                      description: `Payment for "${projectTitle}". Available 7 days after delivery.`,
+                    },
+                  });
+                } else {
+                  await tx.walletTransaction.create({
+                    data: {
+                      walletId: wallet.id,
+                      amount: netAmount,
+                      type: "RELEASED",
+                      status: isMatured ? "AVAILABLE" : "PENDING",
+                      description: `Payment for "${projectTitle}". Available 7 days after delivery.`,
+                      availableAt: holdReleaseDate,
+                      relatedPaymentId: payment.id,
+                    },
+                  });
+                }
+              }
+            } else {
+              const paymentClaim = await tx.payment.updateMany({
+                where: { id: payment.id, status: "FUNDED" },
+                data: { status: "RELEASED" },
+              });
+
+              if (paymentClaim.count === 0) {
+                return;
+              }
+
+              if (engineerUserId) {
+                const wallet = await ensureWallet(tx, engineerUserId);
+
+                const existingLedger = await tx.paymentLedgerEntry.findFirst({
+                  where: { paymentId: payment.id, type: "RELEASED" },
+                  select: { id: true },
+                });
+
+                if (!existingLedger) {
+                  await recordPaymentLedger(tx, payment.id, [
+                    {
+                      type: "RELEASED",
+                      amount: netAmount,
+                      note: "Client approved work — engineer earnings released",
+                    },
+                    {
+                      type: "PLATFORM_COMMISSION",
+                      amount: payment.commission,
+                      note: "Platform commission retained",
+                    },
+                  ]);
+                }
+
+                await tx.wallet.update({
+                  where: { id: wallet.id },
+                  data: isMatured
+                    ? { availableBalance: { increment: netAmount } }
+                    : { pendingBalance: { increment: netAmount } },
+                });
+
+                const existingTx = await tx.walletTransaction.findFirst({
+                  where: { relatedPaymentId: payment.id, type: "RELEASED" },
+                  select: { id: true },
+                });
+
+                if (!existingTx) {
+                  await tx.walletTransaction.create({
+                    data: {
+                      walletId: wallet.id,
+                      amount: netAmount,
+                      type: "RELEASED",
+                      status: isMatured ? "AVAILABLE" : "PENDING",
+                      description: `Payment for "${projectTitle}". Available 7 days after delivery.`,
+                      availableAt: holdReleaseDate,
+                      relatedPaymentId: payment.id,
+                    },
+                  });
+                }
+              }
+            }
+          }
+        }
+
         await tx.project.update({
           where: { id: project.id },
-          data: { status: "COMPLETED" }
+          data: { status: "COMPLETED" },
         });
 
         // Log it
@@ -38,6 +204,41 @@ export async function autoApproveProjects() {
         
         console.log(`Auto-approved project ${project.id}`);
       });
+
+      // Send appropriate notifications to both the client and the engineer
+      try {
+        await createNotification(
+          project.clientId,
+          "PROJECT_COMPLETED",
+          "Project completed",
+          `Review window for "${projectTitle}" has closed. The project has been automatically approved and payment released.`,
+          `/projects?id=${project.id}`
+        );
+
+        if (engineerUserId) {
+          await createNotification(
+            engineerUserId,
+            "WORK_APPROVED",
+            "Work approved",
+            `The review window for "${projectTitle}" has closed and work was automatically approved. Earnings are now ${
+              isMatured ? "available" : "pending"
+            } in your wallet.`,
+            `/balance`
+          );
+
+          await createNotification(
+            engineerUserId,
+            "FUNDS_RELEASED",
+            isMatured ? "Funds released" : "Payment queued to wallet",
+            isMatured
+              ? `Payment for "${projectTitle}" has been released to your available balance.`
+              : `Payment for "${projectTitle}" will become available after the 7-day holding period.`,
+            `/balance`
+          );
+        }
+      } catch (notifErr) {
+        console.error(`Failed to send notifications for auto-approved project ${project.id}:`, notifErr);
+      }
     } catch (e) {
       console.error(`Error auto-approving project ${project.id}:`, e);
     }
@@ -81,6 +282,33 @@ export async function autoEscalateDisputes() {
           where: { id: dispute.id },
           data: { status: "ESCALATED_TO_ADMIN" }
         });
+
+        const clientUserId = dispute.project?.client?.id;
+        const engineerUserId = dispute.project?.payment?.engineer?.user?.id;
+        const projectTitle = dispute.project?.title ?? `Project #${dispute.projectId}`;
+
+        const notifData: Array<{ userId: string; type: string; title: string; body: string; link: string }> = [];
+        if (clientUserId) {
+          notifData.push({
+            userId: clientUserId,
+            type: "DISPUTE_ESCALATED",
+            title: "Dispute Escalated",
+            body: `The dispute for "${projectTitle}" has been escalated to Admin.`,
+            link: `/projects/${dispute.projectId}`,
+          });
+        }
+        if (engineerUserId) {
+          notifData.push({
+            userId: engineerUserId,
+            type: "DISPUTE_ESCALATED",
+            title: "Dispute Escalated",
+            body: `The dispute for "${projectTitle}" has been escalated to Admin.`,
+            link: `/projects/${dispute.projectId}`,
+          });
+        }
+        if (notifData.length > 0) {
+          await tx.notification.createMany({ data: notifData });
+        }
 
         await logSystemEvent({
           actorId: null,

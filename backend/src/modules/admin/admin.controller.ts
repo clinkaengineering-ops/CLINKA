@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { logSystemEvent } from "../../utils/auditLogger";
 import ApiResponse from "../../utils/ApiResponse";
 import { AuthRequest } from "../../middlewares/auth.middleware";
+import { authCookieOptions } from "../../config/cookies";
 import {
   banUserManually,
   getAdminStats,
@@ -215,9 +216,7 @@ export async function impersonateUserController(
     const { user, token } = await impersonateUser(targetUserId);
 
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      ...authCookieOptions(req.headers.origin),
       maxAge: 24 * 60 * 60 * 1000,
     });
 

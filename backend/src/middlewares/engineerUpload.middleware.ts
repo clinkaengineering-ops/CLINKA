@@ -14,10 +14,17 @@
  * routing each to the correct storage directory and mime filter.
  */
 
+import path from "path";
+import crypto from "crypto";
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary";
-import { UploadCategory } from "../config/upload";
+import {
+  UploadCategory,
+  BLOCKED_FILE_EXTENSIONS,
+  isAllowedUpload,
+  resolveStoredExtension,
+} from "../config/upload";
 
 // ── Per-field config ──────────────────────────────────────────────────────────
 
@@ -36,22 +43,24 @@ const FIELD_CONFIG: Record<
   },
 };
 
-// ── Storage: routes each field to its own directory ───────────────────────────
+// ── Storage: routes each field to its own directory with unique public_id ─────
 
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (_req, file) => {
-    const config = FIELD_CONFIG[file.fieldname];
+    const ext = resolveStoredExtension(file.mimetype, file.originalname);
+    const uid = crypto.randomBytes(8).toString("hex");
     const folder = "portfolio";
-    
+
     return {
       folder,
       resource_type: "auto",
+      public_id: `${uid}${ext}`,
     };
   },
 });
 
-// ── File filter: per-field mime validation ────────────────────────────────────
+// ── File filter: per-field mime and extension validation ──────────────────────
 
 function fileFilter(
   _req: Express.Request,
@@ -64,10 +73,21 @@ function fileFilter(
     cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
     return;
   }
-  if (!config.allowedMimes.has(file.mimetype)) {
+
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (BLOCKED_FILE_EXTENSIONS.has(ext)) {
+    cb(new Error("FILE_TYPE_BLOCKED_DANGEROUS"));
+    return;
+  }
+
+  if (
+    !config.allowedMimes.has(file.mimetype) ||
+    !isAllowedUpload(file.mimetype, file.originalname, config.allowedMimes)
+  ) {
     cb(new Error("FILE_FORMAT_NOT_ALLOWED"));
     return;
   }
+
   cb(null, true);
 }
 

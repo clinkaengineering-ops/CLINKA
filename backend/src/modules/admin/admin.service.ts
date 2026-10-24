@@ -271,14 +271,33 @@ export async function updateEngineerVerification(
   return stripPassword(refreshedUser ?? updated.user);
 }
 
+function formatDuration(seconds?: number | null): string | null {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) {
+    return null;
+  }
+  const totalSeconds = Math.round(seconds);
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
 function formatLastMessagePreview(message: {
   content: string;
   attachmentUrl: string | null;
   attachmentName: string | null;
+  attachmentMime?: string | null;
+  attachmentDuration?: number | null;
 }) {
   const text = message.content.trim();
   if (text) return text;
   if (message.attachmentUrl) {
+    const mime = message.attachmentMime?.trim().toLowerCase();
+    if (mime?.startsWith("audio/")) {
+      const durationStr = formatDuration(
+        message.attachmentDuration ?? (message as any).duration,
+      );
+      return durationStr ? `🎤 Voice message (${durationStr})` : "🎤 Voice message";
+    }
     return message.attachmentName
       ? `📎 ${message.attachmentName}`
       : "📎 Attachment";
@@ -385,7 +404,8 @@ export async function impersonateUser(targetUserId: string) {
     throw new ApiError(400, "Cannot impersonate an administrator");
   }
 
-  const token = generateToken(target.id, target.role);
+  // Admin impersonation session is bounded to 24 hours (matching cookie maxAge)
+  const token = generateToken(target.id, target.role, "24h");
   return { user: stripPassword(target), token };
 }
 
@@ -479,7 +499,10 @@ export async function getConversationMessages(
   ]);
 
   return {
-    messages,
+    messages: messages.map((m) => ({
+      ...m,
+      attachmentDuration: m.attachmentDuration ?? null,
+    })),
     total,
     page,
     limit,

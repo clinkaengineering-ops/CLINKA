@@ -815,6 +815,8 @@
   "msg.typing": "Online · typing…",
   "msg.today": "Today",
   "msg.write": "Write a message…",
+  "msg.voiceMessage": "Voice message",
+  "msg.recordVoice": "Record voice message",
   "msg.project": "Project",
   "msg.contract": "Contract CL-CN-00482",
   "msg.pinned": "Pinned",

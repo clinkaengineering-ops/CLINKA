@@ -421,18 +421,19 @@ function CheckoutForm({ projectId }: { projectId: string }) {
         setTitle(session.projectTitle);
         setAmount(session.amountUsd);
 
+        if (!session.checkoutUrl) {
+          // Manual payment flow!
+          clearCheckoutReturnStorage();
+          setStatus("form");
+          setManualModalOpen(true);
+          return;
+        }
+
         if (session.paymentId) {
           writeCheckoutReturnStorage({
             projectId,
             paymentId: session.paymentId,
           });
-        }
-
-        if (!session.checkoutUrl) {
-          // Manual payment flow!
-          setStatus("form");
-          setManualModalOpen(true);
-          return;
         }
 
         window.location.href = session.checkoutUrl;

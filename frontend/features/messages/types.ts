@@ -23,6 +23,7 @@ export interface ChatMessage {
   attachmentUrl?: string | null;
   attachmentName?: string | null;
   attachmentMime?: string | null;
+  attachmentDuration?: number | null;
   createdAt: string;
   sender: MessageSender;
 }

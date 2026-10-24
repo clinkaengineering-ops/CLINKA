@@ -424,6 +424,8 @@ model ManualPaymentSubmission {
   verifier   User?   @relation("ManualPaymentVerifiedBy", fields: [verifiedBy], references: [id], onDelete: SetNull)
 
   @@unique([paymentMethod, transactionReference])
+  @@index([paymentId])
+  @@index([paymentId, status])
 }
 
 model ExchangeRateCache {
@@ -448,6 +450,9 @@ model PaymentLedgerEntry {
   createdAt DateTime          @default(now())
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([paymentId, type])
 }
 
 model ProjectSubmission {
@@ -506,14 +511,15 @@ model Conversation {
 }
 
 model Message {
-  id             Int      @id @default(autoincrement())
-  conversationId Int
-  senderId String
-  content        String   @default("")
-  attachmentUrl  String?
-  attachmentName String?
-  attachmentMime String?
-  createdAt      DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  conversationId     Int
+  senderId           String
+  content            String   @default("")
+  attachmentUrl      String?
+  attachmentName     String?
+  attachmentMime     String?
+  attachmentDuration Int?
+  createdAt          DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
   sender       User         @relation(fields: [senderId], references: [id])

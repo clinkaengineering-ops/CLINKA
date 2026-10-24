@@ -178,7 +178,7 @@ export async function updateAvatar(userId: string, avatarUrl: string) {
   });
 
   if (existing?.avatarUrl && existing.avatarUrl !== avatarUrl) {
-    deleteUploadFile(existing.avatarUrl);
+    await deleteUploadFile(existing.avatarUrl);
   }
 
   return stripPassword(user);
@@ -194,7 +194,7 @@ export async function updateCoverImage(userId: string, coverImageUrl: string) {
   });
 
   if (profile.coverImageUrl && profile.coverImageUrl !== coverImageUrl) {
-    deleteUploadFile(profile.coverImageUrl);
+    await deleteUploadFile(profile.coverImageUrl);
   }
 
   return getMe(userId);
@@ -491,8 +491,24 @@ export async function deletePortfolioItem(userId: string, itemId: number) {
 
   await db.portfolioProject.delete({ where: { id: itemId } });
 
-  deleteUploadFiles([
+  // Security: only delete files belonging to portfolio/image folders,
+  // preventing arbitrary deletion of sensitive categories (documents, projects, etc.)
+  const candidatePaths = [
     item.coverImageUrl,
     ...item.files.map((file) => file.fileUrl),
-  ]);
+  ];
+
+  const safePaths = candidatePaths.filter((p): p is string => {
+    if (!p) return false;
+    const lower = p.toLowerCase();
+    // Block deleting documents, project deliverables, or other categories
+    if (lower.includes("/documents/") || lower.includes("/projects/")) {
+      return false;
+    }
+    return true;
+  });
+
+  if (safePaths.length > 0) {
+    await deleteUploadFiles(safePaths);
+  }
 }

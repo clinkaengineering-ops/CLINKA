@@ -19,13 +19,13 @@ export async function createBidController(
 }
 
 export async function getBidsForProjectController(
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) {
   try {
     const projectId = (req.params.projectId as string);
-    const bids = await getBidsForProject(projectId);
+    const bids = await getBidsForProject(projectId, req.user?.userId, req.user?.role);
     res.status(200).json(ApiResponse(200, "Bids fetched successfully", bids));
   } catch (error) {
     next(error);

@@ -41,7 +41,13 @@ import {
   AlertTriangle as IconAlert,
   CircleDot as IconCircleDot,
   Clock as IconClock,
-  Edit2 as IconEdit
+  Edit2 as IconEdit,
+  Mic as IconMic,
+  Square as IconSquare,
+  Play as IconPlay,
+  Pause as IconPause,
+  Trash2 as IconTrash,
+  Volume2 as IconVolume,
 } from "lucide-react";
 
 export {
@@ -86,7 +92,13 @@ export {
   IconAlert,
   IconCircleDot,
   IconClock,
-  IconEdit
+  IconEdit,
+  IconMic,
+  IconSquare,
+  IconPlay,
+  IconPause,
+  IconTrash,
+  IconVolume,
 };
 
 type P = SVGProps<SVGSVGElement>;

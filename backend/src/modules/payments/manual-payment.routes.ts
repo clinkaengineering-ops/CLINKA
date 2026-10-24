@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { authenticate, authorize } from "../../middlewares/auth.middleware";
+import { authenticate, authorize, rejectIfBanned } from "../../middlewares/auth.middleware";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import ApiResponse from "../../utils/ApiResponse";
 import ApiError from "../../utils/ApiError";
@@ -12,7 +12,10 @@ import {
   adminRejectManualPayment,
   getManualPaymentSettingsForClient,
 } from "./manual-payment.service";
-import { getStoredUploadPath, createUploadMiddleware } from "../../config/upload";
+import fs from "fs";
+import axios from "axios";
+import db from "../../config/db";
+import { getStoredUploadPath, createUploadMiddleware, storedPathToAbsolute } from "../../config/upload";
 import { submitManualPaymentSchema } from "./payments.validation";
 import { adminRateLimit } from "../../middlewares/adminRateLimit";
 import { manualSubmitRateLimiter, t2AccountRateLimit, t2Limiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
@@ -56,6 +59,7 @@ router.post(
   "/projects/:projectId/manual-submit",
   authenticate,
   authorize("CLIENT"),
+  rejectIfBanned("CLIENT"),
   manualSubmitRateLimiter,
   t2AccountRateLimit,
   idempotency,
@@ -103,6 +107,7 @@ router.post(
         receivingWalletProvider: input.receivingWalletProvider,
         receivingWalletNumber: input.receivingWalletNumber,
         receivingInstapayAccount: input.receivingInstapayAccount,
+        destinationAccountId: input.destinationAccountId,
       });
 
       res.status(201).json(ApiResponse(201, "Manual payment submitted", submission));
@@ -124,6 +129,64 @@ router.get(
       const projectId = (req.params.projectId as string);
       const submissions = await getManualPaymentSubmissions(String(req.user!.userId), projectId);
       res.status(200).json(ApiResponse(200, "Submissions fetched", submissions));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// ─── Authenticated: Download manual payment proof ───────────────────────────
+router.get(
+  "/manual-payments/:submissionId/proof",
+  authenticate,
+  t4AccountRateLimit,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const submissionId = Number(req.params.submissionId);
+      const userId = String(req.user!.userId);
+      const isAdmin = req.user!.role === "ADMIN";
+
+      const submission = await db.manualPaymentSubmission.findUnique({
+        where: { id: submissionId },
+        include: { payment: true },
+      });
+      if (!submission) throw new ApiError(404, "Manual payment submission not found");
+
+      if (submission.payment.clientId !== userId && !isAdmin) {
+        throw new ApiError(403, "Access denied to this payment proof");
+      }
+
+      if (!submission.proofUrl) {
+        throw new ApiError(404, "No proof file attached to this submission");
+      }
+
+      if (/^https?:\/\//i.test(submission.proofUrl)) {
+        try {
+          const remoteStream = await axios.get(submission.proofUrl, {
+            responseType: "stream",
+            timeout: 15000,
+          });
+          res.setHeader("Cache-Control", "private, no-store");
+          res.setHeader("X-Content-Type-Options", "nosniff");
+          if (remoteStream.headers["content-type"]) {
+            res.setHeader("Content-Type", String(remoteStream.headers["content-type"]));
+          }
+          const filename = submission.proofOriginalName || "payment-proof";
+          res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+          return remoteStream.data.pipe(res);
+        } catch {
+          return res.redirect(submission.proofUrl);
+        }
+      }
+
+      const absolute = storedPathToAbsolute(submission.proofUrl);
+      if (!absolute || !fs.existsSync(absolute)) {
+        throw new ApiError(404, "Proof file not found on disk");
+      }
+
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.download(absolute, submission.proofOriginalName || "payment-proof");
     } catch (error) {
       next(error);
     }

@@ -6,6 +6,7 @@ import ApiError from "../../utils/ApiError";
 import { getGoogleClientConfig, getGoogleRedirectUri } from "../../config/google";
 import generateToken from "../../utils/generateToken";
 import { hasCompleteEngineerApplication } from "./engineerVerification";
+import { isAllowedOrigin } from "../../config/cors";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -41,8 +42,9 @@ function normalizeOrigin(origin: string): string {
 }
 
 function clientUrl(path: string, origin?: string): string {
+  const safeOrigin = (origin && isAllowedOrigin(origin)) ? origin : undefined;
   const base = normalizeOrigin(
-    origin ?? process.env.CLIENT_URL ?? "http://localhost:3000",
+    safeOrigin ?? process.env.CLIENT_URL ?? "http://localhost:3000",
   );
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
@@ -270,7 +272,8 @@ async function findGoogleUser(
 function parseClientOriginFromState(stateParam?: string): string | undefined {
   if (!stateParam) return undefined;
   try {
-    return verifyState(stateParam).clientOrigin;
+    const raw = verifyState(stateParam).clientOrigin;
+    return raw && isAllowedOrigin(raw) ? raw : undefined;
   } catch {
     return undefined;
   }
@@ -305,6 +308,10 @@ export async function handleGoogleCallback(
 
   try {
     const state = verifyState(stateParam);
+    const safeClientOrigin =
+      state.clientOrigin && isAllowedOrigin(state.clientOrigin)
+        ? state.clientOrigin
+        : undefined;
     const profile = await exchangeCodeForProfile(code, state.redirectUri);
     const role = state.role;
     const result = await findGoogleUser(profile, role, {
@@ -322,9 +329,9 @@ export async function handleGoogleCallback(
       );
       const redirectUrl = clientUrl(
         `/role-selection?token=${encodeURIComponent(tempToken)}`,
-        state.clientOrigin
+        safeClientOrigin,
       );
-      return { redirectUrl, clientOrigin: state.clientOrigin };
+      return { redirectUrl, clientOrigin: safeClientOrigin };
     }
 
     const user = result.user;
@@ -334,7 +341,7 @@ export async function handleGoogleCallback(
     const token = generateToken(user.id, user.role);
 
     let nextPath = state.next?.trim() || "";
-    if (!nextPath.startsWith("/") || nextPath.startsWith("//")) {
+    if (!nextPath.startsWith("/") || nextPath.startsWith("//") || nextPath.startsWith("/\\")) {
       nextPath = user.role === "ADMIN" ? "/admin" : "/dashboard";
     }
     if (await engineerNeedsDocumentUpload(user.id)) {
@@ -343,9 +350,9 @@ export async function handleGoogleCallback(
 
     const redirectUrl = clientUrl(
       `/auth/callback?success=1&next=${encodeURIComponent(nextPath)}`,
-      state.clientOrigin,
+      safeClientOrigin,
     );
-    return { redirectUrl, token, clientOrigin: state.clientOrigin };
+    return { redirectUrl, token, clientOrigin: safeClientOrigin };
   } catch (error) {
     const message =
       error instanceof ApiError

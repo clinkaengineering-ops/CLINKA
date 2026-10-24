@@ -1,5 +1,6 @@
 import {
   CHAT_MAX_FILE_SIZE,
+  CHAT_MAX_VOICE_FILE_SIZE,
   CHAT_ALLOWED_EXTENSIONS,
   CHAT_MIME_TYPES,
 } from "./chatUpload.middleware";
@@ -8,6 +9,10 @@ import { isAllowedUpload, BLOCKED_FILE_EXTENSIONS } from "../config/upload";
 describe("chatUpload middleware configuration", () => {
   it("enforces a 50 MB maximum file size", () => {
     expect(CHAT_MAX_FILE_SIZE).toBe(50 * 1024 * 1024);
+  });
+
+  it("enforces a 5 MB maximum file size for voice messages", () => {
+    expect(CHAT_MAX_VOICE_FILE_SIZE).toBe(5 * 1024 * 1024);
   });
 
   describe("supported compressed and archive formats", () => {
@@ -93,6 +98,24 @@ describe("chatUpload middleware configuration", () => {
     });
   });
 
+  describe("supported audio and voice message formats", () => {
+    const audioFiles = [
+      { name: "voice.webm", mime: "audio/webm" },
+      { name: "voice.webm", mime: "audio/webm;codecs=opus" },
+      { name: "voice.m4a", mime: "audio/mp4" },
+      { name: "voice.mp4", mime: "audio/mp4" },
+      { name: "voice.ogg", mime: "audio/ogg" },
+      { name: "voice.ogg", mime: "audio/ogg; codecs=opus" },
+      { name: "voice.mp3", mime: "audio/mpeg" },
+    ];
+
+    it.each(audioFiles)("allows $name with mime $mime", ({ name, mime }) => {
+      expect(
+        isAllowedUpload(mime, name, CHAT_MIME_TYPES, CHAT_ALLOWED_EXTENSIONS),
+      ).toBe(true);
+    });
+  });
+
   describe("blocks dangerous executable and script files", () => {
     const dangerousFiles = [
       "virus.exe",
@@ -121,7 +144,7 @@ describe("chatUpload middleware configuration", () => {
   });
 
   describe("rejects unlisted arbitrary file extensions", () => {
-    const unsupported = ["audio.mp3", "video.mkv", "random.xyz", "unknown.dat"];
+    const unsupported = ["audio.flac", "video.mkv", "random.xyz", "unknown.dat"];
 
     it.each(unsupported)("rejects %s", (filename) => {
       expect(

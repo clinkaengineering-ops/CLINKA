@@ -34,8 +34,8 @@ export function readCheckoutReturnCookie(
   try {
     const parsed = JSON.parse(raw) as CheckoutReturnCookie;
     if (
-      Number.isInteger(parsed.projectId) &&
-      parsed.projectId !== '' &&
+      typeof parsed.projectId === "string" &&
+      parsed.projectId.trim() !== "" &&
       Number.isInteger(parsed.paymentId) &&
       parsed.paymentId > 0
     ) {

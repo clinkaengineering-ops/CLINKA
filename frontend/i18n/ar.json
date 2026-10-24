@@ -815,6 +815,8 @@
   "msg.typing": "متصل · يكتب…",
   "msg.today": "اليوم",
   "msg.write": "اكتب رسالة…",
+  "msg.voiceMessage": "رسالة صوتية",
+  "msg.recordVoice": "تسجيل رسالة صوتية",
   "msg.project": "المشروع",
   "msg.contract": "العقد CL-CN-00482",
   "msg.pinned": "مثبّت",

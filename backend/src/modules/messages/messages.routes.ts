@@ -5,7 +5,10 @@ import {
 } from "../../middlewares/auth.middleware";
 import { MulterError } from "multer";
 import ApiError from "../../utils/ApiError";
-import chatUpload from "../../middlewares/chatUpload.middleware";
+import chatUpload, {
+  CHAT_MAX_VOICE_FILE_SIZE,
+} from "../../middlewares/chatUpload.middleware";
+import { normalizeMimeType, deleteUploadFile } from "../../config/upload";
 import { t3Limiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
 import {
   getMyConversationsController,
@@ -65,6 +68,23 @@ router.post("/conversations/:id", ...t3Limiters, (req, res, next) => {
 
       return next(err);
     }
+
+    const file = req.file as Express.Multer.File | undefined;
+    if (file) {
+      const mime = normalizeMimeType(file.mimetype);
+      if (mime.startsWith("audio/") && file.size > CHAT_MAX_VOICE_FILE_SIZE) {
+        if (file.path) {
+          void deleteUploadFile(file.path);
+        }
+        return next(
+          new ApiError(
+            400,
+            "Audio file is too large. Maximum allowed size for voice messages is 5 MB.",
+          ),
+        );
+      }
+    }
+
     void sendMessageController(req, res, next);
   });
 });

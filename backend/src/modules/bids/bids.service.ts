@@ -84,7 +84,20 @@ export async function createBid(
   return bid;
 }
 
-export async function getBidsForProject(projectId: string) {
+export async function getBidsForProject(
+  projectId: string,
+  userId?: string,
+  role?: string,
+) {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: { clientId: true },
+  });
+  if (!project) throw new ApiError(404, "Project not found");
+
+  const isClient = project.clientId === userId;
+  const isAdmin = role === "ADMIN";
+
   const bids = await db.bid.findMany({
     where: { projectId },
     include: {
@@ -93,7 +106,17 @@ export async function getBidsForProject(projectId: string) {
       },
     },
   });
-  return bids;
+
+  if (isClient || isAdmin) {
+    return bids;
+  }
+
+  // Non-owners (e.g. other engineers) can only view the accepted bid or their own bid
+  return bids.filter(
+    (b) =>
+      b.status === "ACCEPTED" ||
+      (userId && b.engineer?.user?.id === userId),
+  );
 }
 
 export async function approveBid(clientId: string, bidId: number) {
@@ -138,21 +161,25 @@ export async function approveBid(clientId: string, bidId: number) {
     });
   });
 
-  // Create conversation between client and engineer for this project
-const engineerUser = await db.user.findFirst({
-  where: { profile: { id: bid.engineerId } },
-  select: { id: true },
-});
+  // Create or synchronize conversation between client and the accepted engineer
+  const engineerUser = await db.user.findFirst({
+    where: { profile: { id: bid.engineerId } },
+    select: { id: true },
+  });
 
-await db.conversation.upsert({
-  where: { projectId: project.id },
-  create: {
-    projectId: project.id,
-    clientId: project.clientId,
-    engineerId: engineerUser!.id,
-  },
-  update: {},
-});
+  if (engineerUser) {
+    await db.conversation.upsert({
+      where: { projectId: project.id },
+      create: {
+        projectId: project.id,
+        clientId: project.clientId,
+        engineerId: engineerUser.id,
+      },
+      update: {
+        engineerId: engineerUser.id,
+      },
+    });
+  }
 
   if (engineerUser) {
     await createNotification(

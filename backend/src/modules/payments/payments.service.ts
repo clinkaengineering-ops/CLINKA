@@ -185,7 +185,7 @@ export async function initiateProjectCheckout(
   if (project.clientId !== clientId) {
     throw new ApiError(403, "Only the project owner can fund escrow");
   }
-  if (project.status !== "IN_PROGRESS") {
+  if (project.status !== "IN_PROGRESS" && project.status !== "AWAITING_PAYMENT") {
     throw new ApiError(
       400,
       "Escrow payment is only available for in-progress projects",
@@ -201,7 +201,6 @@ export async function initiateProjectCheckout(
 
   const agreement = await getAcceptedAgreementForProject(projectId, project.budget);
   const engineerProfileId = agreement.engineerProfileId;
-  const config = getPaymobConfig();
   const amountUsd = toNumber(agreement.amount);
   const settings = await db.platformSettings.findFirst();
   const commissionRate = (Number(settings?.platformFeePercent ?? 10)) / 100;
@@ -316,7 +315,7 @@ export async function prepareProjectCheckoutSession(
   if (project.clientId !== clientId) {
     throw new ApiError(403, "Only the project owner can fund escrow");
   }
-  if (project.status !== "IN_PROGRESS") {
+  if (project.status !== "IN_PROGRESS" && project.status !== "AWAITING_PAYMENT") {
     throw new ApiError(
       400,
       "Escrow payment is only available for in-progress projects",
@@ -331,7 +330,6 @@ export async function prepareProjectCheckoutSession(
 
   const agreement = await getAcceptedAgreementForProject(projectId, project.budget);
   const engineerProfileId = agreement.engineerProfileId;
-  const config = getPaymobConfig();
   const amountUsd = toNumber(agreement.amount);
   const settings = await db.platformSettings.findFirst();
   const commissionRate = (Number(settings?.platformFeePercent ?? 10)) / 100;
@@ -403,6 +401,8 @@ export async function prepareProjectCheckoutSession(
     amountUsd, // Returning USD to frontend for display
     commission,
     totalCharged: totalChargedUsd, // Returning USD to frontend
+    amountEgp,
+    exchangeRate: rateUsed.rate,
   };
 
   /* PAYMOB_CHECKOUT_START — Paymob checkout flow (preserved for future activation)
@@ -479,6 +479,13 @@ async function fundPaymentFromVerifiedTransaction(
   
 
   if (payment.status === "FUNDED" || payment.status === "RELEASED") {
+    if (payment.project.status !== "IN_PROGRESS") {
+      await db.project.update({
+        where: { id: payment.projectId },
+        data: { status: "IN_PROGRESS" },
+      });
+      payment.project.status = "IN_PROGRESS";
+    }
     return { payment, duplicate: true as const };
   }
   if (payment.status === "REFUNDED") {
@@ -552,6 +559,7 @@ async function fundPaymentFromVerifiedTransaction(
         where: { id: funded.projectId },
         data: { status: "IN_PROGRESS" },
       });
+      funded.project.status = "IN_PROGRESS";
     }
 
     return { funded, wasNewlyFunded: true };
@@ -1180,7 +1188,7 @@ export async function releaseEscrowPayment(
 ) {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
-    include: { project: { select: { title: true, status: true } } },
+    include: { project: { select: { title: true, status: true, deliveredAt: true } } },
   });
   if (!payment) throw new ApiError(404, "Payment not found");
   if (!isAdmin && payment.clientId !== clientId) {
@@ -1205,6 +1213,9 @@ export async function releaseEscrowPayment(
   if (!engineerProfile) {
     throw new ApiError(404, "Engineer profile not found for this payment");
   }
+
+  const holdReleaseDate = walletHoldReleaseDate(payment.project?.deliveredAt ?? new Date());
+  const isMatured = new Date() >= holdReleaseDate;
 
   const updated = await db.$transaction(async (tx) => {
     const released = await tx.payment.updateMany({
@@ -1235,18 +1246,18 @@ export async function releaseEscrowPayment(
     const wallet = await ensureWallet(tx, engineerProfile.userId);
     await tx.wallet.update({
       where: { id: wallet.id },
-      data: {
-        pendingBalance: { increment: netAmount },
-      },
+      data: isMatured
+        ? { availableBalance: { increment: netAmount } }
+        : { pendingBalance: { increment: netAmount } },
     });
     await tx.walletTransaction.create({
       data: {
         walletId: wallet.id,
         amount: netAmount,
         type: "RELEASED",
-        status: "PENDING",
-        description: `Payment released for \"${projectTitle}\". Available after 14-day hold.`,
-        availableAt: walletHoldReleaseDate(),
+        status: isMatured ? "AVAILABLE" : "PENDING",
+        description: `Payment released for "${projectTitle}". Available 7 days after delivery.`,
+        availableAt: holdReleaseDate,
         relatedPaymentId: paymentId,
       },
     });
@@ -1259,14 +1270,18 @@ export async function releaseEscrowPayment(
     engineerProfile.userId,
     "WORK_APPROVED",
     "Work approved",
-    `The client approved your work on "${projectTitle}". Earnings are now pending in your wallet.`,
+    `The client approved your work on "${projectTitle}". Earnings are now ${
+      isMatured ? "available" : "pending"
+    } in your wallet.`,
     `/balance`,
   );
   await createNotification(
     engineerProfile.userId,
     "FUNDS_RELEASED",
-    "Payment queued to wallet",
-    `The client released payment for "${projectTitle}". Funds will become available after the 14-day holding period.`,
+    isMatured ? "Funds released" : "Payment queued to wallet",
+    isMatured
+      ? `The client released payment for "${projectTitle}". Funds are now available in your wallet.`
+      : `The client released payment for "${projectTitle}". Funds will become available after the 7-day holding period.`,
     `/balance`,
   );
   await createNotification(
@@ -1456,6 +1471,9 @@ export async function pollPaymentConfirmation(
   }
   if (payment.status === "REFUNDED") {
     throw new ApiError(400, "Cannot verify a refunded payment");
+  }
+  if (payment.provider === "MANUAL") {
+    return refreshPaymentRecord(paymentId);
   }
 
   for (let attempt = 0; attempt < CHECKOUT_VERIFY_POLL_ATTEMPTS; attempt++) {

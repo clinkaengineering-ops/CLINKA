@@ -8,6 +8,7 @@ import {
   getStoredUploadPath,
   getUploadBaseUrl,
   isAllowedUpload,
+  normalizeMimeType,
   normalizeStoredUploadPath,
   normalizeUploadOrigin,
   resolvePublicUploadUrl,
@@ -34,15 +35,39 @@ describe("upload config", () => {
     fs.rmSync(tempUploadDir, { recursive: true, force: true });
   });
 
-  it("generates safe extensions from mime type", () => {
+  it("normalizes MIME types by stripping parameters, trimming, and lowercasing", () => {
+    expect(normalizeMimeType("audio/webm;codecs=opus")).toBe("audio/webm");
+    expect(normalizeMimeType("audio/webm; codecs=opus; bitrate=128")).toBe("audio/webm");
+    expect(normalizeMimeType(" AUDIO/MP4; codecs=\"mp4a.40.2\" ")).toBe("audio/mp4");
+    expect(normalizeMimeType("audio/ogg;codecs=opus")).toBe("audio/ogg");
+    expect(normalizeMimeType("audio/mpeg")).toBe("audio/mpeg");
+    expect(normalizeMimeType("")).toBe("");
+    expect(normalizeMimeType(undefined)).toBe("");
+    expect(normalizeMimeType(null)).toBe("");
+  });
+
+  it("generates safe extensions from mime type including audio formats", () => {
     expect(resolveStoredExtension("image/jpeg", "evil.exe")).toBe(".jpg");
     expect(resolveStoredExtension("application/pdf", "report.PDF")).toBe(".pdf");
+    expect(resolveStoredExtension("audio/webm;codecs=opus", "voice.webm")).toBe(".webm");
+    expect(resolveStoredExtension("audio/mp4", "voice.m4a")).toBe(".m4a");
+    expect(resolveStoredExtension("audio/mp4", "voice.mp4")).toBe(".mp4");
+    expect(resolveStoredExtension("video/mp4", "video.mp4")).toBe(".mp4");
+    expect(resolveStoredExtension("audio/ogg", "voice.ogg")).toBe(".ogg");
+    expect(resolveStoredExtension("audio/mpeg", "voice.mp3")).toBe(".mp3");
   });
 
   it("validates mime type and extension together", () => {
     expect(isAllowedUpload("image/png", "photo.png", IMAGE_MIME_TYPES)).toBe(true);
     expect(isAllowedUpload("image/png", "photo.exe", IMAGE_MIME_TYPES)).toBe(false);
     expect(isAllowedUpload("application/pdf", "photo.png", IMAGE_MIME_TYPES)).toBe(false);
+    expect(
+      isAllowedUpload(
+        "audio/webm;codecs=opus",
+        "voice.webm",
+        new Set(["audio/webm"]),
+      ),
+    ).toBe(true);
   });
 
   it("normalizes stored upload paths", () => {
@@ -145,6 +170,13 @@ describe("upload config", () => {
     await deleteUploadFile("https://res.cloudinary.com/bkv1llhu/image/upload/v1792322447/images/profile_avatar.jpg");
     expect(destroySpy).toHaveBeenCalledWith("images/profile_avatar", {
       resource_type: "image",
+      invalidate: true,
+    });
+
+    // Audio / Video URL - Cloudinary stores audio under resource_type "video" and public_id includes the extension
+    await deleteUploadFile("https://res.cloudinary.com/bkv1llhu/video/upload/v1792344372/documents/abc12345.webm");
+    expect(destroySpy).toHaveBeenCalledWith("documents/abc12345.webm", {
+      resource_type: "video",
       invalidate: true,
     });
 

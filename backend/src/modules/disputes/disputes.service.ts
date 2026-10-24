@@ -148,62 +148,79 @@ export async function resolveDispute(adminId: string, projectId: string, resolut
   return db.$transaction(async (tx) => {
     const payment = project.payment;
     if (!payment) throw new ApiError(500, "No payment record found");
-    
+
+    if (typeof tx.$executeRaw === "function") {
+      await tx.$executeRaw`SELECT id FROM "Payment" WHERE id = ${payment.id} FOR UPDATE`;
+    }
+
     const netAmount = netEngineerAmount(payment.amountUsd, payment.commission);
     const profile = await tx.engineerProfile.findUnique({ where: { id: payment.engineerId } });
     const wallet = await ensureWallet(tx, profile!.userId);
 
+    // Database-atomic claim: claim the active dispute
+    const disputeClaim = await tx.dispute.updateMany({
+      where: {
+        id: activeDispute.id,
+        status: { in: ["OPEN", "AWAITING_ENGINEER_FIX", "ESCALATED_TO_ADMIN"] },
+      },
+      data: {
+        status: resolution === "ENGINEER" ? "RESOLVED_ENGINEER" : "RESOLVED_CLIENT",
+        resolvedAt: new Date(),
+        resolvedById: adminId,
+        resolutionNote: reason,
+      },
+    });
+
+    if (disputeClaim.count === 0) {
+      throw new ApiError(409, "Conflict: dispute was already resolved concurrently");
+    }
+
+    const availableAt = project.deliveredAt
+      ? new Date(project.deliveredAt.getTime() + 7 * 24 * 60 * 60 * 1000)
+      : new Date();
+    const isAvailable = new Date() >= availableAt;
+
+    // Decrement heldByDispute safely (enforcing non-negative balance)
+    const walletUpdate = await tx.wallet.updateMany({
+      where: {
+        id: wallet.id,
+        heldByDispute: { gte: netAmount },
+      },
+      data: {
+        heldByDispute: { decrement: netAmount },
+        ...(resolution === "ENGINEER"
+          ? isAvailable
+            ? { availableBalance: { increment: netAmount } }
+            : { pendingBalance: { increment: netAmount } }
+          : {}),
+      },
+    });
+
+    if (walletUpdate.count === 0) {
+      throw new ApiError(409, "Conflict: insufficient heldByDispute balance to resolve dispute");
+    }
+
     if (resolution === "ENGINEER") {
-      // Release funds back to engineer (to pending or available depending on time)
       const wt = await tx.walletTransaction.findFirst({ where: { relatedPaymentId: payment.id } });
-      const availableAt = project.deliveredAt ? new Date(project.deliveredAt.getTime() + 7 * 24 * 60 * 60 * 1000) : new Date();
-      const isAvailable = new Date() >= availableAt;
-      
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { 
-          heldByDispute: { decrement: netAmount },
-          ...(isAvailable ? { availableBalance: { increment: netAmount } } : { pendingBalance: { increment: netAmount } })
-        }
-      });
-      
       if (wt) {
         await tx.walletTransaction.update({
           where: { id: wt.id },
-          data: { status: isAvailable ? "AVAILABLE" : "PENDING", availableAt }
+          data: { status: isAvailable ? "AVAILABLE" : "PENDING", availableAt },
         });
       }
-
-      await tx.dispute.update({
-        where: { id: activeDispute.id },
-        data: { status: "RESOLVED_ENGINEER", resolvedAt: new Date(), resolvedById: adminId, resolutionNote: reason }
-      });
 
       await tx.project.update({
         where: { id: projectId },
-        data: { status: "COMPLETED" }
+        data: { status: "COMPLETED" },
       });
-      
     } else {
-      // Client favor: Administrator will refund via manual payout flow.
-      // Move from heldByDispute to 0. 
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { heldByDispute: { decrement: netAmount } }
-      });
-      
       const wt = await tx.walletTransaction.findFirst({ where: { relatedPaymentId: payment.id } });
       if (wt) {
         await tx.walletTransaction.update({
           where: { id: wt.id },
-          data: { status: "REJECTED" }
+          data: { status: "REJECTED" },
         });
       }
-
-      await tx.dispute.update({
-        where: { id: activeDispute.id },
-        data: { status: "RESOLVED_CLIENT", resolvedAt: new Date(), resolvedById: adminId, resolutionNote: reason }
-      });
     }
 
     await logSystemEvent({
@@ -258,6 +275,15 @@ export async function escalateDispute(actorId: string, actorRole: string, projec
   });
 
   if (!project) throw new ApiError(404, "Project not found");
+
+  const isClient = project.clientId === actorId;
+  const isEngineer = project.payment?.engineer?.user?.id === actorId;
+  const isAdmin = actorRole === "ADMIN";
+
+  if (!isClient && !isEngineer && !isAdmin) {
+    throw new ApiError(403, "You do not have permission to escalate this dispute");
+  }
+
   const activeDispute = project.disputes[0];
   if (!activeDispute) throw new ApiError(400, "No active dispute eligible for escalation");
 

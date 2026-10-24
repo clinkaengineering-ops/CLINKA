@@ -72,6 +72,11 @@ const MIME_TO_EXTENSIONS: Record<string, readonly string[]> = {
   "video/mp4": [".mp4"],
   "video/webm": [".webm"],
   "video/quicktime": [".mov"],
+  // Audio
+  "audio/webm": [".webm"],
+  "audio/mp4": [".m4a", ".mp4"],
+  "audio/ogg": [".ogg"],
+  "audio/mpeg": [".mp3"],
   // CAD, BIM, 3D
   "image/vnd.dwg": [".dwg"],
   "image/x-dwg": [".dwg"],
@@ -132,6 +137,13 @@ export function ensureUploadRoot(): string {
   return root;
 }
 
+export function normalizeMimeType(
+  mimetype: string | undefined | null,
+): string {
+  if (!mimetype || typeof mimetype !== "string") return "";
+  return mimetype.split(";")[0].trim().toLowerCase();
+}
+
 function sanitizeExtension(ext: string): string | null {
   const normalized = ext.toLowerCase();
   if (!normalized.startsWith(".")) return null;
@@ -144,7 +156,8 @@ export function resolveStoredExtension(
   mimetype: string,
   originalname: string,
 ): string {
-  const allowedForMime = MIME_TO_EXTENSIONS[mimetype];
+  const normalizedMime = normalizeMimeType(mimetype);
+  const allowedForMime = MIME_TO_EXTENSIONS[normalizedMime];
   const originalExt = sanitizeExtension(path.extname(originalname));
 
   if (allowedForMime?.length) {
@@ -163,7 +176,8 @@ export function isAllowedUpload(
   allowedMimeTypes: ReadonlySet<string>,
   allowedExtensions?: ReadonlySet<string>,
 ): boolean {
-  if (!allowedMimeTypes.has(mimetype)) return false;
+  const normalizedMime = normalizeMimeType(mimetype);
+  if (!allowedMimeTypes.has(normalizedMime)) return false;
 
   const ext = sanitizeExtension(path.extname(originalname));
   if (!ext) return false;
@@ -172,7 +186,7 @@ export function isAllowedUpload(
     return false;
   }
 
-  const allowedExts = MIME_TO_EXTENSIONS[mimetype];
+  const allowedExts = MIME_TO_EXTENSIONS[normalizedMime];
   if (allowedExts) {
     return allowedExts.includes(ext);
   }
@@ -184,6 +198,7 @@ export function createCloudinaryUpload(category: UploadCategory) {
   return new CloudinaryStorage({
     cloudinary,
     params: async (_req: any, file: Express.Multer.File) => {
+      file.mimetype = normalizeMimeType(file.mimetype);
       const ext = resolveStoredExtension(file.mimetype, file.originalname);
       const uid = crypto.randomBytes(8).toString("hex");
       return {
@@ -277,8 +292,8 @@ export async function deleteUploadFile(storedPath: string | null | undefined): P
         const resourceType = (segments[uploadIdx - 1] || "image").toLowerCase();
         // Skip the version segment (v12345...) — public_id is all segments after it
         let publicId = segments.slice(uploadIdx + 2).join("/");
-        if (resourceType !== "raw") {
-          // For image/video, Cloudinary appends the format extension to the URL, but the public_id does not have it
+        if (resourceType === "image") {
+          // For images, Cloudinary appends the format extension to the URL, but the public_id does not have it
           const lastDot = publicId.lastIndexOf(".");
           if (lastDot > 0) {
             publicId = publicId.slice(0, lastDot);
@@ -297,7 +312,11 @@ export async function deleteUploadFile(storedPath: string | null | undefined): P
     // Fallback for old local files (if they exist)
     const absolute = storedPathToAbsolute(storedPath);
     if (absolute && fs.existsSync(absolute)) {
-      fs.unlinkSync(absolute);
+      try {
+        fs.unlinkSync(absolute);
+      } catch (err) {
+        console.error("Failed to delete local file:", err);
+      }
     }
   } catch (error) {
     console.error("Failed to delete upload file:", error);
@@ -328,6 +347,7 @@ export function createUploadMiddleware(
       ...(options.maxFiles !== undefined ? { files: options.maxFiles } : {}),
     },
     fileFilter: (_req, file, cb) => {
+      file.mimetype = normalizeMimeType(file.mimetype);
       const ext = path.extname(file.originalname).toLowerCase();
       if (BLOCKED_EXTENSIONS.has(ext)) {
         cb(new Error("FILE_TYPE_BLOCKED_DANGEROUS"));

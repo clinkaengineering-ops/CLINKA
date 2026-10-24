@@ -41,10 +41,15 @@ jest.mock("../config/cloudinary", () => ({
   },
 }));
 
-import chatUpload from "./chatUpload.middleware";
+import chatUpload, { CHAT_MAX_VOICE_FILE_SIZE } from "./chatUpload.middleware";
 import ApiError from "../utils/ApiError";
 import { errorHandler } from "./errorHandler.middleware";
-import { getStoredUploadPath, ensureUploadRoot } from "../config/upload";
+import {
+  getStoredUploadPath,
+  ensureUploadRoot,
+  normalizeMimeType,
+  deleteUploadFile,
+} from "../config/upload";
 
 // Magic header bytes for realistic test files
 const ZIP_HEADER = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]);
@@ -118,11 +123,26 @@ function createChatApp() {
         );
       }
 
+      if (file) {
+        const mime = normalizeMimeType(file.mimetype);
+        if (mime.startsWith("audio/") && file.size > CHAT_MAX_VOICE_FILE_SIZE) {
+          if (file.path) {
+            void deleteUploadFile(file.path);
+          }
+          return next(
+            new ApiError(
+              400,
+              "Audio file is too large. Maximum allowed size for voice messages is 5 MB.",
+            ),
+          );
+        }
+      }
+
       res.status(201).json({
         success: true,
         data: {
           attachmentName: file?.originalname,
-          attachmentMime: file?.mimetype,
+          attachmentMime: file ? normalizeMimeType(file.mimetype) : undefined,
           storedPath: getStoredUploadPath(file, "documents"),
         },
       });
@@ -413,5 +433,115 @@ describe("Chat file upload HTTP flow", () => {
     // Assert that the downloaded file is 100% byte-for-byte identical to the sent file
     expect(downloadedBuffer.length).toBe(dwgPayload.length);
     expect(Buffer.compare(downloadedBuffer, dwgPayload)).toBe(0);
+  });
+
+  it("successfully sends an audio voice message (.webm with codecs=opus) with normalized MIME", async () => {
+    const audioData = Buffer.from("RIFF_DUMMY_WEBM_OPUS_AUDIO_STREAM_DATA");
+    const { status, body } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "voice_note.webm",
+      "audio/webm;codecs=opus",
+      audioData,
+    );
+
+    console.log("[TEST RESULT] Upload .webm -> Status:", status, JSON.stringify(body));
+    expect(status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.attachmentName).toBe("voice_note.webm");
+    expect(body.data.attachmentMime).toBe("audio/webm");
+    expect(body.data.storedPath).toMatch(/\.webm$/i);
+  });
+
+  it("successfully sends an audio voice message (.m4a) with audio/mp4", async () => {
+    const audioData = Buffer.from("FTYP_M4A_DUMMY_AUDIO_DATA");
+    const { status, body } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "voice_note.m4a",
+      "audio/mp4",
+      audioData,
+    );
+
+    console.log("[TEST RESULT] Upload .m4a -> Status:", status, JSON.stringify(body));
+    expect(status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.attachmentName).toBe("voice_note.m4a");
+    expect(body.data.attachmentMime).toBe("audio/mp4");
+    expect(body.data.storedPath).toMatch(/\.m4a$/i);
+  });
+
+  it("successfully sends an audio voice message (.mp3) with audio/mpeg", async () => {
+    const audioData = Buffer.from("ID3_DUMMY_MP3_AUDIO_DATA");
+    const { status, body } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "voice_note.mp3",
+      "audio/mpeg",
+      audioData,
+    );
+
+    console.log("[TEST RESULT] Upload .mp3 -> Status:", status, JSON.stringify(body));
+    expect(status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.attachmentName).toBe("voice_note.mp3");
+    expect(body.data.attachmentMime).toBe("audio/mpeg");
+    expect(body.data.storedPath).toMatch(/\.mp3$/i);
+  });
+
+  it("successfully sends an audio voice message (.ogg with parameters)", async () => {
+    const audioData = Buffer.from("OGGS_DUMMY_OGG_AUDIO_DATA");
+    const { status, body } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "voice_note.ogg",
+      "audio/ogg; codecs=opus",
+      audioData,
+    );
+
+    console.log("[TEST RESULT] Upload .ogg -> Status:", status, JSON.stringify(body));
+    expect(status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.attachmentName).toBe("voice_note.ogg");
+    expect(body.data.attachmentMime).toBe("audio/ogg");
+    expect(body.data.storedPath).toMatch(/\.ogg$/i);
+  });
+
+  it("fails with 400 when an audio voice file exceeds the 5 MB limit", async () => {
+    // 6 MB audio buffer (> 5 MB)
+    const oversizedAudio = Buffer.alloc(6 * 1024 * 1024, 0);
+
+    const { status, body } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "huge_voice.webm",
+      "audio/webm;codecs=opus",
+      oversizedAudio,
+    );
+
+    console.log("[TEST RESULT] Upload audio > 5MB -> Status:", status, JSON.stringify(body));
+    expect(status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.message).toBe(
+      "Audio file is too large. Maximum allowed size for voice messages is 5 MB.",
+    );
+  });
+
+  it("allows non-audio files between 5 MB and 50 MB", async () => {
+    // 6 MB zip archive (> 5 MB, but well within 50 MB limit for non-audio)
+    const zipData = Buffer.concat([ZIP_HEADER, Buffer.alloc(6 * 1024 * 1024 - ZIP_HEADER.length, 0)]);
+
+    const { status, body } = await postFile(
+      origin,
+      "/api/messages/conversations/42",
+      "large_docs.zip",
+      "application/zip",
+      zipData,
+    );
+
+    console.log("[TEST RESULT] Upload non-audio 6MB zip -> Status:", status, JSON.stringify(body));
+    expect(status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.attachmentName).toBe("large_docs.zip");
   });
 });
