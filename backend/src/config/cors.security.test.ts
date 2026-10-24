@@ -1,6 +1,8 @@
 import {
   isDevTunnelFrontendOrigin,
+  isDevTunnelBackendOrigin,
   isAllowedOrigin,
+  isAllowedApiOrigin,
   getAllowedOrigins,
 } from "./cors";
 
@@ -65,6 +67,33 @@ describe("CORS and Dev Tunnel Security Controls", () => {
       process.env.CLIENT_URL = "https://clinka.com";
       expect(isAllowedOrigin("https://evil-phishing.com")).toBe(false);
       expect(isAllowedOrigin("https://attacker.site")).toBe(false);
+    });
+  });
+
+  describe("API Origin Resolution", () => {
+    it("allows configured API_URL in production", () => {
+      process.env.NODE_ENV = "production";
+      process.env.API_URL = "https://api.clinka.com";
+      expect(isAllowedApiOrigin("https://api.clinka.com")).toBe(true);
+      expect(isAllowedApiOrigin("https://evil.com")).toBe(false);
+    });
+
+    it("allows localhost:5000 and 127.0.0.1:5000 in non-production", () => {
+      process.env.NODE_ENV = "development";
+      expect(isAllowedApiOrigin("http://localhost:5000")).toBe(true);
+      expect(isAllowedApiOrigin("http://127.0.0.1:5000")).toBe(true);
+      expect(isAllowedApiOrigin("https://evil.com")).toBe(false);
+    });
+
+    it("allows port 5000 dev tunnel in non-production but blocks in production", () => {
+      process.env.NODE_ENV = "development";
+      const devTunnelApi = "https://my-tunnel-5000.uks1.devtunnels.ms";
+      expect(isDevTunnelBackendOrigin(devTunnelApi)).toBe(true);
+      expect(isAllowedApiOrigin(devTunnelApi)).toBe(true);
+
+      process.env.NODE_ENV = "production";
+      expect(isDevTunnelBackendOrigin(devTunnelApi)).toBe(false);
+      expect(isAllowedApiOrigin(devTunnelApi)).toBe(false);
     });
   });
 });

@@ -42,7 +42,7 @@ import {
 import { isGoogleAuthEnabled } from "../../config/google";
 import { logSystemEvent } from "../../utils/auditLogger";
 import { revokeToken } from "../../utils/tokenRevocation";
-import { isAllowedOrigin } from "../../config/cors";
+import { isAllowedOrigin, isAllowedApiOrigin } from "../../config/cors";
 
 
 export async function checkRegistrationEmailController(
@@ -350,7 +350,7 @@ export async function googleAuthStartController(
       req.query.role === "ENGINEER" ? ("ENGINEER" as const) : req.query.role === "CLIENT" ? ("CLIENT" as const) : undefined;
     const apiOrigin =
       typeof req.query.api_origin === "string" ? req.query.api_origin : undefined;
-    if (apiOrigin && !isAllowedOrigin(apiOrigin)) {
+    if (apiOrigin && !isAllowedApiOrigin(apiOrigin)) {
       throw new ApiError(400, "Invalid api origin");
     }
     const clientOrigin =

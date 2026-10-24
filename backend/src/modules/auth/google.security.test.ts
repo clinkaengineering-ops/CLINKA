@@ -41,6 +41,33 @@ describe("Google OAuth Security Controls", () => {
       expect(res.body.message).toContain("Invalid api origin");
     });
 
+    it("allows authorized localhost api_origin in non-production mode", async () => {
+      process.env.NODE_ENV = "development";
+      const res = await request(app)
+        .get("/api/auth/google")
+        .query({
+          client_origin: "http://localhost:3000",
+          api_origin: "http://localhost:5000",
+        });
+
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain("https://accounts.google.com");
+    });
+
+    it("allows configured API_URL api_origin in production mode", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.API_URL = "https://api.clinka.com";
+      const res = await request(app)
+        .get("/api/auth/google")
+        .query({
+          client_origin: "https://clinka.com",
+          api_origin: "https://api.clinka.com",
+        });
+
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain("https://accounts.google.com");
+    });
+
     it("sanitizes open redirect vectors in next parameter", async () => {
       const res = await request(app)
         .get("/api/auth/google")

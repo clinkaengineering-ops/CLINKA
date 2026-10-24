@@ -38,3 +38,50 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
   if (isDevTunnelFrontendOrigin(origin)) return true;
   return false;
 }
+
+/** VS Code / GitHub dev tunnel backends: {id}-5000.uks1.devtunnels.ms */
+const DEV_TUNNEL_BACKEND =
+  /^https:\/\/[\w-]+-5000\.[a-z0-9-]+\.devtunnels\.ms$/i;
+
+export function isDevTunnelBackendOrigin(origin: string): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  return DEV_TUNNEL_BACKEND.test(origin);
+}
+
+export function getAllowedApiOrigins(): string[] {
+  const origins = new Set<string>();
+  const apiUrl = process.env.API_URL?.replace(/\/api\/?$/, "").replace(/\/$/, "");
+  if (apiUrl) origins.add(apiUrl);
+
+  const googleRedirect = process.env.GOOGLE_REDIRECT_URI?.trim();
+  if (googleRedirect) {
+    try {
+      origins.add(new URL(googleRedirect).origin);
+    } catch {}
+  }
+
+  for (const o of getAllowedOrigins()) {
+    origins.add(o);
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    origins.add("http://localhost:5000");
+    origins.add("http://127.0.0.1:5000");
+    const port = process.env.PORT;
+    if (port) {
+      origins.add(`http://localhost:${port}`);
+      origins.add(`http://127.0.0.1:${port}`);
+    }
+  }
+
+  return [...origins];
+}
+
+export function isAllowedApiOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (getAllowedApiOrigins().includes(origin)) return true;
+  if (isDevTunnelBackendOrigin(origin)) return true;
+  return false;
+}
