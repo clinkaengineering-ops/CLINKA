@@ -5,6 +5,7 @@ import { getConversationMessages } from "../admin/admin.service";
 import db from "../../config/db";
 import ApiError from "../../utils/ApiError";
 import * as socketModule from "../../socket";
+import * as uploadConfig from "../../config/upload";
 
 jest.mock("../../config/db", () => ({
   __esModule: true,
@@ -164,6 +165,46 @@ describe("Message Attachment Duration", () => {
       const error = mockNext.mock.calls[0][0] as ApiError;
       expect(error.statusCode).toBe(400);
       expect(error.message).toContain("Duration is required for audio attachments");
+    });
+
+    it("triggers deleteUploadFile when an oversized audio file is uploaded even with an invalid body", async () => {
+      const deleteSpy = jest.spyOn(uploadConfig, "deleteUploadFile").mockResolvedValue(undefined as any);
+
+      mockReq.file = {
+        mimetype: "audio/webm",
+        originalname: "huge.webm",
+        path: "https://res.cloudinary.com/demo/video/upload/v123/documents/huge.webm",
+        size: 6 * 1024 * 1024, // 6 MB > 5 MB limit
+      };
+      mockReq.body = {
+        attachmentDuration: "invalid-duration-value",
+      };
+
+      await sendMessageController(mockReq, mockRes, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(deleteSpy).toHaveBeenCalledWith("https://res.cloudinary.com/demo/video/upload/v123/documents/huge.webm");
+
+      deleteSpy.mockRestore();
+    });
+
+    it("triggers deleteUploadFile on any validation failure when a file was uploaded", async () => {
+      const deleteSpy = jest.spyOn(uploadConfig, "deleteUploadFile").mockResolvedValue(undefined as any);
+
+      mockReq.file = {
+        mimetype: "audio/webm",
+        originalname: "voice.webm",
+        path: "https://res.cloudinary.com/demo/video/upload/v123/documents/voice.webm",
+        size: 1024,
+      };
+      mockReq.body = {}; // Missing duration triggers error
+
+      await sendMessageController(mockReq, mockRes, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(ApiError));
+      expect(deleteSpy).toHaveBeenCalledWith("https://res.cloudinary.com/demo/video/upload/v123/documents/voice.webm");
+
+      deleteSpy.mockRestore();
     });
 
     it("stores duration and returns message with attachmentDuration for audio upload", async () => {

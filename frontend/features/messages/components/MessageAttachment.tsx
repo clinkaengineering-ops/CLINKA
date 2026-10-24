@@ -111,9 +111,10 @@ export function MessageAttachment({ message, side }: MessageAttachmentProps) {
     );
   }
 
+  const mime = message.attachmentMime?.trim().toLowerCase() || "";
   const isAudio =
-    message.attachmentMime?.toLowerCase().startsWith("audio/") ||
-    /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(name) ||
+    mime.startsWith("audio/") ||
+    (!mime.startsWith("video/") && /\.(webm|m4a|ogg|mp3)$/i.test(name)) ||
     name.startsWith("voice-message") ||
     name.startsWith("voice_note");
 
@@ -131,8 +132,6 @@ export function MessageAttachment({ message, side }: MessageAttachmentProps) {
 
   return <FileDownloadLink url={attachmentUrl} name={name} side={side} mime={message.attachmentMime} />;
 }
-
-export { VoiceMessagePlayer };
 
 function FileDownloadLink({
   url,

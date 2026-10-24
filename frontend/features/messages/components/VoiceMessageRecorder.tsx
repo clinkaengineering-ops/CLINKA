@@ -25,10 +25,8 @@ function getBestMimeType(): { mimeType: string; ext: string } {
   const types = [
     { mimeType: "audio/webm;codecs=opus", ext: ".webm" },
     { mimeType: "audio/webm", ext: ".webm" },
-    { mimeType: "audio/ogg;codecs=opus", ext: ".ogg" },
-    { mimeType: "audio/ogg", ext: ".ogg" },
     { mimeType: "audio/mp4", ext: ".m4a" },
-    { mimeType: "audio/aac", ext: ".aac" },
+    { mimeType: "audio/ogg;codecs=opus", ext: ".ogg" },
   ];
 
   for (const t of types) {
@@ -90,12 +88,45 @@ export function VoiceMessageRecorder({
     }
   }, []);
 
+  const previewUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    previewUrlRef.current = previewUrl;
+  }, [previewUrl]);
+
   const onCancelRef = useRef(onCancel);
   const onErrorRef = useRef(onError);
   useEffect(() => {
     onCancelRef.current = onCancel;
     onErrorRef.current = onError;
   }, [onCancel, onError]);
+
+  // Handle Pause & Preview
+  const handlePauseForPreview = useCallback(() => {
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") return;
+
+    mediaRecorderRef.current.onstop = () => {
+      const blob = new Blob(chunksRef.current, {
+        type: mimeConfigRef.current.mimeType,
+      });
+      setPreviewBlob(blob);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+      const url = URL.createObjectURL(blob);
+      previewUrlRef.current = url;
+      setPreviewUrl(url);
+      setIsPausedForPreview(true);
+      setIsRecording(false);
+    };
+
+    mediaRecorderRef.current.stop();
+    cleanupStream();
+  }, [cleanupStream]);
+
+  const handlePauseForPreviewRef = useRef(handlePauseForPreview);
+  useEffect(() => {
+    handlePauseForPreviewRef.current = handlePauseForPreview;
+  }, [handlePauseForPreview]);
 
   // Start recording on mount
   useEffect(() => {
@@ -141,9 +172,21 @@ export function VoiceMessageRecorder({
         recorder.start(100);
         setIsRecording(true);
 
-        // Start duration timer
+        // Start duration timer with 300s limit
         timerRef.current = setInterval(() => {
-          setSeconds((prev) => prev + 1);
+          setSeconds((prev) => {
+            if (prev >= 300) return 300;
+            const next = prev + 1;
+            if (next >= 300) {
+              if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+              }
+              handlePauseForPreviewRef.current();
+              return 300;
+            }
+            return next;
+          });
         }, 1000);
 
         // Start live audio visualizer
@@ -187,6 +230,7 @@ export function VoiceMessageRecorder({
           // If AudioContext fails, silent fallback (bars remain gentle)
         }
       } catch (err: unknown) {
+        cleanupStream();
         if (!isMounted) return;
         const e = err as { name?: string; message?: string };
         if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
@@ -207,9 +251,12 @@ export function VoiceMessageRecorder({
     return () => {
       isMounted = false;
       cleanupStream();
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
     };
-  }, [cleanupStream, previewUrl]);
+  }, [cleanupStream]);
 
   // Handle Discard / Cancel
   const handleDiscard = useCallback(() => {
@@ -218,32 +265,25 @@ export function VoiceMessageRecorder({
       mediaRecorderRef.current.stop();
     }
     chunksRef.current = [];
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreviewUrl(null);
+    setPreviewBlob(null);
     onCancel();
-  }, [cleanupStream, onCancel, previewUrl]);
-
-  // Handle Pause & Preview
-  const handlePauseForPreview = useCallback(() => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") return;
-
-    mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(chunksRef.current, {
-        type: mimeConfigRef.current.mimeType,
-      });
-      setPreviewBlob(blob);
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-      setIsPausedForPreview(true);
-      setIsRecording(false);
-    };
-
-    mediaRecorderRef.current.stop();
-    cleanupStream();
-  }, [cleanupStream]);
+  }, [cleanupStream, onCancel]);
 
   // Handle Send
   const handleFinalSend = useCallback(async () => {
     if (sending || disabled) return;
+
+    // Discard recordings under 1 second without sending
+    if (seconds < 1) {
+      handleDiscard();
+      return;
+    }
+
     setSending(true);
 
     try {
@@ -272,7 +312,7 @@ export function VoiceMessageRecorder({
 
       const { ext } = mimeConfigRef.current;
       const durationSecs = Math.max(1, Math.min(300, Math.round(seconds)));
-      const filename = `voice-message-${Date.now()}-dur${durationSecs}${ext}`;
+      const filename = `voice-message-${Date.now()}${ext}`;
       const file = new File([finalBlob], filename, {
         type: mimeConfigRef.current.mimeType,
       });
@@ -283,10 +323,13 @@ export function VoiceMessageRecorder({
       onError?.(err.message || "Failed to send voice message.");
     } finally {
       cleanupStream();
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
       setSending(false);
     }
-  }, [cleanupStream, disabled, onError, onCancel, onSend, previewBlob, previewUrl, sending]);
+  }, [cleanupStream, disabled, handleDiscard, onError, onCancel, onSend, previewBlob, seconds, sending]);
 
   // Preview playback controls
   const togglePreviewPlay = () => {

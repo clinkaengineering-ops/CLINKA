@@ -65,6 +65,7 @@ describe("VoiceMessageRecorder", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -122,8 +123,8 @@ describe("VoiceMessageRecorder", () => {
     });
   });
 
-  it("packages audio blob into a File and calls onSend", async () => {
-    const onSend = vi.fn().mockResolvedValue(undefined);
+  it("does not restart recording or re-request getUserMedia when pausing for preview", async () => {
+    const onSend = vi.fn();
     const onCancel = vi.fn();
 
     await act(async () => {
@@ -131,16 +132,89 @@ describe("VoiceMessageRecorder", () => {
       await new Promise((r) => setTimeout(r, 20));
     });
 
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle("Pause and review"));
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    // Must still be exactly 1 call — no re-request or effect re-execution
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Voice message preview")).toBeInTheDocument();
+  });
+
+  it("discards recording and does not call onSend if duration is under 1 second", async () => {
+    const onSend = vi.fn();
+    const onCancel = vi.fn();
+
+    await act(async () => {
+      render(<VoiceMessageRecorder onSend={onSend} onCancel={onCancel} />);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    // Click send immediately at 0 seconds
     await act(async () => {
       fireEvent.click(screen.getByTitle("Send voice message"));
     });
 
-    await vi.waitFor(() => {
-      expect(onSend).toHaveBeenCalledWith(expect.any(File), expect.any(Number));
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("packages audio blob into a File and calls onSend with explicit duration", async () => {
+    const onSend = vi.fn().mockResolvedValue(undefined);
+    const onCancel = vi.fn();
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      render(<VoiceMessageRecorder onSend={onSend} onCancel={onCancel} />);
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
+    // Advance timer by 3 seconds
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle("Send voice message"));
+      await Promise.resolve();
+    });
+
+    expect(onSend).toHaveBeenCalledWith(expect.any(File), 3);
+
     const sentFile = onSend.mock.calls[0][0] as File;
-    expect(sentFile.name).toMatch(/^voice-message-\d+-dur\d+\.webm$/);
+    expect(sentFile.name).toMatch(/^voice-message-\d+\.webm$/);
+
+    vi.useRealTimers();
+  });
+
+  it("auto-stops recording and moves to preview when reaching 300 seconds", async () => {
+    const onSend = vi.fn();
+    const onCancel = vi.fn();
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      render(<VoiceMessageRecorder onSend={onSend} onCancel={onCancel} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Advance timer past 300 seconds
+    await act(async () => {
+      vi.advanceTimersByTime(301000);
+      await Promise.resolve();
+    });
+
+    expect(mockMediaRecorder.stop).toHaveBeenCalled();
+    expect(screen.getByText("Voice message preview")).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 
   it("handles microphone permission denial gracefully", async () => {

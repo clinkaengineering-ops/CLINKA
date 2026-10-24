@@ -6,7 +6,7 @@ import { scanMessageContent } from "./content.scanner";
 import { assertUserNotBanned, banUserFor30Days } from "./ban.service";
 import { BanReason } from "../../generated/prisma/enums";
 
-function formatDuration(seconds?: number | null): string | null {
+export function formatDuration(seconds?: number | null): string | null {
   if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) {
     return null;
   }

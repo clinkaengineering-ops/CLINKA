@@ -221,16 +221,26 @@ const ACCEPTED_FILE_TYPES = [
   ".csv",
   ".txt",
   // Audio / Voice messages
-  "audio/*",
+  "audio/webm",
+  "audio/mp4",
+  "audio/ogg",
+  "audio/mpeg",
   ".webm",
-  ".weba",
   ".m4a",
+  ".mp4",
   ".ogg",
-  ".opus",
   ".mp3",
-  ".wav",
-  ".aac",
 ].join(",");
+
+function formatDuration(totalSeconds?: number | null): string | null {
+  if (totalSeconds === undefined || totalSeconds === null || !Number.isFinite(totalSeconds)) {
+    return null;
+  }
+  const sec = Math.max(0, Math.round(totalSeconds));
+  const minutes = Math.floor(sec / 60);
+  const remainingSeconds = sec % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
 
 function messagePreview(msg: ChatMessage): string {
   const text = msg.content.trim();
@@ -238,11 +248,13 @@ function messagePreview(msg: ChatMessage): string {
   if (msg.attachmentUrl) {
     const isVoice =
       msg.attachmentMime?.toLowerCase().startsWith("audio/") ||
-      /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(msg.attachmentName ?? "") ||
+      (!msg.attachmentMime?.toLowerCase().startsWith("video/") &&
+        /\.(webm|m4a|ogg|mp3)$/i.test(msg.attachmentName ?? "")) ||
       (msg.attachmentName?.startsWith("voice-message") ?? false);
 
     if (isVoice) {
-      return "🎤 Voice message";
+      const durStr = formatDuration(msg.attachmentDuration);
+      return durStr ? `🎤 Voice message (${durStr})` : "🎤 Voice message";
     }
     return msg.attachmentName ? `📎 ${msg.attachmentName}` : "📎 Attachment";
   }
@@ -261,7 +273,7 @@ function getAudioFileDuration(file: File): Promise<number | undefined> {
       audio.onloadedmetadata = () => {
         URL.revokeObjectURL(url);
         const dur = Math.round(audio.duration);
-        resolve(dur > 0 && Number.isFinite(dur) ? Math.min(300, Math.max(1, dur)) : undefined);
+        resolve(dur >= 1 && dur <= 300 && Number.isFinite(dur) ? dur : undefined);
       };
       audio.onerror = () => {
         URL.revokeObjectURL(url);
@@ -706,12 +718,19 @@ export function MessagingPage() {
     try {
       if (fileToSend) {
         let duration: number | undefined;
+        const mime = fileToSend.type?.toLowerCase() || "";
         const isAudioFile =
-          fileToSend.type.startsWith("audio/") ||
-          /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(fileToSend.name);
+          mime.startsWith("audio/") ||
+          (!mime.startsWith("video/") && /\.(webm|m4a|ogg|mp3)$/i.test(fileToSend.name));
         if (isAudioFile) {
           const detectedDur = await getAudioFileDuration(fileToSend);
-          duration = detectedDur ?? 1;
+          if (detectedDur === undefined || !Number.isFinite(detectedDur)) {
+            setSendError("Could not determine audio duration. Please select a valid audio file (1 to 300 seconds).");
+            setDraft(content);
+            setPendingFile(fileToSend);
+            return;
+          }
+          duration = detectedDur;
         }
 
         const msg = await sendMessageWithAttachment(

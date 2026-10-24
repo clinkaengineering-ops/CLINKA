@@ -53,10 +53,10 @@ export async function sendMessageController(
   res: Response,
   next: NextFunction,
 ) {
+  const file = req.file as Express.Multer.File | undefined;
+
   try {
     const conversationId = Number(req.params.id);
-    const validatedData = sendMessageSchema.parse(req.body);
-    const file = req.file as Express.Multer.File | undefined;
 
     if (file && file.size === 0) {
       throw new ApiError(400, "The selected file is empty (0 bytes). Please select a valid file.");
@@ -68,14 +68,13 @@ export async function sendMessageController(
     );
 
     if (file && isAudio && file.size > CHAT_MAX_VOICE_FILE_SIZE) {
-      if (file.path) {
-        void deleteUploadFile(file.path);
-      }
       throw new ApiError(
         400,
         "Audio file is too large. Maximum allowed size for voice messages is 5 MB.",
       );
     }
+
+    const validatedData = sendMessageSchema.parse(req.body);
 
     if (isAudio && !validatedData.attachmentDuration) {
       throw new ApiError(400, "Duration is required for audio attachments");
@@ -99,6 +98,9 @@ export async function sendMessageController(
     broadcastNewMessage(conversationId, message);
     res.status(201).json(ApiResponse(201, "Message sent", message));
   } catch (error) {
+    if (file?.path) {
+      void deleteUploadFile(file.path);
+    }
     next(error);
   }
 }

@@ -55,23 +55,14 @@ export const sendMessageWithAttachment = (
   form.append("file", file);
   if (content?.trim()) form.append("content", content.trim());
 
-  let durationToSend = attachmentDuration;
-  if (durationToSend === undefined || durationToSend === null) {
-    const match = file.name.match(/-dur(\d+)/i);
-    if (match) {
-      durationToSend = Number(match[1]);
+  if (
+    typeof attachmentDuration === "number" &&
+    Number.isFinite(attachmentDuration)
+  ) {
+    const rounded = Math.round(attachmentDuration);
+    if (rounded >= 1 && rounded <= 300) {
+      form.append("attachmentDuration", String(rounded));
     }
-  }
-
-  const isAudio =
-    file.type?.toLowerCase().startsWith("audio/") ||
-    /\.(webm|weba|ogg|opus|m4a|mp4|mp3|wav|aac)$/i.test(file.name);
-
-  if (isAudio) {
-    const dur = Math.max(1, Math.min(300, Math.round(durationToSend || 1)));
-    form.append("attachmentDuration", String(dur));
-  } else if (typeof durationToSend === "number" && durationToSend > 0) {
-    form.append("attachmentDuration", String(Math.round(durationToSend)));
   }
 
   return unwrap(
