@@ -49,6 +49,7 @@ describe("VoiceMessageRecorder", () => {
       });
 
       constructor() {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         mockMediaRecorder = this;
       }
     }

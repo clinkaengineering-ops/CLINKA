@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconTrash, IconSend, IconPlay, IconPause, IconSquare } from "@/components/Icons";
-import { cn } from "@/utils/cn";
 
 interface VoiceMessageRecorderProps {
   onSend: (file: File, duration?: number) => Promise<void> | void;
@@ -44,7 +43,6 @@ export function VoiceMessageRecorder({
   onError,
   disabled = false,
 }: VoiceMessageRecorderProps) {
-  const [isRecording, setIsRecording] = useState(false);
   const [isPausedForPreview, setIsPausedForPreview] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [sending, setSending] = useState(false);
@@ -116,7 +114,6 @@ export function VoiceMessageRecorder({
       previewUrlRef.current = url;
       setPreviewUrl(url);
       setIsPausedForPreview(true);
-      setIsRecording(false);
     };
 
     mediaRecorderRef.current.stop();
@@ -170,7 +167,6 @@ export function VoiceMessageRecorder({
 
         mediaRecorderRef.current = recorder;
         recorder.start(100);
-        setIsRecording(true);
 
         // Start duration timer with 300s limit
         timerRef.current = setInterval(() => {
