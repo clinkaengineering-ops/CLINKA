@@ -24,18 +24,23 @@ function axiosMessage(err: unknown): string {
   return e?.response?.data?.message ?? e?.message ?? "Request failed";
 }
 
-export function useAdmin() {
+export function useAdmin(opts: { loadOverview: boolean; loadVerifications: boolean }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [escrow, setEscrow] = useState<EscrowOverview | null>(null);
   const [disputes, setDisputes] = useState<ActiveDispute[]>([]);
   const [verifications, setVerifications] = useState<PendingVerification[]>([]);
   const [incompleteVerifications, setIncompleteVerifications] = useState<PendingVerification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(opts.loadOverview || opts.loadVerifications);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
+  const applyVerifications = useCallback((v: PendingVerification[]) => {
+    setVerifications((v ?? []).filter(isReviewableVerification));
+    setIncompleteVerifications((v ?? []).filter((item) => !isReviewableVerification(item)));
+  }, []);
+
+  const loadOverview = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -47,8 +52,7 @@ export function useAdmin() {
         fetchActiveDisputes(6),
       ]);
       setStats(s);
-      setVerifications((v ?? []).filter(isReviewableVerification));
-      setIncompleteVerifications((v ?? []).filter((item) => !isReviewableVerification(item)));
+      applyVerifications(v);
       setAnalytics(a);
       setEscrow(e);
       setDisputes(d);
@@ -57,25 +61,43 @@ export function useAdmin() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyVerifications]);
+
+  const loadVerifications = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      applyVerifications(await fetchPendingVerifications());
+    } catch (err) {
+      setError(axiosMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [applyVerifications]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (opts.loadOverview) {
+      void loadOverview();
+      return;
+    }
+    if (opts.loadVerifications) {
+      void loadVerifications();
+    }
+  }, [opts.loadOverview, opts.loadVerifications, loadOverview, loadVerifications]);
 
   const approve = useCallback(
     async (profileId: number) => {
       setActionLoading(profileId);
       try {
         await updateVerification(profileId, "APPROVED");
-        await load();
+        await loadVerifications();
       } catch (err) {
         throw new Error(axiosMessage(err));
       } finally {
         setActionLoading(null);
       }
     },
-    [load],
+    [loadVerifications],
   );
 
   const reject = useCallback(
@@ -83,14 +105,14 @@ export function useAdmin() {
       setActionLoading(profileId);
       try {
         await updateVerification(profileId, "REJECTED");
-        await load();
+        await loadVerifications();
       } catch (err) {
         throw new Error(axiosMessage(err));
       } finally {
         setActionLoading(null);
       }
     },
-    [load],
+    [loadVerifications],
   );
 
   return {
@@ -103,7 +125,7 @@ export function useAdmin() {
     loading,
     error,
     actionLoading,
-    refetch: load,
+    refetch: opts.loadOverview ? loadOverview : loadVerifications,
     approve,
     reject,
   };

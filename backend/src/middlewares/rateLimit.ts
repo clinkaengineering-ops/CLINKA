@@ -17,14 +17,16 @@ export const T2_WINDOW_MS = 60 * 60 * 1000;
 
 export const T3_MAX = 20;
 export const T3_WINDOW_MS = 15 * 60 * 1000;
+export const T3_CHAT_MAX = 30;
 
-export const T4_MAX = 120;
+export const T4_MAX = 400;
 export const T4_WINDOW_MS = 15 * 60 * 1000;
 
-export const T5_MAX = 60;
+export const T5_MAX = 180;
 export const T5_WINDOW_MS = 15 * 60 * 1000;
 
 export const ADMIN_MAX = 30;
+export const ADMIN_READ_MAX = 400;
 export const ADMIN_WINDOW_MS = 5 * 60 * 1000;
 
 export const PAYOUT_MAX = 3;
@@ -248,6 +250,7 @@ export const t3IpRateLimiter = createIpRateLimiter({
   message: "Too many requests. Please try again later.",
   name: "t3.ip",
   audit: false,
+  key: (req) => `ip:${clientIp(req)}:${requestRouteKey(req)}`,
 });
 
 export const t3AccountRateLimit = createUserIdRateLimit({
@@ -255,6 +258,23 @@ export const t3AccountRateLimit = createUserIdRateLimit({
   max: T3_MAX,
   message: "Too many requests. Please try again later.",
   name: "t3.account",
+  audit: false,
+  key: (req, userId) => `user:${userId}:${requestRouteKey(req)}`,
+});
+
+export const t3ChatIpRateLimiter = createIpRateLimiter({
+  windowMs: T3_WINDOW_MS,
+  max: T3_CHAT_MAX,
+  message: "Too many messages sent. Please slow down.",
+  name: "t3.chat.ip",
+  audit: false,
+});
+
+export const t3ChatAccountRateLimit = createUserIdRateLimit({
+  windowMs: T3_WINDOW_MS,
+  max: T3_CHAT_MAX,
+  message: "Too many messages sent. Please slow down.",
+  name: "t3.chat.account",
   audit: false,
 });
 
@@ -283,6 +303,7 @@ export const t1OtpLimiters: RequestHandler[] = [otpRateLimiter, otpIdentityRateL
 export const t1RegisterLimiters: RequestHandler[] = [t1RegisterIpLimiter, t1RegisterIdentityLimiter];
 export const t2Limiters: RequestHandler[] = [t2IpRateLimiter, t2AccountRateLimit];
 export const t3Limiters: RequestHandler[] = [t3IpRateLimiter, t3AccountRateLimit];
+export const t3ChatLimiters: RequestHandler[] = [t3ChatIpRateLimiter, t3ChatAccountRateLimit];
 
 /** Optional-auth writes (support tickets): IP always; account only when logged in. */
 export function t3AccountIfPresentRateLimit(req: Request, res: Response, next: NextFunction) {

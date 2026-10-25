@@ -53,6 +53,17 @@ api.interceptors.response.use(
       if (!error.response.data.message || error.response.data.message === "Too Many Requests") {
         error.response.data.message = "You are doing this too often. Please wait a moment and try again.";
       }
+      const retryAfter = Number(error.response.headers?.["retry-after"]);
+      if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        const wait =
+          retryAfter >= 60
+            ? `${Math.ceil(retryAfter / 60)} minute(s)`
+            : `${Math.ceil(retryAfter)} second(s)`;
+        const current = String(error.response.data.message);
+        if (!current.includes("Wait ")) {
+          error.response.data.message = `${current} Wait ${wait}.`;
+        }
+      }
     }
 
     if (

@@ -35,6 +35,8 @@ import { MessageAttachment } from "../components/MessageAttachment";
 import { VoiceMessageRecorder } from "../components/VoiceMessageRecorder";
 import { ProjectContextPanel } from "../components/ProjectContextPanel";
 import { MessagesPolicyModal } from "../components/MessagesPolicyModal";
+import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
+import { isEditableImage } from "../lib/imageProcessing";
 import {
   groupConversationsByParticipant,
   type ParticipantInboxGroup,
@@ -333,6 +335,7 @@ export function MessagingPage() {
   const [banAlert, setBanAlert] = useState<string | null>(null);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewImageFile, setPreviewImageFile] = useState<File | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -685,7 +688,48 @@ export function MessagingPage() {
     }
 
     setSendError(null);
+
+    // If image is editable (JPEG, PNG, WebP), open ImagePreviewDialog instead of staging right away:
+    if (isEditableImage(file)) {
+      setPreviewImageFile(file);
+      return;
+    }
+
+    // Non-editable files (GIF, PDF, Audio, CAD, BIM, archives) follow existing staging path:
     setPendingFile(file);
+  };
+
+  const handleSendPreviewImage = async (file: File, caption?: string) => {
+    setPreviewImageFile(null);
+    if (activeId == null || !user) return;
+
+    const content = caption?.trim() || "";
+    setSending(true);
+    setSendError(null);
+    emitTypingStop();
+
+    try {
+      const msg = await sendMessageWithAttachment(
+        activeId,
+        file,
+        content || undefined,
+      );
+      handleNewSocketMessage(msg);
+      if (content && draft.trim() === content) {
+        setDraft("");
+      }
+    } catch (e: unknown) {
+      const { message } = parseApiValidation(e);
+      if (message.toLowerCase().includes("suspended")) {
+        setBanAlert(message);
+      } else {
+        setSendError(message);
+      }
+      setDraft(content);
+      setPendingFile(file);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleSend = async () => {
@@ -1094,6 +1138,15 @@ export function MessagingPage() {
       <MessagesPolicyModal
         open={showPolicyModal}
         onClose={handleClosePolicyModal}
+      />
+
+      <ImagePreviewDialog
+        file={previewImageFile}
+        open={previewImageFile != null}
+        onClose={() => setPreviewImageFile(null)}
+        onSend={handleSendPreviewImage}
+        initialCaption={draft}
+        isSending={sending}
       />
 
       {banAlert && (

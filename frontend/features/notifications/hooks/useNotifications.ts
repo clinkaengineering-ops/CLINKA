@@ -3,25 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchNotifications,
-  fetchUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
 } from "../api/notifications.api";
 import type { AppNotification } from "@/types";
 
-export function useNotifications(pollMs = 30000) {
+export function useNotifications(pollMs = 60000) {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
-      const [list, count] = await Promise.all([
-        fetchNotifications(),
-        fetchUnreadNotificationCount(),
-      ]);
+      const list = await fetchNotifications();
       setItems(list);
-      setUnread(count);
+      setUnread(list.filter((n) => !n.read).length);
     } catch {
       setItems([]);
       setUnread(0);

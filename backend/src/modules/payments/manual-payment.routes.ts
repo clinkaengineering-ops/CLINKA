@@ -23,7 +23,7 @@ import {
   getAuthenticatedCloudinaryDownloadUrl,
 } from "../../config/upload";
 import { submitManualPaymentSchema } from "./payments.validation";
-import { adminRateLimit } from "../../middlewares/adminRateLimit";
+import { adminRateLimit, adminReadRateLimit } from "../../middlewares/adminRateLimit";
 import { manualSubmitRateLimiter, t2AccountRateLimit, t2Limiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
 import { idempotency } from "../../middlewares/idempotency";
 
@@ -206,7 +206,7 @@ router.get(
 );
 
 // ─── ADMIN: GET PENDING MANUAL PAYMENTS ───────────────────────────────────────
-router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), adminRateLimit, async (req, res, next) => {
+router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), adminReadRateLimit, async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -224,7 +224,7 @@ router.get("/admin/manual-payments", authenticate, authorize("ADMIN"), adminRate
 });
 
 // ─── ADMIN: GET SINGLE MANUAL PAYMENT DETAILS ─────────────────────────────────
-router.get("/admin/manual-payments/:submissionId", authenticate, authorize("ADMIN"), adminRateLimit, async (req, res, next) => {
+router.get("/admin/manual-payments/:submissionId", authenticate, authorize("ADMIN"), adminReadRateLimit, async (req, res, next) => {
   try {
     const id = parseInt(req.params.submissionId as string, 10);
     const result = await getAdminManualPaymentDetails(id);

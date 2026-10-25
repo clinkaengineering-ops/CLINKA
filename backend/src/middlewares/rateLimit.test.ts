@@ -1,7 +1,7 @@
 import type { Request, RequestHandler, Response } from "express";
 import type { Router } from "express";
 import ApiError from "../utils/ApiError";
-import { adminRateLimit } from "./adminRateLimit";
+import { adminRateLimit, adminReadRateLimit, adminTrafficRateLimit } from "./adminRateLimit";
 import { payoutRateLimit } from "./payoutRateLimit";
 import {
   T1_LOGIN_MAX,
@@ -9,14 +9,19 @@ import {
   T1_REGISTER_MAX,
   T2_MAX,
   T3_MAX,
+  T3_CHAT_MAX,
   T4_MAX,
   T5_MAX,
+  ADMIN_MAX,
+  ADMIN_READ_MAX,
   loginRateLimiter,
   otpRateLimiter,
   t1RegisterIpLimiter,
   t2AccountRateLimit,
   t2IpRateLimiter,
   t3IpRateLimiter,
+  t3AccountRateLimit,
+  t3ChatIpRateLimiter,
   t4AccountRateLimit,
   t5PublicListingLimiter,
   manualSubmitRateLimiter,
@@ -173,8 +178,8 @@ const t1t2Cases: Case[] = [
   { name: "POST /api/payments/admin/manual-payments/:submissionId/verify", router: manualPaymentRouter, method: "post", path: "/admin/manual-payments/:submissionId/verify", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [adminRateLimit, t2AccountRateLimit] },
   { name: "POST /api/payments/admin/manual-payments/:submissionId/reject", router: manualPaymentRouter, method: "post", path: "/admin/manual-payments/:submissionId/reject", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [adminRateLimit, t2AccountRateLimit] },
 
-  { name: "PATCH /api/admin/finance/settings", router: adminFinanceRouter, method: "patch", path: "/settings", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [adminRateLimit, t2AccountRateLimit] },
-  { name: "PATCH /api/admin/payments/:paymentId/override", router: adminRouter, method: "patch", path: "/payments/:paymentId/override", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [adminRateLimit, t2AccountRateLimit] },
+  { name: "PATCH /api/admin/finance/settings", router: adminFinanceRouter, method: "patch", path: "/settings", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [adminTrafficRateLimit, t2AccountRateLimit] },
+  { name: "PATCH /api/admin/payments/:paymentId/override", router: adminRouter, method: "patch", path: "/payments/:paymentId/override", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [adminTrafficRateLimit, t2AccountRateLimit] },
   { name: "PATCH /api/admin/withdrawals/:withdrawalId", router: adminRouter, method: "patch", path: "/withdrawals/:withdrawalId", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [t2AccountRateLimit] },
   { name: "POST /api/admin/withdrawals/:withdrawalId/cancel", router: adminRouter, method: "post", path: "/withdrawals/:withdrawalId/cancel", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [t2AccountRateLimit] },
   { name: "POST /api/admin/withdrawals/:withdrawalId/resolve", router: adminRouter, method: "post", path: "/withdrawals/:withdrawalId/resolve", limiter: t2IpRateLimiter, max: T2_MAX, alsoWired: [t2AccountRateLimit] },
@@ -227,10 +232,10 @@ describe("rate limit fail-closed skip-if-no-userId", () => {
 });
 
 describe("rate limit other tiers", () => {
-  it("T3 POST /api/messages/conversations/:id is wired and returns 429 after exceeding the limit", async () => {
+  it("T3 POST /api/messages/conversations/:id is wired and returns 429 after exceeding the chat limit", async () => {
     const handlers = routeHandlers(messagesRouter, "post", "/conversations/:id");
-    expect(handlers.includes(t3IpRateLimiter)).toBeTruthy();
-    await exceedLimit(t3IpRateLimiter, T3_MAX, { ip: "10.8.0.1", socket: { remoteAddress: "10.8.0.1" } as Request["socket"] });
+    expect(handlers.includes(t3ChatIpRateLimiter)).toBeTruthy();
+    await exceedLimit(t3ChatIpRateLimiter, T3_CHAT_MAX, { ip: "10.8.0.1", socket: { remoteAddress: "10.8.0.1" } as Request["socket"] });
   });
 
   it("T3 under-limit traffic is unaffected", async () => {
@@ -330,15 +335,70 @@ describe("rate limit other tiers", () => {
     expect(accountApprove.nextCalled).toBe(true);
   });
 
-  it("adminRateLimit sets Retry-After when the per-admin cap is exceeded", async () => {
+  it("T3 project create exhaustion does not block profile updates on a different path", async () => {
+    const ip = "10.8.0.41";
+    const user = { userId: "123e4567-e89b-12d3-a456-426614174041", role: "CLIENT" };
+    const createReq = {
+      ip,
+      socket: { remoteAddress: ip } as Request["socket"],
+      user,
+      method: "POST",
+      url: "/",
+      baseUrl: "/api/projects",
+      path: "/",
+    };
+    const profileReq = {
+      ip,
+      socket: { remoteAddress: ip } as Request["socket"],
+      user,
+      method: "PUT",
+      url: "/me",
+      baseUrl: "/api/users",
+      path: "/me",
+    };
+
+    await exceedLimit(t3IpRateLimiter, T3_MAX, createReq);
+    await exceedLimit(t3AccountRateLimit, T3_MAX, createReq);
+
+    const ipProfile = await dispatch(t3IpRateLimiter, profileReq);
+    expect(is429(ipProfile)).toBe(false);
+    expect(ipProfile.nextCalled).toBe(true);
+
+    const accountProfile = await dispatch(t3AccountRateLimit, profileReq);
+    expect(is429(accountProfile)).toBe(false);
+    expect(accountProfile.nextCalled).toBe(true);
+  });
+
+  it("adminRateLimit sets Retry-After when the per-admin write cap is exceeded", async () => {
     const user = { userId: "123e4567-e89b-12d3-a456-426614174004", role: "ADMIN" };
-    for (let i = 0; i < 30; i += 1) {
-      const allowed = await dispatch(adminRateLimit, { user });
+    for (let i = 0; i < ADMIN_MAX; i += 1) {
+      const allowed = await dispatch(adminRateLimit, { user, method: "POST" });
       expect(is429(allowed)).toBe(false);
     }
-    const blocked = await dispatch(adminRateLimit, { user });
+    const blocked = await dispatch(adminRateLimit, { user, method: "POST" });
     expect(is429(blocked)).toBe(true);
     expect(blocked.headers["retry-after"]).toBeTruthy();
+  });
+
+  it("adminTrafficRateLimit uses the read cap for GET and the write cap for POST", async () => {
+    const readUser = { userId: "123e4567-e89b-12d3-a456-426614174005", role: "ADMIN" };
+    for (let i = 0; i < ADMIN_MAX + 1; i += 1) {
+      const allowed = await dispatch(adminTrafficRateLimit, { user: readUser, method: "GET" });
+      expect(is429(allowed)).toBe(false);
+    }
+
+    const writeUser = { userId: "123e4567-e89b-12d3-a456-426614174006", role: "ADMIN" };
+    for (let i = 0; i < ADMIN_MAX; i += 1) {
+      const allowed = await dispatch(adminTrafficRateLimit, { user: writeUser, method: "PATCH" });
+      expect(is429(allowed)).toBe(false);
+    }
+    const blocked = await dispatch(adminTrafficRateLimit, { user: writeUser, method: "PATCH" });
+    expect(is429(blocked)).toBe(true);
+  });
+
+  it("adminReadRateLimit sets Retry-After when the per-admin read cap is exceeded", async () => {
+    const user = { userId: "123e4567-e89b-12d3-a456-426614174007", role: "ADMIN" };
+    await exceedLimit(adminReadRateLimit, ADMIN_READ_MAX, { user, method: "GET" });
   });
 });
 

@@ -25,7 +25,7 @@ export function NavbarActions({ showInbox = true, stacked = false }: { showInbox
       .catch(() => setMsgUnread(0));
     const id = setInterval(() => {
       fetchUnreadMessagesCount().then(setMsgUnread).catch(() => setMsgUnread(0));
-    }, 30000);
+    }, 60000);
     return () => clearInterval(id);
   }, [user, showInbox]);
 

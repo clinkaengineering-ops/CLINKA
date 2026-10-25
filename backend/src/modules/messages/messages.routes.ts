@@ -6,7 +6,7 @@ import {
 import { MulterError } from "multer";
 import ApiError from "../../utils/ApiError";
 import chatUpload from "../../middlewares/chatUpload.middleware";
-import { t3Limiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
+import { t3ChatLimiters, t4AccountRateLimit } from "../../middlewares/rateLimit";
 import {
   getMyConversationsController,
   getMessagesController,
@@ -28,7 +28,7 @@ router.get("/conversations/:id", t4AccountRateLimit, getMessagesController);
 
 router.get("/general/:userId", t4AccountRateLimit, getGeneralConversationController);
 
-router.post("/conversations/:id", ...t3Limiters, (req, res, next) => {
+router.post("/conversations/:id", ...t3ChatLimiters, (req, res, next) => {
   chatUpload.single("file")(req, res, (err) => {
     if (err) {
       if (err instanceof MulterError) {

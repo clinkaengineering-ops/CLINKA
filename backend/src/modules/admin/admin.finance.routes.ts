@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middlewares/auth.middleware";
-import { adminRateLimit } from "../../middlewares/adminRateLimit";
+import { adminTrafficRateLimit } from "../../middlewares/adminRateLimit";
 import { t2Limiters } from "../../middlewares/rateLimit";
 import {
   getFinanceOverviewController,
@@ -11,7 +11,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate, authorize("ADMIN"), adminRateLimit);
+router.use(authenticate, authorize("ADMIN"), adminTrafficRateLimit);
 
 router.get("/overview", getFinanceOverviewController);
 router.get("/transactions", getUnifiedTransactionsController);

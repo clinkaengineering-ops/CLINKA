@@ -56,12 +56,12 @@ const proofUpload = createUploadMiddleware("documents", {
   maxFiles: 1,
 });
 
-import { adminRateLimit } from "../../middlewares/adminRateLimit";
+import { adminTrafficRateLimit } from "../../middlewares/adminRateLimit";
 import { t2Limiters } from "../../middlewares/rateLimit";
 
 const router = Router();
 
-router.use(authenticate, authorize("ADMIN"), adminRateLimit);
+router.use(authenticate, authorize("ADMIN"), adminTrafficRateLimit);
 
 router.get("/stats", getAdminStatsController);
 router.get("/verifications/pending", getPendingVerificationsController);

@@ -7,6 +7,7 @@ import { sendMessageSchema } from "./modules/messages/messages.validation";
 import { isAllowedOrigin } from "./config/cors";
 import { isTokenRevoked, isUserSessionRevoked } from "./utils/tokenRevocation";
 import { isUserBanned } from "./modules/messages/ban.service";
+import { T3_CHAT_MAX, T3_WINDOW_MS } from "./middlewares/rateLimit";
 
 interface SocketUser {
   userId: string;
@@ -35,10 +36,10 @@ export function checkJoinRateLimit(socketId: string): boolean {
   return true;
 }
 
-// Message rate limit: max 30 messages per 15m per user (matches T3 HTTP limiter)
+// Message rate limit: matches HTTP t3ChatLimiters
 const userMessageTimestamps = new Map<string, number[]>();
-const WS_MESSAGE_WINDOW_MS = 15 * 60 * 1000;
-const WS_MESSAGE_MAX = 30;
+const WS_MESSAGE_WINDOW_MS = T3_WINDOW_MS;
+const WS_MESSAGE_MAX = T3_CHAT_MAX;
 
 export function checkMessageRateLimit(userId: string): boolean {
   const now = Date.now();

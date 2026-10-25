@@ -73,7 +73,10 @@ export function AdminPage() {
     refetch,
     approve,
     reject,
-  } = useAdmin();
+  } = useAdmin({
+    loadOverview: user?.role === "ADMIN" && tab === "overview",
+    loadVerifications: user?.role === "ADMIN" && (tab === "overview" || tab === "verifications"),
+  });
 
   if (user?.role !== "ADMIN") {
     return (
@@ -157,7 +160,7 @@ export function AdminPage() {
       {tab === "overview" &&
         (loading ? (
           <Card className="p-12 text-center text-slate-500">{t("common.loading")}</Card>
-        ) : stats && analytics && escrow ? (
+        ) : (
           <>
             {error && (
               <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-600 flex justify-between items-center">
@@ -167,19 +170,21 @@ export function AdminPage() {
                 </Button>
               </div>
             )}
-            <AdminOperationsOverview
-              stats={stats}
-              analytics={analytics}
-              escrow={escrow}
-              disputes={disputes}
-              verifications={verifications}
-              actionLoading={actionLoading}
-              onApprove={approve}
-              onReject={reject}
-              onViewAllVerifications={() => setTab("verifications")}
-            />
+            {stats && analytics && escrow ? (
+              <AdminOperationsOverview
+                stats={stats}
+                analytics={analytics}
+                escrow={escrow}
+                disputes={disputes}
+                verifications={verifications}
+                actionLoading={actionLoading}
+                onApprove={approve}
+                onReject={reject}
+                onViewAllVerifications={() => setTab("verifications")}
+              />
+            ) : null}
           </>
-        ) : null)}
+        ))}
     </div>
   );
 }

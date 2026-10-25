@@ -48,6 +48,14 @@ import {
   Pause as IconPause,
   Trash2 as IconTrash,
   Volume2 as IconVolume,
+  Undo2 as IconUndo,
+  Redo2 as IconRedo,
+  Highlighter as IconHighlighter,
+  Pen as IconPen,
+  RotateCcw as IconRotateCcw,
+  RotateCw as IconRotateCw,
+  Crop as IconCrop,
+  RefreshCw as IconRefresh,
 } from "lucide-react";
 
 export {
@@ -99,6 +107,14 @@ export {
   IconPause,
   IconTrash,
   IconVolume,
+  IconUndo,
+  IconRedo,
+  IconHighlighter,
+  IconPen,
+  IconRotateCcw,
+  IconRotateCw,
+  IconCrop,
+  IconRefresh,
 };
 
 type P = SVGProps<SVGSVGElement>;
