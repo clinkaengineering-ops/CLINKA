@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { IconTrash, IconSend, IconPlay, IconPause, IconSquare } from "@/components/Icons";
 
 interface VoiceMessageRecorderProps {
@@ -37,6 +37,9 @@ function getBestMimeType(): { mimeType: string; ext: string } {
   return { mimeType: "audio/webm", ext: ".webm" };
 }
 
+/** Must match the constant in VoiceMessagePlayer so both participate in the same pause system. */
+const GLOBAL_AUDIO_EVENT = "clinka:voice-message:play";
+
 export function VoiceMessageRecorder({
   onSend,
   onCancel,
@@ -65,6 +68,41 @@ export function VoiceMessageRecorder({
   const animFrameRef = useRef<number | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const mimeConfigRef = useRef(getBestMimeType());
+
+  // Unique ID so the global pause system can distinguish this recorder
+  const recorderId = useId();
+
+  // On mount: pause every other voice message that may be playing.
+  // This prevents echo/feedback when the microphone starts capturing.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(GLOBAL_AUDIO_EVENT, { detail: { playerId: recorderId } }),
+    );
+  }, [recorderId]);
+
+  // If another voice player starts playing or recording starts elsewhere:
+  // 1. If actively recording: stop recording and transition to preview to avoid capturing speaker audio
+  // 2. If previewing audio: pause preview playback
+  useEffect(() => {
+    const handleGlobalPlay = (e: Event) => {
+      const customEvent = e as CustomEvent<{ playerId: string }>;
+      if (customEvent.detail?.playerId !== recorderId) {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+          handlePauseForPreviewRef.current();
+        }
+        const audio = previewAudioRef.current;
+        if (audio && !audio.paused) {
+          audio.pause();
+          setIsPlayingPreview(false);
+        }
+      }
+    };
+
+    window.addEventListener(GLOBAL_AUDIO_EVENT, handleGlobalPlay as EventListener);
+    return () => {
+      window.removeEventListener(GLOBAL_AUDIO_EVENT, handleGlobalPlay as EventListener);
+    };
+  }, [recorderId]);
 
   // Cleanup helper
   const cleanupStream = useCallback(() => {
@@ -247,6 +285,13 @@ export function VoiceMessageRecorder({
     return () => {
       isMounted = false;
       cleanupStream();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
         previewUrlRef.current = null;
@@ -335,6 +380,10 @@ export function VoiceMessageRecorder({
       audio.pause();
       setIsPlayingPreview(false);
     } else {
+      // Pause any other voice message that's playing
+      window.dispatchEvent(
+        new CustomEvent(GLOBAL_AUDIO_EVENT, { detail: { playerId: recorderId } }),
+      );
       audio
         .play()
         .then(() => setIsPlayingPreview(true))
@@ -348,10 +397,22 @@ export function VoiceMessageRecorder({
         <audio
           ref={previewAudioRef}
           src={previewUrl}
-          onTimeUpdate={(e) => setPreviewTime(e.currentTarget.currentTime)}
+          onTimeUpdate={(e) => {
+            const ct = e.currentTarget.currentTime;
+            // Force-stop preview if currentTime exceeds recorded seconds
+            if (seconds > 0 && ct >= seconds + 0.3) {
+              e.currentTarget.pause();
+              e.currentTarget.currentTime = 0;
+              setIsPlayingPreview(false);
+              setPreviewTime(0);
+              return;
+            }
+            setPreviewTime(ct);
+          }}
           onEnded={() => {
             setIsPlayingPreview(false);
             setPreviewTime(0);
+            if (previewAudioRef.current) previewAudioRef.current.currentTime = 0;
           }}
         />
       )}

@@ -58,6 +58,11 @@ export function VoiceMessagePlayer({
   const initialDuration = explicitDuration ?? storedDuration ?? message?.attachmentDuration ?? null;
   const effectiveFilename = filename ?? name ?? message?.attachmentName;
 
+  // Authoritative recording duration from the recorder/server — never overwritten by browser
+  const recordedDurationRef = useRef<number | null>(
+    typeof initialDuration === "number" && initialDuration > 0 ? initialDuration : null,
+  );
+
   const playerId = useId();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -75,6 +80,7 @@ export function VoiceMessagePlayer({
   useEffect(() => {
     if (typeof initialDuration === "number" && initialDuration > 0) {
       setDuration(initialDuration);
+      recordedDurationRef.current = initialDuration;
     }
   }, [initialDuration]);
 
@@ -138,13 +144,22 @@ export function VoiceMessagePlayer({
     }
   }, [playbackSpeed]);
 
-  const handleSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = Number(e.target.value);
-    setCurrentTime(newTime);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
-  }, []);
+  const handleSliderChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const rawTime = Number(e.target.value);
+      const maxTime = duration > 0 ? duration : rawTime;
+      const clampedTime = Math.max(0, Math.min(rawTime, maxTime));
+      setCurrentTime(clampedTime);
+      if (audioRef.current) {
+        audioRef.current.currentTime = clampedTime;
+        if (maxTime > 0 && clampedTime >= maxTime && isPlaying) {
+          audioRef.current.pause();
+          setIsPlaying(false);
+        }
+      }
+    },
+    [duration, isPlaying],
+  );
 
   const isMe = side === "me";
   const progressRatio = duration > 0 ? Math.min(1, currentTime / duration) : 0;
@@ -187,17 +202,43 @@ export function VoiceMessagePlayer({
         onLoadedMetadata={(e) => {
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) {
-            setDuration(d);
+            // Only accept browser duration if we have no authoritative recording
+            // duration, or if the browser value is close to it (within 2s)
+            const known = recordedDurationRef.current;
+            if (!known || Math.abs(d - known) <= 2) {
+              setDuration(d);
+            }
           }
         }}
         onDurationChange={(e) => {
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) {
-            setDuration(d);
+            const known = recordedDurationRef.current;
+            if (!known || Math.abs(d - known) <= 2) {
+              setDuration(d);
+            }
           }
         }}
         onTimeUpdate={(e) => {
-          setCurrentTime(e.currentTarget.currentTime);
+          const ct = e.currentTarget.currentTime;
+          // Force-stop if currentTime exceeds the known recording duration or audio duration.
+          // WebM files from MediaRecorder often lack proper end-of-stream
+          // markers, so the browser may never fire 'ended' and the audio
+          // silently keeps going past the real content.
+          const limit =
+            recordedDurationRef.current && recordedDurationRef.current > 0
+              ? recordedDurationRef.current
+              : duration > 0
+                ? duration
+                : null;
+          if (limit && limit > 0 && ct >= limit + 0.3) {
+            e.currentTarget.pause();
+            e.currentTarget.currentTime = 0;
+            setIsPlaying(false);
+            setCurrentTime(0);
+            return;
+          }
+          setCurrentTime(ct);
         }}
         onEnded={() => {
           setIsPlaying(false);

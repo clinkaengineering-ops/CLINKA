@@ -1089,6 +1089,11 @@ export function MessagingPage() {
                           type="button"
                           onClick={() => {
                             setSendError(null);
+                            window.dispatchEvent(
+                              new CustomEvent("clinka:voice-message:play", {
+                                detail: { playerId: "recording-start" },
+                              }),
+                            );
                             setIsRecordingVoice(true);
                           }}
                           disabled={sending}

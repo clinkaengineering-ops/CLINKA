@@ -116,4 +116,53 @@ describe("VoiceMessagePlayer", () => {
     // Player 1 must have been paused
     expect(audio1.pause).toHaveBeenCalled();
   });
+
+  it("force-stops and resets to 0 when playback reaches or exceeds duration (prevents 5s continuing to 6, 7, 8)", async () => {
+    const shortMessage: ChatMessage = {
+      ...mockMessage,
+      attachmentDuration: 5,
+    };
+
+    const { container } = render(<VoiceMessagePlayer message={shortMessage} side="me" />);
+    const playBtn = screen.getByRole("button", { name: "Play voice message" });
+    const audio = container.querySelector("audio") as HTMLAudioElement;
+
+    // Start playing
+    await act(async () => {
+      fireEvent.click(playBtn);
+    });
+    expect(audio.play).toHaveBeenCalled();
+
+    // Simulate timeupdate exceeding 5 seconds (e.g. 5.4s due to WebM missing end-of-stream)
+    Object.defineProperty(audio, "currentTime", {
+      value: 5.4,
+      writable: true,
+      configurable: true,
+    });
+
+    await act(async () => {
+      fireEvent.timeUpdate(audio);
+    });
+
+    // Must have paused and reset to 0:00
+    expect(audio.pause).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Play voice message" })).toBeInTheDocument();
+    expect(screen.getByText("0:00")).toBeInTheDocument();
+  });
+
+  it("clamps seeking to duration and pauses if seeked to the end while playing", async () => {
+    const msg: ChatMessage = {
+      ...mockMessage,
+      attachmentDuration: 10,
+    };
+
+    const { container } = render(<VoiceMessagePlayer message={msg} side="me" />);
+    const audio = container.querySelector("audio") as HTMLAudioElement;
+    const slider = screen.getByRole("slider", { name: "Seek voice message" }) as HTMLInputElement;
+
+    // Seek beyond 10s should clamp to 10
+    fireEvent.change(slider, { target: { value: "15" } });
+    expect(audio.currentTime).toBe(10);
+    expect(slider.value).toBe("10");
+  });
 });

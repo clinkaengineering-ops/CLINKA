@@ -237,4 +237,45 @@ describe("VoiceMessageRecorder", () => {
     );
     expect(onCancel).toHaveBeenCalled();
   });
+
+  it("dispatches global audio event on mount to pause any playing voice message when recording starts", async () => {
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    const onSend = vi.fn();
+    const onCancel = vi.fn();
+
+    await act(async () => {
+      render(<VoiceMessageRecorder onSend={onSend} onCancel={onCancel} />);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "clinka:voice-message:play",
+      }),
+    );
+  });
+
+  it("stops active recording and transitions to preview if another voice note starts playing", async () => {
+    const onSend = vi.fn();
+    const onCancel = vi.fn();
+
+    await act(async () => {
+      render(<VoiceMessageRecorder onSend={onSend} onCancel={onCancel} />);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    expect(mockMediaRecorder.state).toBe("recording");
+
+    // Simulate another voice note starting playback
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("clinka:voice-message:play", {
+          detail: { playerId: "other-voice-player" },
+        }),
+      );
+    });
+
+    expect(mockMediaRecorder.stop).toHaveBeenCalled();
+    expect(screen.getByText("Voice message preview")).toBeInTheDocument();
+  });
 });
