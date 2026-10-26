@@ -72,38 +72,6 @@ export function VoiceMessageRecorder({
   // Unique ID so the global pause system can distinguish this recorder
   const recorderId = useId();
 
-  // On mount: pause every other voice message that may be playing.
-  // This prevents echo/feedback when the microphone starts capturing.
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent(GLOBAL_AUDIO_EVENT, { detail: { playerId: recorderId } }),
-    );
-  }, [recorderId]);
-
-  // If another voice player starts playing or recording starts elsewhere:
-  // 1. If actively recording: stop recording and transition to preview to avoid capturing speaker audio
-  // 2. If previewing audio: pause preview playback
-  useEffect(() => {
-    const handleGlobalPlay = (e: Event) => {
-      const customEvent = e as CustomEvent<{ playerId: string }>;
-      if (customEvent.detail?.playerId !== recorderId) {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-          handlePauseForPreviewRef.current();
-        }
-        const audio = previewAudioRef.current;
-        if (audio && !audio.paused) {
-          audio.pause();
-          setIsPlayingPreview(false);
-        }
-      }
-    };
-
-    window.addEventListener(GLOBAL_AUDIO_EVENT, handleGlobalPlay as EventListener);
-    return () => {
-      window.removeEventListener(GLOBAL_AUDIO_EVENT, handleGlobalPlay as EventListener);
-    };
-  }, [recorderId]);
-
   // Cleanup helper
   const cleanupStream = useCallback(() => {
     if (animFrameRef.current) {
@@ -162,6 +130,38 @@ export function VoiceMessageRecorder({
   useEffect(() => {
     handlePauseForPreviewRef.current = handlePauseForPreview;
   }, [handlePauseForPreview]);
+
+  // On mount: pause every other voice message that may be playing.
+  // This prevents echo/feedback when the microphone starts capturing.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(GLOBAL_AUDIO_EVENT, { detail: { playerId: recorderId } }),
+    );
+  }, [recorderId]);
+
+  // If another voice player starts playing or recording starts elsewhere:
+  // 1. If actively recording: stop recording and transition to preview to avoid capturing speaker audio
+  // 2. If previewing audio: pause preview playback
+  useEffect(() => {
+    const handleGlobalPlay = (e: Event) => {
+      const customEvent = e as CustomEvent<{ playerId: string }>;
+      if (customEvent.detail?.playerId !== recorderId) {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+          handlePauseForPreviewRef.current();
+        }
+        const audio = previewAudioRef.current;
+        if (audio && !audio.paused) {
+          audio.pause();
+          setIsPlayingPreview(false);
+        }
+      }
+    };
+
+    window.addEventListener(GLOBAL_AUDIO_EVENT, handleGlobalPlay as EventListener);
+    return () => {
+      window.removeEventListener(GLOBAL_AUDIO_EVENT, handleGlobalPlay as EventListener);
+    };
+  }, [recorderId]);
 
   // Start recording on mount
   useEffect(() => {
