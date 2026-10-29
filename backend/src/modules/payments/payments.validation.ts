@@ -215,7 +215,12 @@ export type InternationalWithdrawalInput = z.infer<
 
 export const instapayWithdrawalSchema = z.object({
   amount: z.coerce.number().positive(),
-  instapayAccount: z.string().trim().min(2, "InstaPay account is required"),
+  instapayNumber: z
+    .string()
+    .trim()
+    .min(10, "Enter a valid mobile number")
+    .max(15, "Mobile number is too long")
+    .regex(/^[0-9+]+$/, "Mobile number must contain only digits"),
   accountHolderName: accountHolderNameField("Account holder name"),
 });
 

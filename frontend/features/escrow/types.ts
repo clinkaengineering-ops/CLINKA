@@ -175,7 +175,7 @@ export interface UnifiedWithdrawalPayload {
   bankAddress?: string;
   country?: string;
   // INSTAPAY specific
-  instapayAccount?: string;
+  instapayNumber?: string;
   // E_WALLET specific
   walletProvider?: string;
   walletNumber?: string;

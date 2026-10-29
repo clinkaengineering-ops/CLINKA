@@ -1482,7 +1482,7 @@ export async function revealWithdrawalBankDetails(
     decrypted.swiftBic = item.swiftBicEncrypted ? decryptSensitiveField(item.swiftBicEncrypted) : null;
     decrypted.bankAddress = item.bankAddressEncrypted ? decryptSensitiveField(item.bankAddressEncrypted) : null;
   } else if (item.payoutType === "INSTAPAY") {
-    decrypted.instapayAccount = item.accountNumber;
+    decrypted.instapayNumber = item.accountNumber;
   } else if (item.payoutType === "E_WALLET") {
     decrypted.walletProvider = item.bankName;
     decrypted.walletNumber = item.accountNumber;

@@ -88,7 +88,7 @@ export function EngineerBalancePage() {
   const [country, setCountry] = useState("");
 
   // InstaPay Fields
-  const [instapayAccount, setInstapayAccount] = useState("");
+  const [instapayNumber, setInstapayNumber] = useState("");
 
   // E-Wallet Fields
   const [walletProvider, setWalletProvider] = useState("");
@@ -118,7 +118,7 @@ export function EngineerBalancePage() {
     setSwiftBic("");
     setBankAddress("");
     setCountry("");
-    setInstapayAccount("");
+    setInstapayNumber("");
     setWalletProvider("");
     setWalletNumber("");
     setModalError("");
@@ -139,8 +139,8 @@ export function EngineerBalancePage() {
     }
 
     if (method === "INSTAPAY") {
-      if (!instapayAccount.trim()) {
-        setModalError("InstaPay account is required");
+      if (!instapayNumber.trim() || instapayNumber.trim().length < 10) {
+        setModalError("Enter a valid mobile number for InstaPay");
         return;
       }
       if (!isValidAccountHolderName(fullName)) {
@@ -198,7 +198,7 @@ export function EngineerBalancePage() {
       };
 
       if (method === "INSTAPAY") {
-        payload.instapayAccount = instapayAccount.trim();
+        payload.instapayNumber = instapayNumber.trim();
         payload.accountHolderName = fullName.trim();
       } else if (method === "E_WALLET") {
         payload.walletProvider = walletProvider.trim();
@@ -585,13 +585,13 @@ export function EngineerBalancePage() {
                     <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                          InstaPay Account / Mobile
+                          InstaPay Mobile Number
                         </label>
                         <input
-                          type="text"
-                          value={instapayAccount}
-                          onChange={(e) => setInstapayAccount(e.target.value)}
-                          placeholder="e.g. yourname@instapay"
+                          type="tel"
+                          value={instapayNumber}
+                          onChange={(e) => setInstapayNumber(e.target.value.replace(/[^0-9+]/g, ""))}
+                          placeholder="e.g. 01xxxxxxxxx"
                           required
                           className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-electric-500"
                         />

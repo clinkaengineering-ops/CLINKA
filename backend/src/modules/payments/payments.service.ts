@@ -1097,7 +1097,7 @@ export async function createWithdrawalRequest(
 
   const user = await db.user.findUnique({ where: { id: engineerUserId }, select: { name: true, email: true } });
   if (user) {
-    const accountNumber = input.iban || input.account || input.walletNumber || "N/A";
+    const accountNumber = input.iban || input.instapayNumber || input.account || input.walletNumber || "N/A";
     await sendWithdrawalRequestEmailToAdmins({
       engineerName: user.name,
       engineerEmail: user.email,

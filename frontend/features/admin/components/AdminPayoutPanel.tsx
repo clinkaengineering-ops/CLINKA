@@ -483,7 +483,7 @@ export function AdminPayoutPanel() {
                 <span className="mt-0.5">⚠️</span>
                 <span>This access has been logged in the audit trail.</span>
               </div>
-              {(["accountHolderName", "iban", "swiftBic", "bankAddress", "instapayAccount", "walletProvider", "walletNumber", "accountNumber"] as const).map((field) => (
+              {(["accountHolderName", "iban", "swiftBic", "bankAddress", "instapayNumber", "walletProvider", "walletNumber", "accountNumber"] as const).map((field) => (
                 bankDetails.data[field] && (
                   <div key={field}>
                     <p className="text-xs font-medium text-slate-500 uppercase">

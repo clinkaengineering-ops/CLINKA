@@ -1166,8 +1166,8 @@ export async function createInstapayPayout(
   const maskedName = input.accountHolderName.length > 2
     ? input.accountHolderName.substring(0, 1) + "***" + input.accountHolderName.substring(input.accountHolderName.length - 1)
     : "***";
-  const maskedAccount = input.instapayAccount.length > 4
-    ? "***" + input.instapayAccount.slice(-4)
+  const maskedAccount = input.instapayNumber.length > 4
+    ? "***" + input.instapayNumber.slice(-4)
     : "***";
 
   let txResult;
@@ -1188,7 +1188,7 @@ export async function createInstapayPayout(
           userId: engineerUserId,
           amount,
           method: "INSTAPAY",
-          accountNumber: input.instapayAccount, // We can store the raw address here since InstaPay addresses aren't as strictly sensitive as IBANs, or mask it depending on requirements. Wait, we should probably encrypt it if we have the config.
+          accountNumber: input.instapayNumber, // Store the InstaPay mobile number
           payoutType: "INSTAPAY",
           currency: "EGP", // Wait, global system currency is USD for internal? The schema says default "USD".
           accountHolderName: maskedName,
