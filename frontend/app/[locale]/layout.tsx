@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Barlow, Cairo } from "next/font/google";
+import localFont from "next/font/local";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "../globals.css";
 import { ThemeProvider } from "@/components/theme";
@@ -8,16 +8,30 @@ import { I18nProvider } from "@/i18n";
 import { AuthProvider } from "@/features/auth/components/AuthProvider";
 import { GlobalUploadIndicator } from "@/components/UI/GlobalUploadIndicator";
 
-const brandLatin = Barlow({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+const brandLatin = localFont({
+  src: [
+    { path: "../fonts/barlow-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/barlow-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/barlow-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/barlow-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "../fonts/barlow-latin-800-normal.woff2", weight: "800", style: "normal" },
+    { path: "../fonts/barlow-latin-900-normal.woff2", weight: "900", style: "normal" },
+  ],
   variable: "--font-brand-latin",
+  display: "swap",
 });
 
-const brandArabic = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+const brandArabic = localFont({
+  src: [
+    { path: "../fonts/cairo-arabic-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/cairo-arabic-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/cairo-arabic-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/cairo-arabic-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "../fonts/cairo-arabic-800-normal.woff2", weight: "800", style: "normal" },
+    { path: "../fonts/cairo-arabic-900-normal.woff2", weight: "900", style: "normal" },
+  ],
   variable: "--font-brand-arabic",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
