@@ -47,12 +47,19 @@ export function authCookieOptions(requestOrigin?: string): CookieOptions {
     useSecure = useSecure || clientUrl.startsWith("https://");
   }
 
+  const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
   const needsCrossSiteCookie = crossHost && useSecure;
 
-  return {
+  const options: CookieOptions = {
     httpOnly: true,
     secure: useSecure,
-    sameSite: needsCrossSiteCookie ? "none" : isProd ? "strict" : "lax",
+    sameSite: needsCrossSiteCookie ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000,
   };
+
+  if (cookieDomain) {
+    options.domain = cookieDomain;
+  }
+
+  return options;
 }

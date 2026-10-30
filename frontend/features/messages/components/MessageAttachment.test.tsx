@@ -148,7 +148,7 @@ describe("MessageAttachment", () => {
       });
     });
 
-    it("renders voice player with preload='metadata' when attachmentMime starts with audio/", () => {
+    it("renders voice player with preload='auto' when attachmentMime starts with audio/", () => {
       const msg: ChatMessage = {
         ...baseMessage,
         attachmentUrl: "/uploads/documents/voice.webm",
@@ -163,7 +163,7 @@ describe("MessageAttachment", () => {
 
       const audio = container.querySelector("audio");
       expect(audio).toBeInTheDocument();
-      expect(audio).toHaveAttribute("preload", "metadata");
+      expect(audio).toHaveAttribute("preload", "auto");
       expect(audio).toHaveAttribute("src", expect.stringContaining("voice.webm"));
     });
 

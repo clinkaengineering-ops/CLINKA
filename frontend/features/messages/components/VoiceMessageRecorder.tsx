@@ -21,12 +21,27 @@ function getBestMimeType(): { mimeType: string; ext: string } {
     return { mimeType: "audio/webm", ext: ".webm" };
   }
 
-  const types = [
-    { mimeType: "audio/webm;codecs=opus", ext: ".webm" },
-    { mimeType: "audio/webm", ext: ".webm" },
-    { mimeType: "audio/mp4", ext: ".m4a" },
-    { mimeType: "audio/ogg;codecs=opus", ext: ".ogg" },
-  ];
+  // On Apple/iOS devices (iOS Safari, iPadOS, macOS Safari), audio/mp4 (AAC) is the native hardware format.
+  // Safari's experimental audio/webm implementation is buggy and produces broken audio on mobile.
+  const isApple =
+    typeof navigator !== "undefined" &&
+    (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ||
+      /^((?!chrome|android).)*safari/i.test(navigator.userAgent));
+
+  const types = isApple
+    ? [
+        { mimeType: "audio/mp4", ext: ".m4a" },
+        { mimeType: "audio/mp4;codecs=mp4a.40.2", ext: ".m4a" },
+        { mimeType: "audio/webm;codecs=opus", ext: ".webm" },
+        { mimeType: "audio/webm", ext: ".webm" },
+      ]
+    : [
+        { mimeType: "audio/webm;codecs=opus", ext: ".webm" },
+        { mimeType: "audio/webm", ext: ".webm" },
+        { mimeType: "audio/mp4", ext: ".m4a" },
+        { mimeType: "audio/ogg;codecs=opus", ext: ".ogg" },
+      ];
 
   for (const t of types) {
     if (MediaRecorder.isTypeSupported(t.mimeType)) {
@@ -34,7 +49,19 @@ function getBestMimeType(): { mimeType: string; ext: string } {
     }
   }
 
-  return { mimeType: "audio/webm", ext: ".webm" };
+  return isApple
+    ? { mimeType: "audio/mp4", ext: ".m4a" }
+    : { mimeType: "audio/webm", ext: ".webm" };
+}
+
+function setAudioSessionType(type: "playback" | "play-and-record") {
+  if (typeof navigator !== "undefined" && "audioSession" in navigator) {
+    try {
+      (navigator as any).audioSession.type = type;
+    } catch {
+      // ignore unsupported or restricted environments
+    }
+  }
 }
 
 /** Must match the constant in VoiceMessagePlayer so both participate in the same pause system. */
@@ -61,6 +88,7 @@ export function VoiceMessageRecorder({
 
   const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const startTimeRef = useRef<number>(0);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -90,6 +118,8 @@ export function VoiceMessageRecorder({
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    // Reset mobile audio routing back to media playback (loudspeaker)
+    setAudioSessionType("playback");
   }, []);
 
   const previewUrlRef = useRef<string | null>(null);
@@ -106,9 +136,13 @@ export function VoiceMessageRecorder({
 
   // Handle Pause & Preview
   const handlePauseForPreview = useCallback(() => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") return;
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") return;
 
-    mediaRecorderRef.current.onstop = () => {
+    recorder.onstop = () => {
+      // Clean up mic tracks and audio context only after recorder finishes and emits chunks
+      cleanupStream();
+
       const blob = new Blob(chunksRef.current, {
         type: mimeConfigRef.current.mimeType,
       });
@@ -122,8 +156,7 @@ export function VoiceMessageRecorder({
       setIsPausedForPreview(true);
     };
 
-    mediaRecorderRef.current.stop();
-    cleanupStream();
+    recorder.stop();
   }, [cleanupStream]);
 
   const handlePauseForPreviewRef = useRef(handlePauseForPreview);
@@ -204,24 +237,22 @@ export function VoiceMessageRecorder({
         };
 
         mediaRecorderRef.current = recorder;
-        recorder.start(100);
+        startTimeRef.current = Date.now();
+        // Record continuously without rapid 100ms slicing to prevent dropped frames and audio stuttering on mobile
+        recorder.start();
 
         // Start duration timer with 300s limit
         timerRef.current = setInterval(() => {
-          setSeconds((prev) => {
-            if (prev >= 300) return 300;
-            const next = prev + 1;
-            if (next >= 300) {
-              if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
-              }
-              handlePauseForPreviewRef.current();
-              return 300;
+          const elapsed = Math.min(300, Math.floor((Date.now() - startTimeRef.current) / 1000));
+          setSeconds(elapsed);
+          if (elapsed >= 300) {
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
             }
-            return next;
-          });
-        }, 1000);
+            handlePauseForPreviewRef.current();
+          }
+        }, 500);
 
         // Start live audio visualizer
         try {
@@ -241,9 +272,16 @@ export function VoiceMessageRecorder({
 
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
+            let lastVisualizerUpdate = 0;
 
-            const updateVisualizer = () => {
+            const updateVisualizer = (timestamp: number) => {
               if (!analyserRef.current || !isMounted) return;
+              animFrameRef.current = requestAnimationFrame(updateVisualizer);
+
+              // Throttle React re-renders to ~60ms (~16fps) to prevent mobile CPU overload and audio dropouts
+              if (timestamp - lastVisualizerUpdate < 60) return;
+              lastVisualizerUpdate = timestamp;
+
               analyserRef.current.getByteFrequencyData(dataArray);
 
               // Downsample to 16 bars
@@ -255,7 +293,6 @@ export function VoiceMessageRecorder({
                 newLevels.push(Math.max(0.15, Math.min(1, val / 180)));
               }
               setVolumeLevels(newLevels);
-              animFrameRef.current = requestAnimationFrame(updateVisualizer);
             };
 
             animFrameRef.current = requestAnimationFrame(updateVisualizer);
@@ -352,7 +389,8 @@ export function VoiceMessageRecorder({
       }
 
       const { ext } = mimeConfigRef.current;
-      const durationSecs = Math.max(1, Math.min(300, Math.round(seconds)));
+      const elapsedWallSecs = startTimeRef.current > 0 ? (Date.now() - startTimeRef.current) / 1000 : seconds;
+      const durationSecs = Math.max(1, Math.min(300, Math.round(Math.max(seconds, elapsedWallSecs))));
       const filename = `voice-message-${Date.now()}${ext}`;
       const file = new File([finalBlob], filename, {
         type: mimeConfigRef.current.mimeType,
@@ -380,6 +418,15 @@ export function VoiceMessageRecorder({
       audio.pause();
       setIsPlayingPreview(false);
     } else {
+      // Ensure audio routes through main speaker and overrides silent switch on mobile
+      setAudioSessionType("playback");
+
+      // If preview finished or at/near the end, rewind
+      if (seconds > 0 && audio.currentTime >= seconds - 0.2) {
+        audio.currentTime = 0;
+        setPreviewTime(0);
+      }
+
       // Pause any other voice message that's playing
       window.dispatchEvent(
         new CustomEvent(GLOBAL_AUDIO_EVENT, { detail: { playerId: recorderId } }),
@@ -397,10 +444,12 @@ export function VoiceMessageRecorder({
         <audio
           ref={previewAudioRef}
           src={previewUrl}
+          preload="auto"
+          playsInline
           onTimeUpdate={(e) => {
             const ct = e.currentTarget.currentTime;
-            // Force-stop preview if currentTime exceeds recorded seconds
-            if (seconds > 0 && ct >= seconds + 0.3) {
+            // Force-stop preview if currentTime exceeds recorded seconds (allowing small buffer for frame alignment)
+            if (seconds > 0 && ct >= seconds + 0.6) {
               e.currentTarget.pause();
               e.currentTarget.currentTime = 0;
               setIsPlayingPreview(false);

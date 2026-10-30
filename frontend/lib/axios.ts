@@ -45,7 +45,14 @@ api.interceptors.response.use(
     }
 
     const requestUrl = String(error.config?.url ?? "");
-    const isSessionProbe = requestUrl.includes("/users/me");
+    const isSilentRequest =
+      Boolean((error.config as any)?.silent) ||
+      Boolean((error.config as any)?.skipAuthRedirect);
+    const isBackgroundRequest =
+      requestUrl.includes("/users/me") ||
+      requestUrl.includes("/notifications") ||
+      requestUrl.includes("/unread-count") ||
+      isSilentRequest;
 
     if (error.response?.status === 429) {
       if (!error.response.data) error.response.data = {};
@@ -69,14 +76,21 @@ api.interceptors.response.use(
     if (
       typeof window !== "undefined" &&
       error.response?.status === 401 &&
-      !isSessionProbe
+      !isBackgroundRequest
     ) {
-      const path = window.location.pathname;
-      const isPublic = PUBLIC_PATH_PREFIXES.some(
-        (p) => path === p || path.startsWith(`${p}/`),
-      );
+      const rawPath = window.location.pathname;
+      const pathWithoutLocale = rawPath.replace(/^\/(?:en|ar)(?=\/|$)/, "") || "/";
+      const isPublic =
+        PUBLIC_PATH_PREFIXES.some(
+          (p) => pathWithoutLocale === p || pathWithoutLocale.startsWith(`${p}/`),
+        ) ||
+        pathWithoutLocale === "/" ||
+        pathWithoutLocale.startsWith("/engineers") ||
+        pathWithoutLocale.startsWith("/projects") ||
+        pathWithoutLocale.startsWith("/about");
+
       if (!isPublic) {
-        const next = encodeURIComponent(path);
+        const next = encodeURIComponent(rawPath);
         window.location.href = `/login?next=${next}`;
       }
     }

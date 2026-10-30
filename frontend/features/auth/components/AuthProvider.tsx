@@ -45,8 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const me = await getMe();
         if (!cancelled) setUser(me);
-      } catch {
-        if (!cancelled) setUser(null);
+      } catch (err: any) {
+        if (!cancelled) {
+          if (err?.response?.status === 401 || err?.response?.status === 403) {
+            setUser(null);
+          } else {
+            setSessionReady(true);
+          }
+        }
       } finally {
         if (!cancelled) {
           setBootstrapping(false);

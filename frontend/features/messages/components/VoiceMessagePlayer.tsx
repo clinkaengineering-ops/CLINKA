@@ -117,6 +117,14 @@ export function VoiceMessagePlayer({
     };
   }, []);
 
+  // Pre-load audio to prime the decoder and cache buffers on mobile
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && typeof audio.load === "function") {
+      audio.load();
+    }
+  }, [url]);
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -125,15 +133,40 @@ export function VoiceMessagePlayer({
       audio.pause();
       setIsPlaying(false);
     } else {
+      // Force mobile audio session into playback mode (routes to main loudspeaker and overrides iPhone silent switch)
+      if (typeof navigator !== "undefined" && "audioSession" in navigator) {
+        try {
+          (navigator as any).audioSession.type = "playback";
+        } catch {
+          // ignore
+        }
+      }
+
+      // If audio already finished or is at/near the end, rewind to start
+      const limit = Math.max(recordedDurationRef.current || 0, duration || 0);
+      if (audio.ended || (limit > 0 && audio.currentTime >= limit - 0.2)) {
+        audio.currentTime = 0;
+        setCurrentTime(0);
+      }
+
       window.dispatchEvent(
         new CustomEvent(GLOBAL_AUDIO_EVENT, { detail: { playerId } }),
       );
-      audio
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => setLoadError(true));
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            setLoadError(false);
+          })
+          .catch((err) => {
+            if (err?.name === "AbortError") return;
+            setLoadError(true);
+          });
+      }
     }
-  }, [isPlaying, playerId]);
+  }, [duration, isPlaying, playerId]);
 
   const cycleSpeed = useCallback(() => {
     const nextIndex = (SPEED_OPTIONS.indexOf(playbackSpeed) + 1) % SPEED_OPTIONS.length;
@@ -196,7 +229,8 @@ export function VoiceMessagePlayer({
       <audio
         ref={audioRef}
         src={url}
-        preload="metadata"
+        preload="auto"
+        playsInline
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onLoadedMetadata={(e) => {
@@ -207,6 +241,7 @@ export function VoiceMessagePlayer({
             const known = recordedDurationRef.current;
             if (!known || Math.abs(d - known) <= 2) {
               setDuration(d);
+              recordedDurationRef.current = d;
             }
           }
         }}
@@ -216,6 +251,7 @@ export function VoiceMessagePlayer({
             const known = recordedDurationRef.current;
             if (!known || Math.abs(d - known) <= 2) {
               setDuration(d);
+              recordedDurationRef.current = d;
             }
           }
         }}
@@ -225,13 +261,8 @@ export function VoiceMessagePlayer({
           // WebM files from MediaRecorder often lack proper end-of-stream
           // markers, so the browser may never fire 'ended' and the audio
           // silently keeps going past the real content.
-          const limit =
-            recordedDurationRef.current && recordedDurationRef.current > 0
-              ? recordedDurationRef.current
-              : duration > 0
-                ? duration
-                : null;
-          if (limit && limit > 0 && ct >= limit + 0.3) {
+          const limit = Math.max(recordedDurationRef.current || 0, duration || 0);
+          if (limit > 0 && ct >= limit + 0.3) {
             e.currentTarget.pause();
             e.currentTarget.currentTime = 0;
             setIsPlaying(false);

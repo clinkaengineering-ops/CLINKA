@@ -7,9 +7,11 @@ import {
 } from "../modules/messages/ban.service";
 
 import { isTokenRevoked, isUserSessionRevoked } from "../utils/tokenRevocation";
+import generateToken from "../utils/generateToken";
+import { authCookieOptions } from "../config/cookies";
 
 export interface AuthRequest extends Request {
-  user?: { userId: string; role: string; iat?: number };
+  user?: { userId: string; role: string; iat?: number; exp?: number };
 }
 
 function extractToken(req: Request): string | undefined {
@@ -21,6 +23,27 @@ function extractToken(req: Request): string | undefined {
   return undefined;
 }
 
+function renewCookieSessionIfDue(
+  req: Request,
+  res: Response,
+  payload: { userId: string; role: string; iat?: number; exp?: number },
+) {
+  if (req.cookies?.token && payload.exp && payload.iat && payload.userId && payload.role) {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const totalLife = payload.exp - payload.iat;
+    const timeLeft = payload.exp - nowSec;
+    // Renew if token has passed 20% of its lifespan or has less than 7 days remaining
+    if (timeLeft > 0 && (timeLeft < totalLife * 0.8 || timeLeft < 7 * 24 * 3600)) {
+      try {
+        const freshToken = generateToken(payload.userId, payload.role);
+        res.cookie("token", freshToken, authCookieOptions(req.headers.origin));
+      } catch {
+        // Non-blocking: continue even if refreshing cookie fails
+      }
+    }
+  }
+}
+
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const token = extractToken(req);
@@ -30,6 +53,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       userId: string;
       role: string;
       iat?: number;
+      exp?: number;
     };
 
     if (await isTokenRevoked(token)) {
@@ -41,6 +65,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     }
 
     req.user = payload;
+    renewCookieSessionIfDue(req, res, payload);
 
     next();
   } catch (error) {
@@ -77,6 +102,7 @@ export async function optionalAuthenticate(
       userId: string;
       role: string;
       iat?: number;
+      exp?: number;
     };
 
     if (await isTokenRevoked(token)) {
@@ -90,6 +116,7 @@ export async function optionalAuthenticate(
     }
 
     req.user = payload;
+    renewCookieSessionIfDue(req, res, payload);
     next();
   } catch {
     next();

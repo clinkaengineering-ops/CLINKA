@@ -17,6 +17,7 @@ describe("VoiceMessagePlayer", () => {
   };
 
   beforeEach(() => {
+    window.HTMLMediaElement.prototype.load = vi.fn();
     window.HTMLMediaElement.prototype.play = vi.fn().mockImplementation(function (this: HTMLMediaElement) {
       this.dispatchEvent(new Event("play"));
       return Promise.resolve();
@@ -164,5 +165,53 @@ describe("VoiceMessagePlayer", () => {
     fireEvent.change(slider, { target: { value: "15" } });
     expect(audio.currentTime).toBe(10);
     expect(slider.value).toBe("10");
+  });
+
+  it("calls audio.load() on mount to prime mobile decoder and buffer data", () => {
+    const { container } = render(<VoiceMessagePlayer message={mockMessage} side="me" />);
+    const audio = container.querySelector("audio") as HTMLAudioElement;
+    expect(audio.load).toHaveBeenCalled();
+    expect(audio.getAttribute("preload")).toBe("auto");
+    expect(audio.hasAttribute("playsinline")).toBe(true);
+  });
+
+  it("rewinds to beginning when playing if audio already finished or near end", async () => {
+    const msg: ChatMessage = {
+      ...mockMessage,
+      attachmentDuration: 10,
+    };
+
+    const { container } = render(<VoiceMessagePlayer message={msg} side="me" />);
+    const audio = container.querySelector("audio") as HTMLAudioElement;
+    const playBtn = screen.getByRole("button", { name: "Play voice message" });
+
+    // Simulate audio finished and sitting at the end
+    audio.currentTime = 9.9;
+    Object.defineProperty(audio, "ended", { value: true, configurable: true });
+
+    await act(async () => {
+      fireEvent.click(playBtn);
+    });
+
+    expect(audio.currentTime).toBe(0);
+    expect(audio.play).toHaveBeenCalled();
+  });
+
+  it("configures navigator.audioSession.type to playback when user plays audio on mobile Safari", async () => {
+    const mockAudioSession = { type: "auto" };
+    Object.defineProperty(navigator, "audioSession", {
+      value: mockAudioSession,
+      writable: true,
+      configurable: true,
+    });
+
+    render(<VoiceMessagePlayer message={mockMessage} side="me" />);
+    const playBtn = screen.getByRole("button", { name: "Play voice message" });
+
+    await act(async () => {
+      fireEvent.click(playBtn);
+    });
+
+    expect(mockAudioSession.type).toBe("playback");
   });
 });

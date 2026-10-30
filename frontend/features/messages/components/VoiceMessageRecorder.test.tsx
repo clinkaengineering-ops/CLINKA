@@ -48,9 +48,11 @@ describe("VoiceMessageRecorder", () => {
         }
       });
 
-      constructor() {
+      options: any;
+      constructor(_stream?: any, options?: any) {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         mockMediaRecorder = this;
+        this.options = options;
       }
     }
 
@@ -277,5 +279,51 @@ describe("VoiceMessageRecorder", () => {
 
     expect(mockMediaRecorder.stop).toHaveBeenCalled();
     expect(screen.getByText("Voice message preview")).toBeInTheDocument();
+  });
+
+  it("resets navigator.audioSession.type to playback when recording is cleaned up or discarded", async () => {
+    const mockAudioSession = { type: "play-and-record" };
+    Object.defineProperty(navigator, "audioSession", {
+      value: mockAudioSession,
+      writable: true,
+      configurable: true,
+    });
+
+    const onSend = vi.fn();
+    const onCancel = vi.fn();
+
+    await act(async () => {
+      render(<VoiceMessageRecorder onSend={onSend} onCancel={onCancel} />);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle("Discard recording"));
+    });
+
+    expect(mockAudioSession.type).toBe("playback");
+  });
+
+  it("prioritizes audio/mp4 on Apple / iOS devices for native hardware encoding", async () => {
+    const originalUserAgent = navigator.userAgent;
+    Object.defineProperty(navigator, "userAgent", {
+      value: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+      configurable: true,
+    });
+
+    const onSend = vi.fn();
+    const onCancel = vi.fn();
+
+    await act(async () => {
+      render(<VoiceMessageRecorder onSend={onSend} onCancel={onCancel} />);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    expect(mockMediaRecorder.options?.mimeType).toBe("audio/mp4");
+
+    Object.defineProperty(navigator, "userAgent", {
+      value: originalUserAgent,
+      configurable: true,
+    });
   });
 });
